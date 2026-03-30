@@ -1,0 +1,59 @@
+{
+  "name": "get-shit-secured",
+  "version": "0.1.0",
+  "description": "Security workflow installer for AI coding runtimes (Claude, Codex, and more)",
+  "homepage": "https://github.com/viniciusalgado/get-shit-secured#readme",
+  "bugs": {
+    "url": "https://github.com/viniciusalgado/get-shit-secured/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viniciusalgado/get-shit-secured.git"
+  },
+  "license": "MIT",
+  "author": "get-shit-secured contributors",
+  "type": "module",
+  "main": "./dist/core/index.js",
+  "bin": {
+    "gss": "./dist/cli/index.js",
+    "get-shit-secured": "./dist/cli/index.js"
+  },
+  "exports": {
+    "./cli": "./dist/cli/index.js",
+    "./core": "./dist/core/index.js",
+    "./runtimes/*": "./dist/runtimes/*/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "node --test test/unit/**/*.test.js",
+    "test:integration": "node --test test/integration/**/*.test.js",
+    "lint": "eslint src",
+    "format": "prettier --write \"src/**/*.ts\""
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "security",
+    "claude",
+    "codex",
+    "ai",
+    "cli",
+    "installer",
+    "devsecops",
+    "workflow",
+    "owasp"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  }
+}
