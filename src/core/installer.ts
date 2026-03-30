@@ -13,6 +13,8 @@ import type {
 } from './types.js';
 import { resolveRuntimeRoot } from './paths.js';
 import { createManifest, readManifest, writeManifest, mergeManifest, deleteManifest } from './manifest.js';
+import { fetchAllCheatSheets } from './owasp-ingestion.js';
+import { generateAllSpecialists } from './specialist-generator.js';
 
 /**
  * Default workflows to install if none specified.
@@ -41,6 +43,10 @@ export async function install(
   const rootsByRuntime: Partial<Record<RuntimeTarget, string>> = {};
   let totalFilesCreated = 0;
 
+  // Generate OWASP specialists (in background, don't block install)
+  const corpus = await fetchAllCheatSheets();
+  const specialists = generateAllSpecialists(corpus);
+
   for (const adapter of adapters) {
     const runtime = adapter.runtime;
     const rootPath = adapter.resolveRootPath(scope, cwd);
@@ -48,12 +54,29 @@ export async function install(
 
     const files: InstallFile[] = [];
 
-    // Add placeholder files for the runtime itself
+    // Set specialists on adapter (if supported) BEFORE getting placeholder files
+    // This allows placeholder files to include specialist README
+    const adapterWithSpecialists = adapter as unknown as {
+      setSpecialists(specialists: unknown[]): void;
+      getSpecialistFiles(): InstallFile[];
+    };
+
+    if (typeof adapterWithSpecialists.setSpecialists === 'function') {
+      adapterWithSpecialists.setSpecialists(specialists);
+    }
+
+    // Add placeholder files for the runtime itself (now includes specialist README if specialists are set)
     files.push(...adapter.getPlaceholderFiles());
 
     // Add files for each workflow
     for (const workflow of DEFAULT_WORKFLOWS) {
       files.push(...adapter.getFilesForWorkflow(workflow));
+    }
+
+    // Add specialist files
+    if (typeof adapterWithSpecialists.getSpecialistFiles === 'function') {
+      const specialistFiles = adapterWithSpecialists.getSpecialistFiles();
+      files.push(...specialistFiles);
     }
 
     const runtimeFilePaths: string[] = [];
