@@ -470,4 +470,16 @@ When you detect specific vulnerability types, consult the corresponding OWASP sp
 
 Ground all findings in OWASP standards and cheat sheets.`,
   },
+  delegationPolicy: {
+    mode: 'on-detection',
+    subjectSource: 'finding clusters and vulnerability classes',
+    constraints: {
+      maxRequiredPerSubject: 3,
+      maxOptionalPerSubject: 3,
+      allowFollowUpSpecialists: true,
+      maxFollowUpDepth: 1,
+      failOnMissingRequired: true,
+      allowOutOfPlanConsults: false,
+    },
+  },
 };

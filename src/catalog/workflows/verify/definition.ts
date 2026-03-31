@@ -423,4 +423,16 @@ For fixes involving authentication, crypto, sessions, config, or transport, dele
 
 Focus on evidence-based verification.`,
   },
+  delegationPolicy: {
+    mode: 'always',
+    subjectSource: 'applied, partial, and blocked patches from execute-remediation',
+    constraints: {
+      maxRequiredPerSubject: 3,
+      maxOptionalPerSubject: 2,
+      allowFollowUpSpecialists: false,
+      maxFollowUpDepth: 0,
+      failOnMissingRequired: true,
+      allowOutOfPlanConsults: false,
+    },
+  },
 };

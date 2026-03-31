@@ -467,6 +467,249 @@ export interface DelegationRule {
   workflowContext?: WorkflowId;
 }
 
+// =============================================================================
+// Delegation Planning Types
+// =============================================================================
+
+/**
+ * Requirement class for a specialist within a delegation plan.
+ * Determines whether consultation is mandatory, optional, derived, or excluded.
+ */
+export type DelegationRequirement = 'required' | 'optional' | 'derived-follow-up' | 'excluded';
+
+/**
+ * Subject type that triggers delegation decisions.
+ * Each workflow produces different subject types from its artifacts.
+ */
+export type DelegationSubjectType =
+  | 'workflow'
+  | 'finding'
+  | 'patch'
+  | 'verification-target'
+  | 'report-section';
+
+/**
+ * A delegation subject extracted from workflow artifacts.
+ * Represents something that may require specialist consultation.
+ */
+export interface DelegationSubject {
+  /** Unique identifier for this subject */
+  id: string;
+  /** What kind of subject this is */
+  type: DelegationSubjectType;
+  /** Human-readable description */
+  description: string;
+  /** Which artifact produced this subject */
+  sourceArtifact: string;
+  /** Raw signals used for matching (issue types, file paths, stack tags, etc.) */
+  sourceSignals: string[];
+}
+
+/**
+ * Reason why a specialist was included in the delegation plan.
+ * Provides auditability for every delegation decision.
+ */
+export interface DelegationReason {
+  /** Signal type that triggered this reason */
+  signalType: 'workflow-binding' | 'issue-tag' | 'stack-condition' | 'file-path' | 'artifact-field' | 'delegation-edge' | 'trigger-phrase';
+  /** Raw signal value that matched */
+  signalValue: string;
+  /** Score contribution from this reason */
+  score: number;
+  /** Human-readable explanation */
+  description: string;
+}
+
+/**
+ * A candidate specialist for delegation, with scoring and classification.
+ */
+export interface DelegationCandidate {
+  /** Specialist definition ID */
+  specialistId: string;
+  /** Which subject this candidate addresses */
+  subjectId: string;
+  /** Composite score from all matching signals */
+  score: number;
+  /** Reasons contributing to the score */
+  reasons: DelegationReason[];
+  /** Current requirement classification */
+  requirement: DelegationRequirement;
+}
+
+/**
+ * Constraints applied to delegation plan generation.
+ * Controls fan-out, depth, and enforcement behavior.
+ */
+export interface DelegationConstraints {
+  /** Maximum required specialists per subject (default: 3) */
+  maxRequiredPerSubject: number;
+  /** Maximum optional specialists per subject (default: 3) */
+  maxOptionalPerSubject: number;
+  /** Whether follow-up specialists are allowed (default: true) */
+  allowFollowUpSpecialists: boolean;
+  /** Maximum depth for follow-up delegation chains (default: 1) */
+  maxFollowUpDepth: number;
+  /** Whether to hard-fail on missing required consultations (default: true) */
+  failOnMissingRequired: boolean;
+  /** Whether out-of-plan consults are allowed (default: false) */
+  allowOutOfPlanConsults: boolean;
+}
+
+/** Default constraint values */
+export const DEFAULT_DELEGATION_CONSTRAINTS: DelegationConstraints = {
+  maxRequiredPerSubject: 3,
+  maxOptionalPerSubject: 3,
+  allowFollowUpSpecialists: true,
+  maxFollowUpDepth: 1,
+  failOnMissingRequired: true,
+  allowOutOfPlanConsults: false,
+};
+
+/**
+ * Delegation mode for a workflow.
+ * Controls when and how delegation planning is triggered.
+ */
+export type DelegationMode = 'always' | 'on-detection' | 'artifact-driven' | 'none';
+
+/**
+ * Delegation policy attached to a workflow definition.
+ * Governs how the planner generates delegation plans for this workflow.
+ */
+export interface DelegationPolicy {
+  /** When delegation planning is triggered */
+  mode: DelegationMode;
+  /** Description of what produces delegation subjects */
+  subjectSource: string;
+  /** Constraints for plan generation */
+  constraints: DelegationConstraints;
+}
+
+/** Default delegation policy for workflows without explicit policy */
+export const DEFAULT_DELEGATION_POLICY: DelegationPolicy = {
+  mode: 'none',
+  subjectSource: '',
+  constraints: DEFAULT_DELEGATION_CONSTRAINTS,
+};
+
+/**
+ * Specialist entry within a delegation plan.
+ * Associates a specialist with a subject and requirement class.
+ */
+export interface DelegationPlanEntry {
+  /** Specialist definition ID */
+  specialistId: string;
+  /** Subject this entry addresses */
+  subjectId: string;
+  /** Requirement classification */
+  requirement: DelegationRequirement;
+  /** Composite score */
+  score: number;
+  /** Reasons for inclusion */
+  reasons: DelegationReason[];
+  /** Stable order index for deterministic ordering */
+  orderIndex: number;
+}
+
+/**
+ * Schema version for delegation plan artifacts.
+ */
+export const DELEGATION_PLAN_SCHEMA_VERSION = 1;
+
+/**
+ * A deterministic delegation plan for a workflow run.
+ * This is a first-class artifact that governs specialist spawning.
+ */
+export interface DelegationPlan {
+  /** Schema version for artifact compatibility */
+  schemaVersion: typeof DELEGATION_PLAN_SCHEMA_VERSION;
+  /** Which workflow this plan is for */
+  workflowId: WorkflowId;
+  /** Timestamp of plan generation */
+  generatedAt: string;
+  /** Subjects extracted from workflow artifacts */
+  subjects: DelegationSubject[];
+  /** Specialist entries with requirement classifications */
+  entries: DelegationPlanEntry[];
+  /** Constraints applied during plan generation */
+  constraints: DelegationConstraints;
+  /** Artifact references used as input */
+  sourceArtifactRefs: string[];
+}
+
+/**
+ * Record of a specialist consultation that occurred during workflow execution.
+ */
+export interface SpecialistExecutionRecord {
+  /** Specialist definition ID */
+  specialistId: string;
+  /** Subject this consultation addressed */
+  subjectId: string;
+  /** Requirement class at time of execution */
+  requirement: DelegationRequirement;
+  /** Verdict from the specialist */
+  verdict: 'pass' | 'fail' | 'needs-review';
+  /** Confidence score (0-1) */
+  confidence: number;
+  /** Evidence references */
+  evidenceRefs: string[];
+  /** Summary of the consultation */
+  summary: string;
+  /** Follow-up specialists recommended by this specialist */
+  followUpSpecialists: string[];
+  /** Timestamp of execution */
+  executedAt: string;
+}
+
+/**
+ * Schema version for compliance artifacts.
+ */
+export const DELEGATION_COMPLIANCE_SCHEMA_VERSION = 1;
+
+/**
+ * A compliance issue found during validation.
+ */
+export interface DelegationComplianceIssue {
+  /** Issue type */
+  type: 'missing-required' | 'malformed-verdict' | 'unauthorized-consult' | 'duplicate-consult' | 'unsupported-follow-up';
+  /** Specialist ID involved */
+  specialistId: string;
+  /** Subject involved */
+  subjectId: string;
+  /** Description of the issue */
+  description: string;
+}
+
+/**
+ * Compliance report comparing plan against actual execution.
+ * Determines whether the workflow delegation was performed correctly.
+ */
+export interface DelegationComplianceReport {
+  /** Schema version */
+  schemaVersion: typeof DELEGATION_COMPLIANCE_SCHEMA_VERSION;
+  /** Which workflow this compliance report covers */
+  workflowId: WorkflowId;
+  /** Timestamp of compliance check */
+  checkedAt: string;
+  /** Overall pass/fail verdict */
+  status: 'pass' | 'fail';
+  /** Individual compliance issues */
+  issues: DelegationComplianceIssue[];
+  /** Number of required specialists consulted */
+  requiredConsulted: number;
+  /** Total required specialists in plan */
+  requiredTotal: number;
+  /** Number of optional specialists consulted */
+  optionalConsulted: number;
+  /** Number of follow-up specialists consulted */
+  followUpConsulted: number;
+  /** Number of unauthorized consults */
+  unauthorizedCount: number;
+}
+
+// =============================================================================
+// Extended Workflow Definition
+// =============================================================================
+
 /**
  * Extended workflow definition with specialist metadata.
  * Extends the base WorkflowDefinition with specialist-aware fields.
@@ -620,6 +863,8 @@ export interface WorkflowDefinition {
   guardrails: Guardrail[];
   /** Runtime-specific prompt customizations */
   runtimePrompts: RuntimePrompts;
+  /** Delegation policy governing specialist spawning for this workflow */
+  delegationPolicy?: DelegationPolicy;
 }
 
 /**

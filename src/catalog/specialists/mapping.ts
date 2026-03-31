@@ -9,6 +9,29 @@
 import type { WorkflowId } from '../../core/types.js';
 
 /**
+ * Per-specialist binding detail for a workflow binding.
+ * Used for scoring and matching during delegation planning.
+ */
+export interface SpecialistBindingDetail {
+  /** Specialist definition ID */
+  specialistId: string;
+  /** Priority weight for delegation scoring (higher = more likely to be required) */
+  priorityWeight: number;
+  /** Issue taxonomy tags this specialist addresses */
+  issueTags: string[];
+  /** Stack predicates for activation */
+  stackPredicates: string[];
+  /** File/path pattern predicates */
+  filePredicates: string[];
+  /** Artifact field predicates for matching */
+  artifactPredicates: string[];
+  /** Workflow phases where this specialist applies */
+  phaseApplicability: string[];
+  /** Exclusion predicates */
+  exclusionPredicates: string[];
+}
+
+/**
  * Workflow-to-specialist binding configuration.
  */
 export interface WorkflowSpecialistBinding {
@@ -25,7 +48,11 @@ export interface WorkflowSpecialistBinding {
     /** Specialist IDs to activate */
     specialists: string[];
   }>;
+  /** Enriched per-specialist binding details for delegation planning */
+  specialistDetails?: Record<string, SpecialistBindingDetail>;
 }
+
+
 
 /**
  * Complete workflow-to-specialist mapping as specified in the plan.
@@ -404,6 +431,38 @@ export const WORKFLOW_SPECIALIST_MAPPING: Record<WorkflowId, WorkflowSpecialistB
     ],
     optionalSpecialists: [],
     stackConditionedSpecialists: [],
+    specialistDetails: {
+      'vulnerability-disclosure': {
+        specialistId: 'vulnerability-disclosure',
+        priorityWeight: 15,
+        issueTags: ['disclosure', 'reporting'],
+        stackPredicates: [],
+        filePredicates: [],
+        artifactPredicates: [],
+        phaseApplicability: ['generate-owasp-compliance', 'generate-remediation-roadmap'],
+        exclusionPredicates: [],
+      },
+      'security-terminology': {
+        specialistId: 'security-terminology',
+        priorityWeight: 10,
+        issueTags: ['terminology', 'reporting'],
+        stackPredicates: [],
+        filePredicates: [],
+        artifactPredicates: [],
+        phaseApplicability: ['generate-owasp-compliance'],
+        exclusionPredicates: [],
+      },
+      'logging-vocabulary': {
+        specialistId: 'logging-vocabulary',
+        priorityWeight: 10,
+        issueTags: ['logging', 'reporting'],
+        stackPredicates: [],
+        filePredicates: [],
+        artifactPredicates: [],
+        phaseApplicability: ['generate-owasp-compliance'],
+        exclusionPredicates: [],
+      },
+    },
   },
 };
 
@@ -525,4 +584,32 @@ export function getDefaultDelegationBehavior(workflowId: WorkflowId): 'always' |
     default:
       return 'manual';
   }
+}
+
+/**
+ * Get enriched binding detail for a specialist within a workflow.
+ * @param specialistId - The specialist ID
+ * @param workflowId - The workflow ID
+ * @returns Specialist binding detail if available
+ */
+export function getSpecialistBindingDetail(
+  specialistId: string,
+  workflowId: WorkflowId
+): SpecialistBindingDetail | undefined {
+  return WORKFLOW_SPECIALIST_MAPPING[workflowId]?.specialistDetails?.[specialistId];
+}
+
+/**
+ * Get all specialist detail entries for a workflow.
+ * @param workflowId - The workflow ID
+ * @returns Array of specialist binding details
+ */
+export function getAllSpecialistDetailsForWorkflow(
+  workflowId: WorkflowId
+): SpecialistBindingDetail[] {
+  const binding = WORKFLOW_SPECIALIST_MAPPING[workflowId];
+  if (!binding?.specialistDetails) {
+    return [];
+  }
+  return Object.values(binding.specialistDetails);
 }

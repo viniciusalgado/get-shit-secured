@@ -372,4 +372,16 @@ Output reports to .gss/report/ directory:
 
 Tailor each report to its audience with appropriate level of detail.`,
   },
+  delegationPolicy: {
+    mode: 'none',
+    subjectSource: 'report sections and unresolved risk themes',
+    constraints: {
+      maxRequiredPerSubject: 0,
+      maxOptionalPerSubject: 1,
+      allowFollowUpSpecialists: false,
+      maxFollowUpDepth: 0,
+      failOnMissingRequired: false,
+      allowOutOfPlanConsults: false,
+    },
+  },
 };

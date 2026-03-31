@@ -17,6 +17,7 @@ import type {
   WorkflowId,
   RoleAgentDefinition,
   AgentAccessLevel,
+  DelegationPolicy,
 } from './types.js';
 
 /**
@@ -52,6 +53,7 @@ export function renderClaudeAgent(workflow: WorkflowDefinition): string {
     renderAgentSteps(workflow),
     renderAgentGuardrails(workflow),
     renderAgentRuntimePrompts(workflow),
+    renderClaudeDelegationPlanSection(workflow),
   ].filter(Boolean);
 
   return sections.join('\n\n');
@@ -73,6 +75,7 @@ export function renderCodexSkill(workflow: WorkflowDefinition): string {
     renderSkillSteps(workflow),
     renderSkillGuardrails(workflow),
     renderSkillRuntimePrompts(workflow),
+    renderCodexDelegationPlanSection(workflow),
   ].filter(Boolean);
 
   return sections.join('\n\n');
@@ -1296,4 +1299,105 @@ function getCodexDoneCriteria(agentId: string): string {
   };
 
   return criteria[agentId] || '1. Outputs are complete\n2. Artifacts saved\n3. Success criteria met';
+}
+
+// =============================================================================
+// Delegation Plan Rendering
+// =============================================================================
+
+/**
+ * Render a delegation plan section for a Claude workflow agent.
+ * This is a template section that instructs the runtime to compute and
+ * follow the delegation plan at runtime.
+ */
+export function renderClaudeDelegationPlanSection(workflow: WorkflowDefinition): string {
+  if (!workflow.delegationPolicy || workflow.delegationPolicy.mode === 'none') {
+    return '';
+  }
+
+  const policy = workflow.delegationPolicy;
+  const constraints = policy.constraints;
+
+  return `## Delegation Plan
+
+This workflow uses **deterministic delegation planning** to select specialists.
+
+**Delegation Mode:** ${policy.mode}
+**Subject Source:** ${policy.subjectSource}
+
+### Required Specialist Consultations
+
+Before consulting specialists, compute the delegation plan using the signals available in this workflow's artifacts. The plan determines which specialists MUST be consulted (required), MAY be consulted (optional), and are derived as follow-ups.
+
+### Consultation Constraints
+
+- Maximum required specialists per subject: **${constraints.maxRequiredPerSubject}**
+- Maximum optional specialists per subject: **${constraints.maxOptionalPerSubject}**
+- Follow-up specialists allowed: **${constraints.allowFollowUpSpecialists ? 'Yes' : 'No'}**
+- Maximum follow-up depth: **${constraints.maxFollowUpDepth}**
+- Fail if required specialist missing: **${constraints.failOnMissingRequired ? 'Yes' : 'No'}**
+- Out-of-plan consults allowed: **${constraints.allowOutOfPlanConsults ? 'Yes' : 'No'}**
+
+### Specialist Output Format
+
+Each specialist consultation MUST produce:
+- \`verdict\`: \`pass\` | \`fail\` | \`needs-review\`
+- \`confidence\`: 0-1 score
+- \`evidence\`: code snippets or configuration
+- \`affectedFiles\`: files and line numbers
+- \`remediationNotes\`: specific fix recommendations
+- \`verificationNotes\`: how to verify the fix
+- \`owaspSourceUrl\`: governing cheat sheet URL
+
+### Required Output Capture
+
+1. Every specialist response MUST be captured in \`.gss/artifacts/${workflow.id}/specialist-results.json\`
+2. The delegation plan MUST be saved to \`.gss/artifacts/${workflow.id}/delegation-plan.json\`
+3. Compliance validation MUST be saved to \`.gss/artifacts/${workflow.id}/delegation-compliance.json\`
+4. A human-readable summary MUST be saved to \`.gss/artifacts/${workflow.id}/delegation-summary.md\`
+
+### Compliance Rules
+
+- Missing a required specialist consultation is a **hard failure** for this workflow
+- Consulting a specialist not in the plan is recorded and excluded from aggregation
+- Duplicate consultations are resolved by keeping the highest-confidence result
+- The workflow MUST NOT self-certify as complete if delegation compliance fails`;
+}
+
+/**
+ * Render a delegation plan section for a Codex workflow skill.
+ */
+export function renderCodexDelegationPlanSection(workflow: WorkflowDefinition): string {
+  if (!workflow.delegationPolicy) {
+    return '';
+  }
+
+  const policy = workflow.delegationPolicy;
+  const constraints = policy.constraints;
+
+  return `## Delegation Plan
+
+This skill uses **deterministic delegation planning** for specialist selection.
+
+**Mode:** ${policy.mode}
+**Subject Source:** ${policy.subjectSource}
+
+### Constraints
+
+- Max required per subject: ${constraints.maxRequiredPerSubject}
+- Max optional per subject: ${constraints.maxOptionalPerSubject}
+- Follow-ups allowed: ${constraints.allowFollowUpSpecialists ? 'Yes' : 'No'} (depth: ${constraints.maxFollowUpDepth})
+- Fail on missing required: ${constraints.failOnMissingRequired ? 'Yes' : 'No'}
+
+### Output Requirements
+
+1. Save specialist results to \`.gss/artifacts/${workflow.id}/specialist-results.json\`
+2. Save delegation plan to \`.gss/artifacts/${workflow.id}/delegation-plan.json\`
+3. Save compliance check to \`.gss/artifacts/${workflow.id}/delegation-compliance.json\`
+
+### Compliance
+
+- Required specialist consultations are mandatory
+- Out-of-plan consults are recorded but excluded
+- Highest-confidence result retained for duplicates`;
 }

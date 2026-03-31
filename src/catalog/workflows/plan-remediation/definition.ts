@@ -345,4 +345,16 @@ After completing this workflow, tell the user to review the remediation plan and
 
 Focus on secure coding practices and defense in depth.`,
   },
+  delegationPolicy: {
+    mode: 'artifact-driven',
+    subjectSource: 'accepted findings from audit',
+    constraints: {
+      maxRequiredPerSubject: 3,
+      maxOptionalPerSubject: 3,
+      allowFollowUpSpecialists: true,
+      maxFollowUpDepth: 1,
+      failOnMissingRequired: false,
+      allowOutOfPlanConsults: false,
+    },
+  },
 };

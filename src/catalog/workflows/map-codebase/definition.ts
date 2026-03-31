@@ -243,4 +243,16 @@ Output artifacts to .gss/artifacts/map-codebase/ for use by subsequent workflows
 
 Focus on understanding before evaluating.`,
   },
+  delegationPolicy: {
+    mode: 'artifact-driven',
+    subjectSource: 'architecture domains and detected stack segments',
+    constraints: {
+      maxRequiredPerSubject: 3,
+      maxOptionalPerSubject: 2,
+      allowFollowUpSpecialists: true,
+      maxFollowUpDepth: 1,
+      failOnMissingRequired: false,
+      allowOutOfPlanConsults: false,
+    },
+  },
 };

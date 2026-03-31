@@ -510,4 +510,16 @@ Do NOT refactor beyond what's specified. Do NOT add unrelated changes.`,
 
 Only apply changes specified in the approved patch plan.`,
   },
+  delegationPolicy: {
+    mode: 'on-detection',
+    subjectSource: 'approved patch items and high-risk remediations',
+    constraints: {
+      maxRequiredPerSubject: 2,
+      maxOptionalPerSubject: 2,
+      allowFollowUpSpecialists: true,
+      maxFollowUpDepth: 1,
+      failOnMissingRequired: false,
+      allowOutOfPlanConsults: false,
+    },
+  },
 };

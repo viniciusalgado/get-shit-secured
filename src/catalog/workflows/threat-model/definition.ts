@@ -284,4 +284,16 @@ Output artifacts to .gss/artifacts/threat-model/ for use by audit and plan-remed
 
 Ground all analysis in OWASP threat modeling practices.`,
   },
+  delegationPolicy: {
+    mode: 'on-detection',
+    subjectSource: 'abuse cases and trust-boundary risks',
+    constraints: {
+      maxRequiredPerSubject: 3,
+      maxOptionalPerSubject: 3,
+      allowFollowUpSpecialists: true,
+      maxFollowUpDepth: 1,
+      failOnMissingRequired: false,
+      allowOutOfPlanConsults: false,
+    },
+  },
 };
