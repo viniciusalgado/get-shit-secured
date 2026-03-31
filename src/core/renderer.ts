@@ -125,10 +125,11 @@ Run workflows in order for complete security analysis:
 2. \`/gss-map-codebase\` - Analyze codebase structure
 3. \`/gss-threat-model\` - Generate threat models
 4. \`/gss-audit\` - Run security audit
-5. \`/gss-plan-remediation\` - Plan security fixes
-6. \`/gss-execute-remediation\` - Apply approved fixes
-7. \`/gss-verify\` - Verify the fixes
-8. \`/gss-report\` - Generate reports
+5. \`/gss-validate-findings\` - Validate findings with exploitation tests
+6. \`/gss-plan-remediation\` - Plan security fixes
+7. \`/gss-execute-remediation\` - Apply approved fixes
+8. \`/gss-verify\` - Verify the fixes
+9. \`/gss-report\` - Generate reports
 
 For more information on each workflow, see its command file.
 `;
@@ -226,10 +227,11 @@ For a complete security analysis, run workflows in order:
 2. \`/gss-map-codebase\` - Map your codebase structure
 3. \`/gss-threat-model\` - Identify threats and risks
 4. \`/gss-audit\` - Find security vulnerabilities
-5. \`/gss-plan-remediation\` - Plan security fixes
-6. \`/gss-execute-remediation\` - Apply approved fixes
-7. \`/gss-verify\` - Verify the fixes
-8. \`/gss-report\` - Generate reports
+5. \`/gss-validate-findings\` - Validate findings with exploitation tests
+6. \`/gss-plan-remediation\` - Plan security fixes
+7. \`/gss-execute-remediation\` - Apply approved fixes
+8. \`/gss-verify\` - Verify the fixes
+9. \`/gss-report\` - Generate reports
 
 ## Artifacts
 
@@ -359,6 +361,7 @@ function getNextWorkflowInSequence(currentId: WorkflowId): WorkflowId | null {
     'map-codebase',
     'threat-model',
     'audit',
+    'validate-findings',
     'plan-remediation',
     'execute-remediation',
     'verify',
@@ -544,8 +547,16 @@ function renderDoneMeans(workflow: WorkflowDefinition): string {
 4. Confidence levels are stated for each finding
 5. Artifacts are saved in \`.gss/artifacts/audit/\`
 `,
+    'validate-findings': `
+1. All audit findings have been tested with exploitation test cases
+2. Each finding is classified as confirmed, unconfirmed, or hallucinated
+3. Unconfirmed and hallucinated findings have been re-evaluated by specialists
+4. Validated findings include adjusted confidence scores
+5. TDD test document is generated for downstream remediation
+6. Artifacts are saved in \`.gss/artifacts/validate-findings/\`
+`,
     'plan-remediation': `
-1. All audit findings have a corresponding remediation plan
+1. All validated findings have a corresponding remediation plan
 2. Plans include specific code changes with file paths
 3. Potential side effects are documented
 4. Verification steps are specified for each remediation
@@ -812,6 +823,7 @@ function renderWorkflowChain(workflows: WorkflowDefinition[]): string {
     'map-codebase',
     'threat-model',
     'audit',
+    'validate-findings',
     'plan-remediation',
     'execute-remediation',
     'verify',

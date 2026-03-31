@@ -18,15 +18,16 @@ import {
 } from '../../dist/catalog/workflows/registry.js';
 
 describe('Workflow Registry', () => {
-  it('should have all 8 workflows registered', () => {
+  it('should have all 9 workflows registered', () => {
     const workflows = getAllWorkflows();
-    assert.equal(workflows.length, 8);
+    assert.equal(workflows.length, 9);
 
     const workflowIds = workflows.map((w) => w.id);
     assert.ok(workflowIds.includes('security-review'));
     assert.ok(workflowIds.includes('map-codebase'));
     assert.ok(workflowIds.includes('threat-model'));
     assert.ok(workflowIds.includes('audit'));
+    assert.ok(workflowIds.includes('validate-findings'));
     assert.ok(workflowIds.includes('plan-remediation'));
     assert.ok(workflowIds.includes('execute-remediation'));
     assert.ok(workflowIds.includes('verify'));
@@ -87,7 +88,7 @@ describe('Workflow Registry', () => {
 
   it('should return workflows in executable order', () => {
     const order = getExecutableOrder();
-    assert.equal(order.length, 8);
+    assert.equal(order.length, 9);
 
     // First workflow should be security-review (entry + first in canonical order)
     assert.equal(order[0].id, 'security-review');
@@ -95,7 +96,7 @@ describe('Workflow Registry', () => {
 
   it('should provide workflow summary', () => {
     const summary = getWorkflowSummary();
-    assert.equal(summary.length, 8);
+    assert.equal(summary.length, 9);
 
     const mapSummary = summary.find((s) => s.id === 'map-codebase');
     assert.ok(mapSummary);
@@ -187,8 +188,11 @@ describe('Workflow Definition Structure', () => {
     const audit = getWorkflow('audit');
     assert.ok(audit.dependencies.some((d) => d.workflowId === 'map-codebase'));
 
+    const validateFindings = getWorkflow('validate-findings');
+    assert.ok(validateFindings.dependencies.some((d) => d.workflowId === 'audit'));
+
     const planRemediation = getWorkflow('plan-remediation');
-    assert.ok(planRemediation.dependencies.some((d) => d.workflowId === 'audit'));
+    assert.ok(planRemediation.dependencies.some((d) => d.workflowId === 'validate-findings'));
 
     const executeRemediation = getWorkflow('execute-remediation');
     assert.ok(executeRemediation.dependencies.some((d) => d.workflowId === 'plan-remediation'));

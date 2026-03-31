@@ -327,6 +327,60 @@ export const WORKFLOW_SPECIALIST_MAPPING: Record<WorkflowId, WorkflowSpecialistB
     ],
   },
 
+  'validate-findings': {
+    workflow: 'validate-findings',
+    primarySpecialists: [
+      'secure-code-review',
+      'input-validation',
+      'sql-injection-prevention',
+      'cross-site-scripting-prevention',
+      'authentication',
+      'authorization',
+      'session-management',
+      'cryptographic-storage',
+      'secrets-management',
+    ],
+    optionalSpecialists: [
+      'access-control',
+      'password-storage',
+      'os-command-injection-defense',
+      'file-upload',
+      'deserialization',
+      'server-side-request-forgery-prevention',
+      'cross-site-request-forgery-prevention',
+      'content-security-policy',
+      'http-headers',
+      'error-handling',
+      'logging',
+    ],
+    stackConditionedSpecialists: [
+      {
+        stack: 'django',
+        specialists: ['django-security', 'django-rest-framework'],
+      },
+      {
+        stack: 'laravel',
+        specialists: ['laravel'],
+      },
+      {
+        stack: ['nodejs', 'javascript'],
+        specialists: ['nodejs-security'],
+      },
+      {
+        stack: ['ruby', 'rails'],
+        specialists: ['ruby-on-rails'],
+      },
+      {
+        stack: 'java',
+        specialists: ['java-security'],
+      },
+      {
+        stack: ['csharp', 'dotnet'],
+        specialists: ['dotnet-security'],
+      },
+    ],
+  },
+
   'plan-remediation': {
     workflow: 'plan-remediation',
     primarySpecialists: [
@@ -652,6 +706,7 @@ export function getDefaultDelegationBehavior(workflowId: WorkflowId): 'always' |
   switch (workflowId) {
     case 'security-review':
     case 'audit':
+    case 'validate-findings':
     case 'plan-remediation':
     case 'execute-remediation':
       return 'on-detection';

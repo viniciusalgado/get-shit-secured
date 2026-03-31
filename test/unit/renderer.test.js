@@ -383,3 +383,15 @@ describe('Renderer - Next Workflow Guidance', () => {
     const command = renderClaudeCommand(securityReview);
     assert.ok(command.includes('/gss-map-codebase'));
   });
+
+  it('should show validate-findings as next after audit', () => {
+    const audit = getWorkflow('audit');
+    const command = renderClaudeCommand(audit);
+    assert.ok(command.includes('/gss-validate-findings'));
+  });
+
+  it('should show plan-remediation as next after validate-findings', () => {
+    const validateFindings = getWorkflow('validate-findings');
+    const command = renderClaudeCommand(validateFindings);
+    assert.ok(command.includes('/gss-plan-remediation'));
+  });

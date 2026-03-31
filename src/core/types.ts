@@ -20,6 +20,7 @@ export type WorkflowId =
   | 'map-codebase'
   | 'threat-model'
   | 'audit'
+  | 'validate-findings'
   | 'plan-remediation'
   | 'execute-remediation'
   | 'verify'
@@ -376,6 +377,122 @@ export interface OwaspCorpusEntry {
   tags: string[];
   /** Processing status */
   status: 'pending' | 'fetched' | 'parsed' | 'validated';
+}
+
+// =============================================================================
+// Corpus v2 Types (Phase 2 — Knowledge Boundary)
+// =============================================================================
+
+/**
+ * Structured workflow binding within a SecurityDoc.
+ * Replaces the flat WorkflowId[] in OwaspCorpusEntry.
+ */
+export interface DocWorkflowBinding {
+  /** Which workflow this doc is bound to */
+  workflowId: WorkflowId;
+  /** Priority classification */
+  priority: 'required' | 'optional' | 'followup';
+  /** Why this binding exists */
+  rationale?: string;
+}
+
+/**
+ * Structured stack binding within a SecurityDoc.
+ * Replaces the flat string[] in OwaspCorpusEntry.
+ */
+export interface DocStackBinding {
+  /** Stack tag (e.g., "django", "java", "docker") */
+  stack: string;
+  /** Activation condition description */
+  condition?: string;
+}
+
+/**
+ * Provenance tracking for binding decisions.
+ * Records which bindings were inferred vs curated.
+ */
+export interface DocProvenance {
+  /** Fields that were inferred by heuristic logic */
+  inferred: string[];
+  /** Fields that were overridden from curated mapping.ts data */
+  overridden: string[];
+}
+
+/**
+ * Normalized security document replacing OwaspCorpusEntry for the v2 corpus.
+ * This is the canonical data model for the Knowledge Boundary (Boundary C).
+ *
+ * Backward-compatible with OwaspCorpusEntry: every field in the old type
+ * has a direct mapping to a SecurityDoc field.
+ */
+export interface SecurityDoc {
+  /** Unique identifier derived from cheat sheet filename (e.g., "password-storage") */
+  id: string;
+  /** URI following the security:// scheme (e.g., "security://owasp/cheatsheet/password-storage") */
+  uri: string;
+  /** Full title of the cheat sheet */
+  title: string;
+  /** Canonical URL to the cheat sheet */
+  sourceUrl: string;
+  /** Source type classification */
+  sourceType: 'owasp-cheatsheet' | 'owasp-glossary' | 'other';
+  /** Semver of the corpus snapshot this doc belongs to */
+  corpusVersion: string;
+  /** Processing status (3-state, replacing 4-state OwaspCorpusEntry status) */
+  status: 'ready' | 'pending' | 'deprecated';
+  /** One-sentence summary (was intentSummary in OwaspCorpusEntry) */
+  summary: string;
+  /** Major section headings in order */
+  headings: string[];
+  /** Checklist items (was checklistItems in OwaspCorpusEntry) */
+  checklist: string[];
+  /** Tags for categorization and search */
+  tags: string[];
+  /** Issue taxonomy tags from issue-taxonomy.ts */
+  issueTypes: string[];
+  /** Structured workflow bindings (was flat WorkflowId[] in OwaspCorpusEntry) */
+  workflowBindings: DocWorkflowBinding[];
+  /** Structured stack bindings (was flat string[] in OwaspCorpusEntry) */
+  stackBindings: DocStackBinding[];
+  /** Related doc IDs (was canonicalRefs in OwaspCorpusEntry) */
+  relatedDocIds: string[];
+  /** Alternative names/abbreviations for this doc */
+  aliases: string[];
+  /** Provenance tracking for binding decisions */
+  provenance: DocProvenance;
+}
+
+/**
+ * Statistics summary embedded in a corpus snapshot.
+ */
+export interface CorpusSnapshotStats {
+  /** Total documents in snapshot */
+  totalDocs: number;
+  /** Documents with status "ready" */
+  readyDocs: number;
+  /** Documents with status "pending" (fetch failed or no content) */
+  pendingDocs: number;
+  /** Total workflow bindings across all docs */
+  totalBindings: number;
+  /** Total related-doc edges across all docs */
+  totalRelatedEdges: number;
+}
+
+/**
+ * Versioned corpus snapshot — the single artifact produced by `build-corpus`.
+ * Stored at data/owasp-corpus.snapshot.json.
+ */
+export interface CorpusSnapshot {
+  /** Snapshot schema version (increment when format changes) */
+  schemaVersion: 1;
+  /** Corpus version (semver, e.g., "1.0.0") */
+  corpusVersion: string;
+  /** ISO 8601 timestamp of snapshot generation */
+  generatedAt: string;
+  /** All documents in the corpus */
+  documents: SecurityDoc[];
+  /** Aggregate statistics */
+  stats: CorpusSnapshotStats;
 }
 
 /**

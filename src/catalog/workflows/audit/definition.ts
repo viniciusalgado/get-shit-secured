@@ -122,7 +122,7 @@ export const auditDefinition: WorkflowDefinition = {
   ],
   handoffs: [
     {
-      nextWorkflow: 'plan-remediation',
+      nextWorkflow: 'validate-findings',
       outputsToPass: ['findings-report', 'remediation-priorities'],
     },
     {

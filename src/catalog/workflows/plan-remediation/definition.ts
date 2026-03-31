@@ -27,16 +27,16 @@ export const planRemediationDefinition: WorkflowDefinition = {
   ],
   inputs: [
     {
-      name: 'findings-report',
+      name: 'validated-findings',
       type: 'json',
       required: true,
-      description: 'Security findings from audit workflow',
+      description: 'Validated findings from validate-findings workflow with confirmation status and test evidence',
     },
     {
-      name: 'remediation-priorities',
+      name: 'tdd-test-document',
       type: 'json',
       required: true,
-      description: 'Prioritized findings from audit workflow',
+      description: 'TDD-style test specs from validate-findings workflow for remediation verification',
     },
     {
       name: 'mitigation-requirements',
@@ -73,8 +73,8 @@ export const planRemediationDefinition: WorkflowDefinition = {
   ],
   dependencies: [
     {
-      workflowId: 'audit',
-      requiredOutputs: ['findings-report', 'remediation-priorities'],
+      workflowId: 'validate-findings',
+      requiredOutputs: ['validated-findings', 'tdd-test-document'],
     },
   ],
   handoffs: [
@@ -253,8 +253,8 @@ For each remediation, document:
   guardrails: [
     {
       type: 'preflight',
-      description: 'Verify audit artifacts exist before starting',
-      condition: 'Check for findings-report and remediation-priorities',
+      description: 'Verify validate-findings artifacts exist before starting',
+      condition: 'Check for validated-findings and tdd-test-document',
     },
     {
       type: 'mutation',
@@ -347,7 +347,7 @@ Focus on secure coding practices and defense in depth.`,
   },
   delegationPolicy: {
     mode: 'artifact-driven',
-    subjectSource: 'accepted findings from audit',
+    subjectSource: 'confirmed findings from validate-findings',
     constraints: {
       maxRequiredPerSubject: 3,
       maxOptionalPerSubject: 3,
