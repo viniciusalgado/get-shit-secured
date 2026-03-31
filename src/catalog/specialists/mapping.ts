@@ -58,6 +58,85 @@ export interface WorkflowSpecialistBinding {
  * Complete workflow-to-specialist mapping as specified in the plan.
  */
 export const WORKFLOW_SPECIALIST_MAPPING: Record<WorkflowId, WorkflowSpecialistBinding> = {
+  'security-review': {
+    workflow: 'security-review',
+    primarySpecialists: [
+      'secure-code-review',
+      'threat-modeling',
+      'attack-surface-analysis',
+    ],
+    optionalSpecialists: [
+      'access-control',
+      'authentication',
+      'authorization',
+      'session-management',
+      'password-storage',
+      'secrets-management',
+      'cryptographic-storage',
+      'key-management',
+      'content-security-policy',
+      'http-headers',
+      'http-strict-transport-security',
+      'transport-layer-security',
+      'transport-layer-protection',
+      'input-validation',
+      'sql-injection-prevention',
+      'query-parameterization',
+      'os-command-injection-defense',
+      'cross-site-scripting-prevention',
+      'dom-based-xss-prevention',
+      'cross-site-request-forgery-prevention',
+      'server-side-request-forgery-prevention',
+      'file-upload',
+      'deserialization',
+      'error-handling',
+      'logging',
+      'vulnerable-dependency-management',
+      'software-supply-chain-security',
+      'mcp-security',
+      'ai-agent-security',
+    ],
+    stackConditionedSpecialists: [
+      {
+        stack: 'django',
+        specialists: ['django-security', 'django-rest-framework'],
+      },
+      {
+        stack: 'laravel',
+        specialists: ['laravel'],
+      },
+      {
+        stack: ['nodejs', 'javascript'],
+        specialists: ['nodejs-security', 'nodejs-docker', 'npm-security'],
+      },
+      {
+        stack: ['ruby', 'rails'],
+        specialists: ['ruby-on-rails'],
+      },
+      {
+        stack: 'symfony',
+        specialists: ['symfony'],
+      },
+      {
+        stack: 'java',
+        specialists: [
+          'java-security',
+          'injection-prevention-in-java',
+          'json-web-token-for-java',
+          'jaas',
+        ],
+      },
+      {
+        stack: ['csharp', 'dotnet'],
+        specialists: ['dotnet-security'],
+      },
+      {
+        stack: 'php',
+        specialists: ['php-configuration'],
+      },
+    ],
+  },
+
   'map-codebase': {
     workflow: 'map-codebase',
     primarySpecialists: [
@@ -571,6 +650,7 @@ export function getWorkflowsForSpecialist(specialistId: string): WorkflowId[] {
  */
 export function getDefaultDelegationBehavior(workflowId: WorkflowId): 'always' | 'on-detection' | 'manual' {
   switch (workflowId) {
+    case 'security-review':
     case 'audit':
     case 'plan-remediation':
     case 'execute-remediation':

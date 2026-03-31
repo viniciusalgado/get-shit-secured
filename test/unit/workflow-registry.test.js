@@ -18,11 +18,12 @@ import {
 } from '../../dist/catalog/workflows/registry.js';
 
 describe('Workflow Registry', () => {
-  it('should have all 7 workflows registered', () => {
+  it('should have all 8 workflows registered', () => {
     const workflows = getAllWorkflows();
-    assert.equal(workflows.length, 7);
+    assert.equal(workflows.length, 8);
 
     const workflowIds = workflows.map((w) => w.id);
+    assert.ok(workflowIds.includes('security-review'));
     assert.ok(workflowIds.includes('map-codebase'));
     assert.ok(workflowIds.includes('threat-model'));
     assert.ok(workflowIds.includes('audit'));
@@ -53,7 +54,12 @@ describe('Workflow Registry', () => {
     const entryWorkflows = getEntryWorkflows();
     assert.ok(entryWorkflows.length > 0);
 
-    // map-codebase should be an entry workflow
+    // security-review should be an entry workflow
+    const securityReview = entryWorkflows.find((w) => w.id === 'security-review');
+    assert.ok(securityReview, 'security-review should be an entry workflow');
+    assert.equal(securityReview.dependencies.length, 0);
+
+    // map-codebase should also be an entry workflow
     const mapCodebase = entryWorkflows.find((w) => w.id === 'map-codebase');
     assert.ok(mapCodebase, 'map-codebase should be an entry workflow');
     assert.equal(mapCodebase.dependencies.length, 0);
@@ -81,15 +87,15 @@ describe('Workflow Registry', () => {
 
   it('should return workflows in executable order', () => {
     const order = getExecutableOrder();
-    assert.equal(order.length, 7);
+    assert.equal(order.length, 8);
 
-    // First workflow should be map-codebase (no dependencies)
-    assert.equal(order[0].id, 'map-codebase');
+    // First workflow should be security-review (entry + first in canonical order)
+    assert.equal(order[0].id, 'security-review');
   });
 
   it('should provide workflow summary', () => {
     const summary = getWorkflowSummary();
-    assert.equal(summary.length, 7);
+    assert.equal(summary.length, 8);
 
     const mapSummary = summary.find((s) => s.id === 'map-codebase');
     assert.ok(mapSummary);

@@ -6,6 +6,7 @@
  */
 
 import type { WorkflowDefinition, WorkflowId } from '../../core/types.js';
+import { securityReviewDefinition } from './security-review/definition.js';
 import { mapCodebaseDefinition } from './map-codebase/definition.js';
 import { threatModelDefinition } from './threat-model/definition.js';
 import { auditDefinition } from './audit/definition.js';
@@ -18,6 +19,7 @@ import { reportDefinition } from './report/definition.js';
  * Internal workflow registry map.
  */
 const WORKFLOW_REGISTRY: Record<WorkflowId, WorkflowDefinition> = {
+  'security-review': securityReviewDefinition,
   'map-codebase': mapCodebaseDefinition,
   'threat-model': threatModelDefinition,
   'audit': auditDefinition,
@@ -31,6 +33,7 @@ const WORKFLOW_REGISTRY: Record<WorkflowId, WorkflowDefinition> = {
  * All workflow IDs in order of typical execution.
  */
 export const WORKFLOW_ORDER: WorkflowId[] = [
+  'security-review',
   'map-codebase',
   'threat-model',
   'audit',

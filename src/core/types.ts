@@ -16,6 +16,7 @@ export type InstallScope = 'local' | 'global';
  * These correspond to high-level security activities that can be composed.
  */
 export type WorkflowId =
+  | 'security-review'
   | 'map-codebase'
   | 'threat-model'
   | 'audit'
@@ -642,6 +643,8 @@ export interface DelegationPlan {
 export interface SpecialistExecutionRecord {
   /** Specialist definition ID */
   specialistId: string;
+  /** Optional orchestration phase identifier where this specialist was executed */
+  phaseId?: string;
   /** Subject this consultation addressed */
   subjectId: string;
   /** Requirement class at time of execution */
@@ -814,6 +817,36 @@ export interface WorkflowStep {
 }
 
 /**
+ * Ordered orchestration phase metadata for coordinator-driven workflows.
+ */
+export interface WorkflowOrchestrationPhase {
+  /** Stable phase identifier */
+  id: string;
+  /** Human-readable phase title */
+  title: string;
+  /** Lead role/agent for this phase */
+  lead: string;
+  /** Execution mode for this phase */
+  execution: string;
+  /** Input artifact or signal names consumed by this phase */
+  inputs: string[];
+  /** Output artifact names produced by this phase */
+  outputs: string[];
+  /** Specialist engagement mode for this phase */
+  specialistMode: string;
+}
+
+/**
+ * Optional orchestration metadata for workflows that execute ordered subagent phases.
+ */
+export interface WorkflowOrchestration {
+  /** Coordinator entity for the workflow orchestration */
+  coordinator: 'workflow-agent';
+  /** Ordered phases in execution sequence */
+  phases: WorkflowOrchestrationPhase[];
+}
+
+/**
  * Guardrail - safety constraints for the workflow.
  */
 export interface Guardrail {
@@ -863,6 +896,8 @@ export interface WorkflowDefinition {
   guardrails: Guardrail[];
   /** Runtime-specific prompt customizations */
   runtimePrompts: RuntimePrompts;
+  /** Optional coordinator orchestration metadata */
+  orchestration?: WorkflowOrchestration;
   /** Delegation policy governing specialist spawning for this workflow */
   delegationPolicy?: DelegationPolicy;
 }

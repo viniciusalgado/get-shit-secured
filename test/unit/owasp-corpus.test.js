@@ -321,6 +321,14 @@ describe('Delegation Graph', () => {
 });
 
 describe('Workflow-to-Specialist Mapping', () => {
+  it('should get core specialists for security-review workflow', () => {
+    const securityReviewSpecialists = getSpecialistsForWorkflow('security-review');
+
+    assert.ok(securityReviewSpecialists.includes('secure-code-review'));
+    assert.ok(securityReviewSpecialists.includes('threat-modeling'));
+    assert.ok(securityReviewSpecialists.includes('attack-surface-analysis'));
+  });
+
   it('should get specialists for audit workflow', () => {
     const auditSpecialists = getSpecialistsForWorkflow('audit');
 
@@ -355,6 +363,7 @@ describe('Workflow-to-Specialist Mapping', () => {
   });
 
   it('should get default delegation behavior for workflow', () => {
+    assert.equal(getDefaultDelegationBehavior('security-review'), 'on-detection');
     assert.equal(getDefaultDelegationBehavior('audit'), 'on-detection');
     assert.equal(getDefaultDelegationBehavior('plan-remediation'), 'on-detection');
     assert.equal(getDefaultDelegationBehavior('verify'), 'always');

@@ -107,13 +107,16 @@ Claude installations include hooks for:
 
 Available security workflows (run in order):
 
-1. `gss-map-codebase` - Analyze codebase structure
-2. `gss-threat-model` - Identify threats and risks
-3. `gss-audit` - Find security vulnerabilities
-4. `gss-plan-remediation` - Plan security fixes
-5. `gss-execute-remediation` - Apply approved fixes
-6. `gss-verify` - Verify the fixes
-7. `gss-report` - Generate reports
+1. `gss-security-review` - Change-scoped security review for current diff or a commit patch (recommended first for security-relevant changes)
+2. `gss-map-codebase` - Analyze codebase structure
+3. `gss-threat-model` - Identify threats and risks
+4. `gss-audit` - Find security vulnerabilities
+5. `gss-plan-remediation` - Plan security fixes
+6. `gss-execute-remediation` - Apply approved fixes
+7. `gss-verify` - Verify the fixes
+8. `gss-report` - Generate reports
+
+`security-review` is a lightweight supplement to the full chain. In v1, invocation remains explicit.
 
 ## Development
 

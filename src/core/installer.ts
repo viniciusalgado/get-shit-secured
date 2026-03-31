@@ -42,6 +42,7 @@ import { generateAllSpecialists } from './specialist-generator.js';
  * Default workflows to install if none specified.
  */
 const DEFAULT_WORKFLOWS: WorkflowId[] = [
+  'security-review',
   'map-codebase',
   'threat-model',
   'audit',

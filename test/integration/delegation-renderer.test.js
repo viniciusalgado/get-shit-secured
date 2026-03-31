@@ -77,6 +77,17 @@ describe('Delegation Renderer - renderClaudeDelegationPlanSection', () => {
 });
 
 describe('Delegation Renderer - Regression', () => {
+  it('should render orchestration section for security-review workflow', () => {
+    const workflow = getWorkflow('security-review');
+    const claudeOutput = renderClaudeAgent(workflow);
+    const codexOutput = renderCodexSkill(workflow);
+
+    assert.ok(claudeOutput.includes('## Orchestration'));
+    assert.ok(codexOutput.includes('## Orchestration'));
+    assert.ok(claudeOutput.includes('collect-change-set'));
+    assert.ok(codexOutput.includes('validation-and-tdd'));
+  });
+
   it('should not break existing Claude agent rendering', () => {
     const workflow = getWorkflow('map-codebase');
     const output = renderClaudeAgent(workflow);

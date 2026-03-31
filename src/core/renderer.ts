@@ -51,6 +51,7 @@ export function renderClaudeAgent(workflow: WorkflowDefinition): string {
     renderAgentHandoffs(workflow),
     renderAgentNextWorkflow(workflow),
     renderAgentSteps(workflow),
+    renderAgentOrchestration(workflow),
     renderAgentGuardrails(workflow),
     renderAgentRuntimePrompts(workflow),
     renderClaudeDelegationPlanSection(workflow),
@@ -73,6 +74,7 @@ export function renderCodexSkill(workflow: WorkflowDefinition): string {
     renderSkillDependencies(workflow),
     renderSkillNextWorkflow(workflow),
     renderSkillSteps(workflow),
+    renderSkillOrchestration(workflow),
     renderSkillGuardrails(workflow),
     renderSkillRuntimePrompts(workflow),
     renderCodexDelegationPlanSection(workflow),
@@ -119,13 +121,14 @@ ${renderWorkflowChain(workflows)}
 
 Run workflows in order for complete security analysis:
 
-1. \`/gss-map-codebase\` - Analyze codebase structure
-2. \`/gss-threat-model\` - Generate threat models
-3. \`/gss-audit\` - Run security audit
-4. \`/gss-plan-remediation\` - Plan security fixes
-5. \`/gss-execute-remediation\` - Apply approved fixes
-6. \`/gss-verify\` - Verify the fixes
-7. \`/gss-report\` - Generate reports
+1. \`/gss-security-review\` - Review security-relevant diffs (recommended first for change-scoped checks)
+2. \`/gss-map-codebase\` - Analyze codebase structure
+3. \`/gss-threat-model\` - Generate threat models
+4. \`/gss-audit\` - Run security audit
+5. \`/gss-plan-remediation\` - Plan security fixes
+6. \`/gss-execute-remediation\` - Apply approved fixes
+7. \`/gss-verify\` - Verify the fixes
+8. \`/gss-report\` - Generate reports
 
 For more information on each workflow, see its command file.
 `;
@@ -219,13 +222,14 @@ ${tableRows}
 
 For a complete security analysis, run workflows in order:
 
-1. \`/gss-map-codebase\` - Map your codebase structure
-2. \`/gss-threat-model\` - Identify threats and risks
-3. \`/gss-audit\` - Find security vulnerabilities
-4. \`/gss-plan-remediation\` - Plan security fixes
-5. \`/gss-execute-remediation\` - Apply approved fixes
-6. \`/gss-verify\` - Verify the fixes
-7. \`/gss-report\` - Generate reports
+1. \`/gss-security-review\` - Review current diff or a commit patch for security issues
+2. \`/gss-map-codebase\` - Map your codebase structure
+3. \`/gss-threat-model\` - Identify threats and risks
+4. \`/gss-audit\` - Find security vulnerabilities
+5. \`/gss-plan-remediation\` - Plan security fixes
+6. \`/gss-execute-remediation\` - Apply approved fixes
+7. \`/gss-verify\` - Verify the fixes
+8. \`/gss-report\` - Generate reports
 
 ## Artifacts
 
@@ -351,6 +355,7 @@ When this workflow is done, remind the user to clear the context with \`/clear\`
  */
 function getNextWorkflowInSequence(currentId: WorkflowId): WorkflowId | null {
   const sequence: WorkflowId[] = [
+    'security-review',
     'map-codebase',
     'threat-model',
     'audit',
@@ -510,6 +515,13 @@ ${items}`;
  */
 function renderDoneMeans(workflow: WorkflowDefinition): string {
   const doneCriteria: Record<WorkflowId, string> = {
+    'security-review': `
+1. Change scope is captured from uncommitted set or commit-ref
+2. Security relevance gate outcome is explicit and deterministic
+3. Findings include evidence, OWASP mapping, severity, and confidence
+4. Validation is performed without mutating tracked files
+5. TDD remediation specs are generated in .gss/artifacts/security-review/
+`,
     'map-codebase': `
 1. All major code components are identified and catalogued
 2. Dependencies (direct and transitive) are listed
@@ -596,6 +608,30 @@ function renderAgentRuntimePrompts(workflow: WorkflowDefinition): string {
   return `## Runtime Instructions
 
 ${workflow.runtimePrompts.claude}`;
+}
+
+function renderAgentOrchestration(workflow: WorkflowDefinition): string {
+  if (!workflow.orchestration || workflow.orchestration.phases.length === 0) {
+    return '';
+  }
+
+  const phaseLines = workflow.orchestration.phases
+    .map((phase, index) => (
+      `### ${index + 1}. ${phase.title} (\`${phase.id}\`)
+
+- Lead: \`${phase.lead}\`
+- Execution: \`${phase.execution}\`
+- Inputs: ${phase.inputs.map((i) => `\`${i}\``).join(', ') || 'None'}
+- Outputs: ${phase.outputs.map((o) => `\`${o}\``).join(', ') || 'None'}
+- Specialist Mode: \`${phase.specialistMode}\``
+    ))
+    .join('\n\n');
+
+  return `## Orchestration
+
+Coordinator: \`${workflow.orchestration.coordinator}\`
+
+${phaseLines}`;
 }
 
 // =============================================================================
@@ -743,12 +779,36 @@ function renderSkillRuntimePrompts(workflow: WorkflowDefinition): string {
 ${workflow.runtimePrompts.codex}`;
 }
 
+function renderSkillOrchestration(workflow: WorkflowDefinition): string {
+  if (!workflow.orchestration || workflow.orchestration.phases.length === 0) {
+    return '';
+  }
+
+  const phaseLines = workflow.orchestration.phases
+    .map((phase, index) =>
+      `${index + 1}. **${phase.title}** (\`${phase.id}\`)
+   - Lead: \`${phase.lead}\`
+   - Execution: \`${phase.execution}\`
+   - Inputs: ${phase.inputs.map((i) => `\`${i}\``).join(', ') || 'None'}
+   - Outputs: ${phase.outputs.map((o) => `\`${o}\``).join(', ') || 'None'}
+   - Specialist mode: \`${phase.specialistMode}\``
+    )
+    .join('\n\n');
+
+  return `## Orchestration
+
+Coordinator: \`${workflow.orchestration.coordinator}\`
+
+${phaseLines}`;
+}
+
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
 function renderWorkflowChain(workflows: WorkflowDefinition[]): string {
   const canonicalOrder: WorkflowId[] = [
+    'security-review',
     'map-codebase',
     'threat-model',
     'audit',

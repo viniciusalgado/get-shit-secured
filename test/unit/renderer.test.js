@@ -178,6 +178,27 @@ describe('Renderer - Codex Skill', () => {
   });
 });
 
+describe('Renderer - Orchestration Section', () => {
+  it('should render orchestration section for Claude agent when orchestration exists', () => {
+    const workflow = getWorkflow('security-review');
+    const output = renderClaudeAgent(workflow);
+
+    assert.ok(output.includes('## Orchestration'));
+    assert.ok(output.includes('collect-change-set'));
+    assert.ok(output.includes('security-relevance-gate'));
+    assert.ok(output.includes('validation-and-tdd'));
+  });
+
+  it('should render orchestration section for Codex skill when orchestration exists', () => {
+    const workflow = getWorkflow('security-review');
+    const output = renderCodexSkill(workflow);
+
+    assert.ok(output.includes('## Orchestration'));
+    assert.ok(output.includes('specialist-pass'));
+    assert.ok(output.includes('workflow-agent'));
+  });
+});
+
 describe('Renderer - README Files', () => {
   const allWorkflows = getAllWorkflows();
 
@@ -195,6 +216,7 @@ describe('Renderer - README Files', () => {
   it('should include workflow chain in commands README', () => {
     const output = renderCommandsReadme(allWorkflows);
     assert.ok(output.includes('## Workflow Execution Order'));
+    assert.ok(output.includes('security-review'));
     assert.ok(output.includes('map-codebase'));
     assert.ok(output.includes('execute-remediation'));
   });
@@ -235,6 +257,7 @@ describe('Renderer - README Files', () => {
   it('should include quick start in help command', () => {
     const output = renderHelpCommand(allWorkflows);
     assert.ok(output.includes('## Quick Start'));
+    assert.ok(output.includes('/gss-security-review'));
     assert.ok(output.includes('/gss-map-codebase'));
     assert.ok(output.includes('/gss-execute-remediation'));
     assert.ok(output.includes('/gss-report'));
@@ -355,3 +378,8 @@ describe('Renderer - Next Workflow Guidance', () => {
     assert.ok(command.includes('/clear'));
   });
 });
+  it('should show map-codebase as next after security-review', () => {
+    const securityReview = getWorkflow('security-review');
+    const command = renderClaudeCommand(securityReview);
+    assert.ok(command.includes('/gss-map-codebase'));
+  });
