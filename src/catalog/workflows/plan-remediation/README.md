@@ -1,10 +1,10 @@
-# Remediate
+# Plan Remediation
 
 **Planning workflow** - Creates security remediation plans for identified vulnerabilities.
 
 ## Description
 
-This workflow generates detailed remediation plans including patch specifications, implementation guides, test specifications, and rollback procedures. It does NOT modify code - it creates plans for the `apply-patches` workflow to execute.
+This workflow generates detailed remediation plans including patch specifications, implementation guides, test specifications, and rollback procedures. It does NOT modify code - it creates plans for the `execute-remediation` workflow to execute.
 
 ## Activities
 
@@ -29,11 +29,11 @@ This workflow generates detailed remediation plans including patch specification
 
 ## Next Step
 
-After reviewing and approving the remediation plan, run `/gss-apply-patches` to apply the approved changes to the codebase.
+After reviewing and approving the remediation plan, run `/gss-execute-remediation` to apply the approved changes to the codebase.
 
 ## Important
 
-This workflow is planning-only. It does NOT modify any files in your repository. All code changes are applied by the `apply-patches` workflow after you review and approve the plan.
+This workflow is planning-only. It does NOT modify any files in your repository. All code changes are applied by the `execute-remediation` workflow after you review and approve the plan.
 
 ## References
 

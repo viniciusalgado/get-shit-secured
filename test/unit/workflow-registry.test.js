@@ -26,8 +26,8 @@ describe('Workflow Registry', () => {
     assert.ok(workflowIds.includes('map-codebase'));
     assert.ok(workflowIds.includes('threat-model'));
     assert.ok(workflowIds.includes('audit'));
-    assert.ok(workflowIds.includes('remediate'));
-    assert.ok(workflowIds.includes('apply-patches'));
+    assert.ok(workflowIds.includes('plan-remediation'));
+    assert.ok(workflowIds.includes('execute-remediation'));
     assert.ok(workflowIds.includes('verify'));
     assert.ok(workflowIds.includes('report'));
   });
@@ -181,14 +181,14 @@ describe('Workflow Definition Structure', () => {
     const audit = getWorkflow('audit');
     assert.ok(audit.dependencies.some((d) => d.workflowId === 'map-codebase'));
 
-    const remediate = getWorkflow('remediate');
-    assert.ok(remediate.dependencies.some((d) => d.workflowId === 'audit'));
+    const planRemediation = getWorkflow('plan-remediation');
+    assert.ok(planRemediation.dependencies.some((d) => d.workflowId === 'audit'));
 
-    const applyPatches = getWorkflow('apply-patches');
-    assert.ok(applyPatches.dependencies.some((d) => d.workflowId === 'remediate'));
+    const executeRemediation = getWorkflow('execute-remediation');
+    assert.ok(executeRemediation.dependencies.some((d) => d.workflowId === 'plan-remediation'));
 
     const verify = getWorkflow('verify');
-    assert.ok(verify.dependencies.some((d) => d.workflowId === 'remediate'));
-    assert.ok(verify.dependencies.some((d) => d.workflowId === 'apply-patches'));
+    assert.ok(verify.dependencies.some((d) => d.workflowId === 'plan-remediation'));
+    assert.ok(verify.dependencies.some((d) => d.workflowId === 'execute-remediation'));
   });
 });

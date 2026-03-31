@@ -4,10 +4,10 @@ import type { WorkflowDefinition } from '../../../core/types.js';
  * Remediate workflow definition.
  * Grounded in OWASP Secure Coding Practices and remediation best practices.
  */
-export const remediateDefinition: WorkflowDefinition = {
-  id: 'remediate',
+export const planRemediationDefinition: WorkflowDefinition = {
+  id: 'plan-remediation',
   title: 'Security Remediation Planning',
-  goal: 'Prepare safe, minimal remediation plans with implementation guidance, test specifications, and rollback procedures. This workflow does NOT mutate code - it creates plans for apply-patches to execute.',
+  goal: 'Prepare safe, minimal remediation plans with implementation guidance, test specifications, and rollback procedures. This workflow does NOT mutate code - it creates plans for execute-remediation to execute.',
   owaspTopics: [
     {
       name: 'Secure Coding Practices',
@@ -50,25 +50,25 @@ export const remediateDefinition: WorkflowDefinition = {
       name: 'patch-plan',
       type: 'json',
       description: 'Structured plan for applying security fixes with dependencies and ordering',
-      path: '.gss/artifacts/remediate/patch-plan.json',
+      path: '.gss/artifacts/plan-remediation/patch-plan.json',
     },
     {
       name: 'implementation-guide',
       type: 'markdown',
       description: 'Step-by-step implementation instructions for each remediation',
-      path: '.gss/artifacts/remediate/implementation-guide.md',
+      path: '.gss/artifacts/plan-remediation/implementation-guide.md',
     },
     {
       name: 'test-specifications',
       type: 'json',
       description: 'Test cases to verify each remediation works correctly',
-      path: '.gss/artifacts/remediate/test-specs.json',
+      path: '.gss/artifacts/plan-remediation/test-specs.json',
     },
     {
       name: 'rollback-plan',
       type: 'markdown',
       description: 'Rollback procedures if remediations cause issues',
-      path: '.gss/artifacts/remediate/rollback-plan.md',
+      path: '.gss/artifacts/plan-remediation/rollback-plan.md',
     },
   ],
   dependencies: [
@@ -79,7 +79,7 @@ export const remediateDefinition: WorkflowDefinition = {
   ],
   handoffs: [
     {
-      nextWorkflow: 'apply-patches',
+      nextWorkflow: 'execute-remediation',
       outputsToPass: ['patch-plan', 'implementation-guide', 'test-specifications', 'rollback-plan'],
     },
   ],
@@ -263,8 +263,8 @@ For each remediation, document:
     },
     {
       type: 'approval',
-      description: 'Remediation plans should be reviewed before apply-patches',
-      condition: 'Inform user that plans are ready for review and will be executed by apply-patches workflow',
+      description: 'Remediation plans should be reviewed before execute-remediation',
+      condition: 'Inform user that plans are ready for review and will be executed by execute-remediation workflow',
     },
     {
       type: 'scope',
@@ -325,14 +325,14 @@ When the codebase uses specific frameworks, delegate for idiomatic fixes:
 
 ### Output
 
-Output artifacts to .gss/artifacts/remediate/:
+Output artifacts to .gss/artifacts/plan-remediation/:
 - patch-plan.json
 - implementation-guide.md
 - test-specs.json
 - rollback-plan.md
 
 **Next Steps:**
-After completing this workflow, tell the user to review the remediation plan and then run \`/gss-apply-patches\` to apply the approved changes.`,
+After completing this workflow, tell the user to review the remediation plan and then run \`/gss-execute-remediation\` to apply the approved changes.`,
     codex: `Generate security remediation PLANS:
 
 1. Review prioritized findings
@@ -341,7 +341,7 @@ After completing this workflow, tell the user to review the remediation plan and
 4. Generate test specifications
 5. Document rollback procedures
 
-**This workflow does NOT modify code.** It creates detailed plans for the apply-patches workflow to execute.
+**This workflow does NOT modify code.** It creates detailed plans for the execute-remediation workflow to execute.
 
 Focus on secure coding practices and defense in depth.`,
   },

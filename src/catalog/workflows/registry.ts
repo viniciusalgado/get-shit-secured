@@ -9,8 +9,8 @@ import type { WorkflowDefinition, WorkflowId } from '../../core/types.js';
 import { mapCodebaseDefinition } from './map-codebase/definition.js';
 import { threatModelDefinition } from './threat-model/definition.js';
 import { auditDefinition } from './audit/definition.js';
-import { remediateDefinition } from './remediate/definition.js';
-import { applyPatchesDefinition } from './apply-patches/definition.js';
+import { planRemediationDefinition } from './plan-remediation/definition.js';
+import { executeRemediationDefinition } from './execute-remediation/definition.js';
 import { verifyDefinition } from './verify/definition.js';
 import { reportDefinition } from './report/definition.js';
 
@@ -21,8 +21,8 @@ const WORKFLOW_REGISTRY: Record<WorkflowId, WorkflowDefinition> = {
   'map-codebase': mapCodebaseDefinition,
   'threat-model': threatModelDefinition,
   'audit': auditDefinition,
-  'remediate': remediateDefinition,
-  'apply-patches': applyPatchesDefinition,
+  'plan-remediation': planRemediationDefinition,
+  'execute-remediation': executeRemediationDefinition,
   'verify': verifyDefinition,
   'report': reportDefinition,
 };
@@ -34,8 +34,8 @@ export const WORKFLOW_ORDER: WorkflowId[] = [
   'map-codebase',
   'threat-model',
   'audit',
-  'remediate',
-  'apply-patches',
+  'plan-remediation',
+  'execute-remediation',
   'verify',
   'report',
 ];

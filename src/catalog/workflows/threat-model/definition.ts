@@ -87,7 +87,7 @@ export const threatModelDefinition: WorkflowDefinition = {
       outputsToPass: ['threat-register', 'risk-assessment', 'mitigation-requirements'],
     },
     {
-      nextWorkflow: 'remediate',
+      nextWorkflow: 'plan-remediation',
       outputsToPass: ['mitigation-requirements'],
     },
   ],
@@ -273,7 +273,7 @@ These abuse cases will guide the audit workflow's testing approach.`,
 - Distinguish between "theoretical" and "practical" threats
 - Focus on threats relevant to this application's context
 
-Output artifacts to .gss/artifacts/threat-model/ for use by audit and remediate workflows.`,
+Output artifacts to .gss/artifacts/threat-model/ for use by audit and plan-remediation workflows.`,
     codex: `Build a comprehensive threat model:
 
 1. Read the codebase mapping artifacts

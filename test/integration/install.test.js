@@ -318,8 +318,8 @@ describe('install', () => {
       const adapters = [new ClaudeAdapter()];
       await install(adapters, 'local', tempDir, false);
 
-      const remediateAgent = join(tempDir, '.claude/agents/gss-remediate.md');
-      const content = await readFile(remediateAgent, 'utf-8');
+      const planRemediationAgent = join(tempDir, '.claude/agents/gss-plan-remediation.md');
+      const content = await readFile(planRemediationAgent, 'utf-8');
 
       assert.ok(content.includes('Guardrails'), 'Should include guardrails section');
       assert.ok(content.includes('preflight') || content.includes('approval'), 'Should include guardrail types');

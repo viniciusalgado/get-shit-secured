@@ -104,6 +104,13 @@ How to confirm the fix works.
 - MUST obtain user approval before applying changes
 - Do NOT: refactor without security justification
 
+### Executor Agent
+
+- Must apply: approved remediation changes
+- Output: applied changes with verification status
+- MUST apply only changes explicitly approved by user or remediator
+- Do NOT: make changes beyond approved scope
+
 ### Verifier Agent
 
 - Must verify: each remediation addresses the reported finding

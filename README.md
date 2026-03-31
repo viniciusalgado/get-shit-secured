@@ -110,8 +110,8 @@ Available security workflows (run in order):
 1. `gss-map-codebase` - Analyze codebase structure
 2. `gss-threat-model` - Identify threats and risks
 3. `gss-audit` - Find security vulnerabilities
-4. `gss-remediate` - Plan security fixes
-5. `gss-apply-patches` - Apply approved fixes
+4. `gss-plan-remediation` - Plan security fixes
+5. `gss-execute-remediation` - Apply approved fixes
 6. `gss-verify` - Verify the fixes
 7. `gss-report` - Generate reports
 

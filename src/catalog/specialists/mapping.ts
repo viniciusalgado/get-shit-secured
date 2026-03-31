@@ -221,8 +221,8 @@ export const WORKFLOW_SPECIALIST_MAPPING: Record<WorkflowId, WorkflowSpecialistB
     ],
   },
 
-  'remediate': {
-    workflow: 'remediate',
+  'plan-remediation': {
+    workflow: 'plan-remediation',
     primarySpecialists: [
       // Reuse audit specialists - prompts switch from "find" to "fix"
       'secure-code-review',
@@ -297,10 +297,10 @@ export const WORKFLOW_SPECIALIST_MAPPING: Record<WorkflowId, WorkflowSpecialistB
     ],
   },
 
-  'apply-patches': {
-    workflow: 'apply-patches',
+  'execute-remediation': {
+    workflow: 'execute-remediation',
     primarySpecialists: [
-      // Use same specialists as remediate for consistency
+      // Use same specialists as plan-remediation for consistency
       'secure-code-review',
       'input-validation',
       'sql-injection-prevention',
@@ -513,8 +513,8 @@ export function getWorkflowsForSpecialist(specialistId: string): WorkflowId[] {
 export function getDefaultDelegationBehavior(workflowId: WorkflowId): 'always' | 'on-detection' | 'manual' {
   switch (workflowId) {
     case 'audit':
-    case 'remediate':
-    case 'apply-patches':
+    case 'plan-remediation':
+    case 'execute-remediation':
       return 'on-detection';
     case 'verify':
       return 'always';

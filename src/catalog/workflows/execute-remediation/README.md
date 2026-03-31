@@ -1,10 +1,10 @@
-# Apply Patches
+# Execute Remediation
 
 **Execution workflow** - Applies approved security remediation plans to the codebase.
 
 ## Description
 
-This workflow is the ONLY stage that mutates repository files. It takes the approved remediation plan from the `remediate` workflow and applies the actual code, configuration, and test changes.
+This workflow is the ONLY stage that mutates repository files. It takes the approved remediation plan from the `plan-remediation` workflow and applies the actual code, configuration, and test changes.
 
 ## Activities
 
@@ -17,7 +17,7 @@ This workflow is the ONLY stage that mutates repository files. It takes the appr
 
 ## Prerequisites
 
-- `remediate` workflow must be completed
+- `plan-remediation` workflow must be completed
 - Patch plan must be reviewed and approved
 - Rollback plan must be available
 

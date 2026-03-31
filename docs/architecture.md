@@ -35,16 +35,16 @@ src/
 │       └── adapter.ts     # Codex runtime adapter (skills + config)
 ├── catalog/                # Security workflow definitions
 │   ├── workflows/
-│   │   ├── map-codebase/  # Codebase mapping workflow
-│   │   ├── threat-model/  # Threat modeling workflow
-│   │   ├── audit/         # Security audit workflow
-│   │   ├── verify/        # Verification workflow
-│   │   ├── remediate/     # Remediation workflow
-│   │   ├── apply-patches/ # Patch application workflow
-│   │   ├── report/        # Reporting workflow
-│   │   └── registry.ts    # Workflow registry
+│   │   ├── map-codebase/     # Codebase mapping workflow
+│   │   ├── threat-model/     # Threat modeling workflow
+│   │   ├── audit/            # Security audit workflow
+│   │   ├── plan-remediation/ # Remediation planning workflow
+│   │   ├── execute-remediation/ # Remediation execution workflow
+│   │   ├── verify/           # Verification workflow
+│   │   ├── report/           # Reporting workflow
+│   │   └── registry.ts       # Workflow registry
 │   └── specialists/
-│       └── mapping.ts     # Stack-to-specialist bindings
+│       └── mapping.ts        # Stack-to-specialist bindings
 └── shared/                 # Shared templates and utilities
     └── templates/         # Common template fragments
 ```
@@ -67,8 +67,8 @@ Security workflow identifiers:
 - `threat-model` - Generate threat models
 - `audit` - Run security audits
 - `verify` - Verify security fixes
-- `remediate` - Apply remediations
-- `apply-patches` - Apply patches
+- `plan-remediation` - Plan remediations
+- `execute-remediation` - Execute remediations
 - `report` - Generate reports
 
 ### RoleAgentId

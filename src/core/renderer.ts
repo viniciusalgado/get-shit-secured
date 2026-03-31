@@ -119,8 +119,8 @@ Run workflows in order for complete security analysis:
 1. \`/gss-map-codebase\` - Analyze codebase structure
 2. \`/gss-threat-model\` - Generate threat models
 3. \`/gss-audit\` - Run security audit
-4. \`/gss-remediate\` - Plan security fixes
-5. \`/gss-apply-patches\` - Apply approved fixes
+4. \`/gss-plan-remediation\` - Plan security fixes
+5. \`/gss-execute-remediation\` - Apply approved fixes
 6. \`/gss-verify\` - Verify the fixes
 7. \`/gss-report\` - Generate reports
 
@@ -219,8 +219,8 @@ For a complete security analysis, run workflows in order:
 1. \`/gss-map-codebase\` - Map your codebase structure
 2. \`/gss-threat-model\` - Identify threats and risks
 3. \`/gss-audit\` - Find security vulnerabilities
-4. \`/gss-remediate\` - Plan security fixes
-5. \`/gss-apply-patches\` - Apply approved fixes
+4. \`/gss-plan-remediation\` - Plan security fixes
+5. \`/gss-execute-remediation\` - Apply approved fixes
 6. \`/gss-verify\` - Verify the fixes
 7. \`/gss-report\` - Generate reports
 
@@ -325,7 +325,9 @@ function renderCommandNextWorkflow(workflow: WorkflowDefinition): string {
   if (!nextWorkflow) {
     return `## Next Workflow
 
-This is the final workflow in the security analysis sequence. Run \`/gss-report\` to generate comprehensive reports.`;
+This is the final workflow in the security analysis sequence. Run \`/gss-report\` to generate comprehensive reports.
+
+When this workflow is done, remind the user to clear the context with \`/clear\`.`;
   }
 
   return `## Next Workflow
@@ -336,7 +338,9 @@ After completing this workflow, run:
 /gss-${nextWorkflow}
 \`\`\`
 
-Use the outputs from this workflow as inputs for the next one.`;
+Use the outputs from this workflow as inputs for the next one.
+
+When this workflow is done, remind the user to clear the context with \`/clear\` before starting the next workflow.`;
 }
 
 /**
@@ -347,8 +351,8 @@ function getNextWorkflowInSequence(currentId: WorkflowId): WorkflowId | null {
     'map-codebase',
     'threat-model',
     'audit',
-    'remediate',
-    'apply-patches',
+    'plan-remediation',
+    'execute-remediation',
     'verify',
     'report',
   ];
@@ -458,7 +462,8 @@ This is the final workflow in the security analysis sequence. All workflows have
 **Completion Guidance:**
 - Direct the user to run \`/gss-report\` if they haven't already
 - The report workflow aggregates all artifacts into comprehensive security reports
-- After reports are generated, the full security analysis sequence is complete`;
+- After reports are generated, the full security analysis sequence is complete
+- When this workflow completes, explicitly remind the user to clear the context with \`/clear\``;
   }
 
   return `## Next Recommended Workflow
@@ -471,6 +476,7 @@ After completing this workflow, the user should run:
 
 **Completion Guidance:**
 - When this workflow completes, explicitly tell the user to run \`/gss-${nextWorkflow}\` next
+- When this workflow completes, explicitly remind the user to clear the context with \`/clear\` before starting the next workflow
 - Reference the specific artifacts that should be passed to the next workflow
 - Do not suggest running any other workflows - follow the canonical sequence strictly`;
 }
@@ -523,19 +529,19 @@ function renderDoneMeans(workflow: WorkflowDefinition): string {
 4. Confidence levels are stated for each finding
 5. Artifacts are saved in \`.gss/artifacts/audit/\`
 `,
-    'remediate': `
+    'plan-remediation': `
 1. All audit findings have a corresponding remediation plan
 2. Plans include specific code changes with file paths
 3. Potential side effects are documented
 4. Verification steps are specified for each remediation
 5. User approval is obtained BEFORE applying any changes
-6. Artifacts are saved in \`.gss/artifacts/remediate/\`
+6. Artifacts are saved in \`.gss/artifacts/plan-remediation/\`
 `,
-    'apply-patches': `
+    'execute-remediation': `
 1. All approved remediations are applied
 2. Changes are tested for regressions
 3. Failed patches are documented with reasons
-4. Artifacts are saved in \`.gss/artifacts/apply-patches/\`
+4. Artifacts are saved in \`.gss/artifacts/execute-remediation/\`
 `,
     'verify': `
 1. All remediations are verified against original findings
@@ -679,12 +685,16 @@ function renderSkillNextWorkflow(workflow: WorkflowDefinition): string {
   if (!nextWorkflow) {
     return `## Next Step
 
-This is the final workflow in the security analysis sequence. Run \`gss-report\` to generate comprehensive reports.`;
+This is the final workflow in the security analysis sequence. Run \`gss-report\` to generate comprehensive reports.
+
+When this workflow is done, remind the user to clear the context with \`/clear\`.`;
   }
 
   return `## Next Step
 
-After completing this workflow, run \`gss-${nextWorkflow}\` to continue the security analysis sequence.`;
+After completing this workflow, run \`gss-${nextWorkflow}\` to continue the security analysis sequence.
+
+When this workflow is done, remind the user to clear the context with \`/clear\` before starting the next workflow.`;
 }
 
 function renderSkillSteps(workflow: WorkflowDefinition): string {
@@ -739,8 +749,8 @@ function renderWorkflowChain(workflows: WorkflowDefinition[]): string {
     'map-codebase',
     'threat-model',
     'audit',
-    'remediate',
-    'apply-patches',
+    'plan-remediation',
+    'execute-remediation',
     'verify',
     'report',
   ];
@@ -1019,7 +1029,7 @@ function getRoleSpecificInstructions(agentId: string): string {
 - Prefer configuration changes over code changes when possible
 - Preserve user changes and custom logic
 - Document all planned changes with rationale
-- Output remediation plans to \`.gss/artifacts/remediate/\`
+- Output remediation plans to \`.gss/artifacts/plan-remediation/\`
 `,
     'gss-verifier': `
 - Verify that remediations address the reported findings
@@ -1096,7 +1106,7 @@ function getWritePermissions(agentId: string): string {
       '- \`.gss/artifacts/audit/\` - Create and update audit findings',
     ],
     'gss-remediator': [
-      '- \`.gss/artifacts/remediate/\` - Create remediation plans',
+      '- \`.gss/artifacts/plan-remediation/\` - Create remediation plans',
       '- Source code (ONLY with explicit user approval)',
     ],
     'gss-verifier': [
@@ -1178,7 +1188,7 @@ function getDoneCriteria(agentId: string): string {
 3. Potential side effects are documented
 4. Verification steps are specified
 5. User approval is obtained BEFORE applying changes
-6. Artifacts exist in \`.gss/artifacts/remediate/\`
+6. Artifacts exist in \`.gss/artifacts/plan-remediation/\`
 `,
     'gss-verifier': `
 1. All remediations are verified
@@ -1248,7 +1258,7 @@ function getCodexRoleInstructions(agentId: string): string {
     'gss-mapper': '- Analyze codebase structure\n- Map dependencies and boundaries\n- Document data flows\n- Output to `.gss/artifacts/map-codebase/`',
     'gss-threat-modeler': '- Identify threat surfaces\n- Assess threat impact\n- Prioritize threats\n- Output to `.gss/artifacts/threat-model/`',
     'gss-auditor': '- Scan for vulnerabilities\n- Assess severity with evidence\n- Map to OWASP standards\n- Output to `.gss/artifacts/audit/`',
-    'gss-remediator': '- Plan minimal safe changes\n- Preserve user changes\n- Document with rationale\n- Output to `.gss/artifacts/remediate/`',
+    'gss-remediator': '- Plan minimal safe changes\n- Preserve user changes\n- Document with rationale\n- Output to `.gss/artifacts/plan-remediation/`',
     'gss-verifier': '- Verify remediations\n- Run tests\n- Check for regressions\n- Output to `.gss/artifacts/verify/`',
     'gss-reporter': '- Aggregate artifacts\n- Create summaries\n- Provide action items\n- Output to `.gss/artifacts/report/`',
   };
@@ -1280,7 +1290,7 @@ function getCodexDoneCriteria(agentId: string): string {
     'gss-mapper': '1. All major components are identified\n2. Dependencies are catalogued\n3. Artifacts exist in `.gss/artifacts/map-codebase/`',
     'gss-threat-modeler': '1. Threat surfaces are identified\n2. Threats are prioritized\n3. Artifacts exist in `.gss/artifacts/threat-model/`',
     'gss-auditor': '1. All findings include file path, line, severity, evidence\n2. Mapped to OWASP categories\n3. Artifacts exist in `.gss/artifacts/audit/`',
-    'gss-remediator': '1. All findings have remediation plans\n2. User approval obtained before changes\n3. Artifacts exist in `.gss/artifacts/remediate/`',
+    'gss-remediator': '1. All findings have remediation plans\n2. User approval obtained before changes\n3. Artifacts exist in `.gss/artifacts/plan-remediation/`',
     'gss-verifier': '1. All remediations are verified\n2. Test results documented\n3. Artifacts exist in `.gss/artifacts/verify/`',
     'gss-reporter': '1. Executive summary included\n2. Action items prioritized\n3. Final report in `.gss/artifacts/report/`',
   };

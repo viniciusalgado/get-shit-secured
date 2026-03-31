@@ -4,7 +4,7 @@
 
 ## Description
 
-This workflow cross-checks the application report from `apply-patches` against the original patch plan from `remediate` to verify what was actually applied. It verifies only applied/partial items and surfaces blocked/skipped items as residual risk.
+This workflow cross-checks the application report from `execute-remediation` against the original patch plan from `plan-remediation` to verify what was actually applied. It verifies only applied/partial items and surfaces blocked/skipped items as residual risk.
 
 ## Activities
 
@@ -17,8 +17,8 @@ This workflow cross-checks the application report from `apply-patches` against t
 
 ## Prerequisites
 
-- `remediate` workflow must be completed (provides patch-plan, test-specifications)
-- `apply-patches` workflow must be completed (provides application-report)
+- `plan-remediation` workflow must be completed (provides patch-plan, test-specifications)
+- `execute-remediation` workflow must be completed (provides application-report)
 
 ## Output
 

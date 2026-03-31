@@ -4,7 +4,7 @@
 
 ## Description
 
-This is the final workflow in the security analysis pipeline. It gathers artifacts from all previous workflows (map-codebase, threat-model, audit, remediate, apply-patches, and verify) to generate comprehensive security reports.
+This is the final workflow in the security analysis pipeline. It gathers artifacts from all previous workflows (map-codebase, threat-model, audit, plan-remediation, execute-remediation, and verify) to generate comprehensive security reports.
 
 ## Activities
 
@@ -22,8 +22,8 @@ Best results when all workflows are completed:
 - `map-codebase` - provides codebase inventory
 - `threat-model` - provides threat register and risk assessment
 - `audit` - provides findings report
-- `remediate` - provides patch plan
-- `apply-patches` - provides application report and change summary
+- `plan-remediation` - provides patch plan
+- `execute-remediation` - provides application report and change summary
 - `verify` - provides verification report
 
 ## Output
@@ -39,8 +39,8 @@ After running this workflow, the full security analysis sequence is complete:
 1. map-codebase
 2. threat-model
 3. audit
-4. remediate
-5. apply-patches
+4. plan-remediation
+5. execute-remediation
 6. verify
 7. report (you are here)
 

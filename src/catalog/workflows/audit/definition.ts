@@ -122,7 +122,7 @@ export const auditDefinition: WorkflowDefinition = {
   ],
   handoffs: [
     {
-      nextWorkflow: 'remediate',
+      nextWorkflow: 'plan-remediation',
       outputsToPass: ['findings-report', 'remediation-priorities'],
     },
     {
@@ -455,7 +455,7 @@ After delegating to specialists:
 3. Prioritize by severity and confidence
 4. Generate a consolidated findings report
 
-Output artifacts to .gss/artifacts/audit/ for use by remediate and report workflows.`,
+Output artifacts to .gss/artifacts/audit/ for use by plan-remediation and report workflows.`,
     codex: `Conduct a comprehensive security audit:
 
 1. Review codebase mapping artifacts

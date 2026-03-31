@@ -390,7 +390,7 @@ export function inferWorkflowBindings(id: string, headings: string[], tags: stri
 
   // Remediate binding: same as audit (specialists switch from "find" to "fix")
   if (bindings.includes('audit')) {
-    bindings.push('remediate');
+    bindings.push('plan-remediation');
   }
 
   // Verify binding: testing and verification focused

@@ -45,8 +45,8 @@ const DEFAULT_WORKFLOWS: WorkflowId[] = [
   'map-codebase',
   'threat-model',
   'audit',
-  'remediate',
-  'apply-patches',
+  'plan-remediation',
+  'execute-remediation',
   'verify',
   'report',
 ];

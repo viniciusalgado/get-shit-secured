@@ -5,11 +5,11 @@ import type { WorkflowDefinition } from '../../../core/types.js';
  * Grounded in OWASP Secure Coding Practices and secure deployment best practices.
  *
  * This is the ONLY workflow that should mutate repository files.
- * All planning and approval happens in the remediate workflow before this.
+ * All planning and approval happens in the plan-remediation workflow before this.
  */
-export const applyPatchesDefinition: WorkflowDefinition = {
-  id: 'apply-patches',
-  title: 'Security Patch Application',
+export const executeRemediationDefinition: WorkflowDefinition = {
+  id: 'execute-remediation',
+  title: 'Security Remediation Execution',
   goal: 'Apply approved security remediation plans to code, configuration, and tests, then document what was actually changed.',
   owaspTopics: [
     {
@@ -33,25 +33,25 @@ export const applyPatchesDefinition: WorkflowDefinition = {
       name: 'patch-plan',
       type: 'json',
       required: true,
-      description: 'Structured patch plan from remediate workflow',
+      description: 'Structured patch plan from plan-remediation workflow',
     },
     {
       name: 'implementation-guide',
       type: 'markdown',
       required: true,
-      description: 'Step-by-step implementation instructions from remediate workflow',
+      description: 'Step-by-step implementation instructions from plan-remediation workflow',
     },
     {
       name: 'test-specifications',
       type: 'json',
       required: true,
-      description: 'Test specifications from remediate workflow',
+      description: 'Test specifications from plan-remediation workflow',
     },
     {
       name: 'rollback-plan',
       type: 'markdown',
       required: true,
-      description: 'Rollback procedures from remediate workflow',
+      description: 'Rollback procedures from plan-remediation workflow',
     },
     {
       name: 'mitigation-requirements',
@@ -65,24 +65,24 @@ export const applyPatchesDefinition: WorkflowDefinition = {
       name: 'application-report',
       type: 'json',
       description: 'Report of what was actually applied, including per-remediation status',
-      path: '.gss/artifacts/apply-patches/application-report.json',
+      path: '.gss/artifacts/execute-remediation/application-report.json',
     },
     {
       name: 'change-summary',
       type: 'markdown',
       description: 'Human-readable summary of all changes made',
-      path: '.gss/artifacts/apply-patches/change-summary.md',
+      path: '.gss/artifacts/execute-remediation/change-summary.md',
     },
     {
       name: 'deviations-log',
       type: 'markdown',
       description: 'Any deviations from the approved plan with rationale',
-      path: '.gss/artifacts/apply-patches/deviations.md',
+      path: '.gss/artifacts/execute-remediation/deviations.md',
     },
   ],
   dependencies: [
     {
-      workflowId: 'remediate',
+      workflowId: 'plan-remediation',
       requiredOutputs: ['patch-plan', 'implementation-guide', 'test-specifications', 'rollback-plan'],
     },
   ],
@@ -99,26 +99,26 @@ export const applyPatchesDefinition: WorkflowDefinition = {
       instructions: `Confirm all required remediation artifacts exist and are valid:
 
 **Required Artifacts:**
-1. **patch-plan** (.gss/artifacts/remediate/patch-plan.json)
+1. **patch-plan** (.gss/artifacts/plan-remediation/patch-plan.json)
    - Contains structured remediation plan
    - Each patch has ID, description, priority
    - Includes dependencies between patches
 
-2. **implementation-guide** (.gss/artifacts/remediate/implementation-guide.md)
+2. **implementation-guide** (.gss/artifacts/plan-remediation/implementation-guide.md)
    - Step-by-step instructions for each remediation
    - Code changes specified with before/after
    - File paths and line numbers identified
 
-3. **test-specifications** (.gss/artifacts/remediate/test-specs.json)
+3. **test-specifications** (.gss/artifacts/plan-remediation/test-specs.json)
    - Test cases for each remediation
    - Verification procedures documented
 
-4. **rollback-plan** (.gss/artifacts/remediate/rollback-plan.md)
+4. **rollback-plan** (.gss/artifacts/plan-remediation/rollback-plan.md)
    - Rollback procedures for each change
    - Triggers for rollback documented
 
 **Validation Steps:**
-- Read all artifacts from .gss/artifacts/remediate/
+- Read all artifacts from .gss/artifacts/plan-remediation/
 - Confirm JSON files are valid and parseable
 - Verify patch plan is complete (no missing required fields)
 - Check that implementation guide matches patch plan entries
@@ -126,7 +126,8 @@ export const applyPatchesDefinition: WorkflowDefinition = {
 
 **If any artifacts are missing or invalid:**
 - Stop and report the issue
-- Recommend re-running remediate workflow
+- Recommend re-running plan-remediation workflow
+- Do not proceed with mutations
 - Do not proceed with mutations
 
 **Before Proceeding:**
@@ -288,7 +289,7 @@ For each remediation in the patch plan, record:
 
 **Application Report Output:**
 
-Write to .gss/artifacts/apply-patches/application-report.json:
+Write to .gss/artifacts/execute-remediation/application-report.json:
 
 \`\`\`json
 {
@@ -331,7 +332,7 @@ Write to .gss/artifacts/apply-patches/application-report.json:
       title: 'Document Changes and Deviations',
       instructions: `Create human-readable documentation of all changes:
 
-**Change Summary (.gss/artifacts/apply-patches/change-summary.md):**
+**Change Summary (.gss/artifacts/execute-remediation/change-summary.md):**
 
 1. **Executive Summary**
    - Total patches attempted
@@ -351,7 +352,7 @@ Write to .gss/artifacts/apply-patches/application-report.json:
    |----------|-------|--------|-------|-------|
    | SQLI-001 | Fix SQL injection | applied | 1 | 1 |
 
-**Deviations Log (.gss/artifacts/apply-patches/deviations.md):**
+**Deviations Log (.gss/artifacts/execute-remediation/deviations.md):**
 
 Document any deviation from the approved plan:
 
@@ -446,7 +447,7 @@ After completing this workflow:
     {
       type: 'preflight',
       description: 'Verify all remediation artifacts exist before starting',
-      condition: 'Check for patch-plan, implementation-guide, test-specifications, and rollback-plan in .gss/artifacts/remediate/',
+      condition: 'Check for patch-plan, implementation-guide, test-specifications, and rollback-plan in .gss/artifacts/plan-remediation/',
     },
     {
       type: 'approval',
@@ -461,7 +462,7 @@ After completing this workflow:
     {
       type: 'scope',
       description: 'Only apply changes specified in the approved patch plan',
-      condition: 'Never add changes beyond what was planned in the remediate workflow',
+      condition: 'Never add changes beyond what was planned in the plan-remediation workflow',
     },
   ],
   runtimePrompts: {

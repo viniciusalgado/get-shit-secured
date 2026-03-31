@@ -230,7 +230,7 @@ function generateSpecialistInputs(entry: OwaspCorpusEntry) {
   ];
 
   // Add workflow-specific inputs based on bindings
-  if (entry.workflowBindings.includes('audit') || entry.workflowBindings.includes('remediate')) {
+  if (entry.workflowBindings.includes('audit') || entry.workflowBindings.includes('plan-remediation')) {
     inputs.push({
       name: 'code-diff',
       type: 'string',

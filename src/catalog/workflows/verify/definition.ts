@@ -30,19 +30,19 @@ export const verifyDefinition: WorkflowDefinition = {
       name: 'patch-plan',
       type: 'json',
       required: true,
-      description: 'Patch plan from remediate workflow',
+      description: 'Patch plan from plan-remediation workflow',
     },
     {
       name: 'application-report',
       type: 'json',
       required: true,
-      description: 'Application report from apply-patches workflow showing what was actually applied',
+      description: 'Application report from execute-remediation workflow showing what was actually applied',
     },
     {
       name: 'test-specifications',
       type: 'json',
       required: true,
-      description: 'Test specifications from remediate workflow',
+      description: 'Test specifications from plan-remediation workflow',
     },
     {
       name: 'findings-report',
@@ -54,7 +54,7 @@ export const verifyDefinition: WorkflowDefinition = {
       name: 'deviations-log',
       type: 'markdown',
       required: false,
-      description: 'Deviations from the plan from apply-patches workflow',
+      description: 'Deviations from the plan from execute-remediation workflow',
     },
   ],
   outputs: [
@@ -85,11 +85,11 @@ export const verifyDefinition: WorkflowDefinition = {
   ],
   dependencies: [
     {
-      workflowId: 'remediate',
+      workflowId: 'plan-remediation',
       requiredOutputs: ['patch-plan', 'test-specifications'],
     },
     {
-      workflowId: 'apply-patches',
+      workflowId: 'execute-remediation',
       requiredOutputs: ['application-report'],
     },
   ],
@@ -108,8 +108,8 @@ export const verifyDefinition: WorkflowDefinition = {
 **Cross-Check Process:**
 
 1. **Compare Plan vs Actual**
-   - Read patch-plan.json from remediate workflow
-   - Read application-report.json from apply-patches workflow
+   - Read patch-plan.json from plan-remediation workflow
+   - Read application-report.json from execute-remediation workflow
    - Cross-check: for each patch in the plan, find its status in the application report
 
 2. **Verify Applied Fixes (status: "applied")**
@@ -353,7 +353,7 @@ This feeds into the final report for stakeholders.`,
   guardrails: [
     {
       type: 'preflight',
-      description: 'Verify remediate artifacts exist before starting',
+      description: 'Verify plan-remediation artifacts exist before starting',
       condition: 'Check for patch-plan and test-specifications',
     },
     {

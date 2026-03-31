@@ -55,25 +55,25 @@ export const reportDefinition: WorkflowDefinition = {
       name: 'patch-plan',
       type: 'json',
       required: false,
-      description: 'From remediate workflow',
+      description: 'From plan-remediation workflow',
     },
     {
       name: 'application-report',
       type: 'json',
       required: false,
-      description: 'From apply-patches workflow',
+      description: 'From execute-remediation workflow',
     },
     {
       name: 'change-summary',
       type: 'markdown',
       required: false,
-      description: 'From apply-patches workflow',
+      description: 'From execute-remediation workflow',
     },
     {
       name: 'deviations-log',
       type: 'markdown',
       required: false,
-      description: 'From apply-patches workflow',
+      description: 'From execute-remediation workflow',
     },
     {
       name: 'verification-report',
@@ -146,13 +146,13 @@ From audit:
 - Evidence artifacts
 - Remediation priorities
 
-From remediate:
+From plan-remediation:
 - Patch plan
 - Implementation guide
 - Test specifications
 - Rollback plan
 
-From apply-patches:
+From execute-remediation:
 - Application report
 - Change summary
 - Deviations log

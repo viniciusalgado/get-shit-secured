@@ -196,12 +196,12 @@ describe('Renderer - README Files', () => {
     const output = renderCommandsReadme(allWorkflows);
     assert.ok(output.includes('## Workflow Execution Order'));
     assert.ok(output.includes('map-codebase'));
-    assert.ok(output.includes('apply-patches'));
+    assert.ok(output.includes('execute-remediation'));
   });
 
-  it('should include apply-patches in commands README', () => {
+  it('should include execute-remediation in commands README', () => {
     const output = renderCommandsReadme(allWorkflows);
-    assert.ok(output.includes('/gss-apply-patches'));
+    assert.ok(output.includes('/gss-execute-remediation'));
   });
 
   it('should render agents README with all workflows', () => {
@@ -236,7 +236,7 @@ describe('Renderer - README Files', () => {
     const output = renderHelpCommand(allWorkflows);
     assert.ok(output.includes('## Quick Start'));
     assert.ok(output.includes('/gss-map-codebase'));
-    assert.ok(output.includes('/gss-apply-patches'));
+    assert.ok(output.includes('/gss-execute-remediation'));
     assert.ok(output.includes('/gss-report'));
   });
 
@@ -249,7 +249,7 @@ describe('Renderer - README Files', () => {
 
 describe('Renderer Content Quality', () => {
   it('should generate proper markdown formatting', () => {
-    const workflow = getWorkflow('remediate');
+    const workflow = getWorkflow('plan-remediation');
     const command = renderClaudeCommand(workflow);
     const agent = renderClaudeAgent(workflow);
 
@@ -309,25 +309,26 @@ describe('Renderer - Next Workflow Guidance', () => {
   });
 
   it('should include next workflow section in agents', () => {
-    const workflow = getWorkflow('remediate');
+    const workflow = getWorkflow('plan-remediation');
     const agent = renderClaudeAgent(workflow);
 
     assert.ok(agent.includes('## Next Recommended Workflow'));
   });
 
-  it('should show apply-patches as next after remediate', () => {
-    const remediate = getWorkflow('remediate');
-    const agent = renderClaudeAgent(remediate);
+  it('should show execute-remediation as next after plan-remediation', () => {
+    const planRemediation = getWorkflow('plan-remediation');
+    const agent = renderClaudeAgent(planRemediation);
 
-    assert.ok(agent.includes('gss-apply-patches'));
+    assert.ok(agent.includes('gss-execute-remediation'));
   });
 
   it('should include completion guidance for non-final workflows', () => {
-    const applyPatches = getWorkflow('apply-patches');
-    const agent = renderClaudeAgent(applyPatches);
+    const executeRemediation = getWorkflow('execute-remediation');
+    const agent = renderClaudeAgent(executeRemediation);
 
     assert.ok(agent.includes('Completion Guidance'));
     assert.ok(agent.includes('/gss-verify'));
+    assert.ok(agent.includes('/clear'));
   });
 
   it('should show sequence complete for final workflow', () => {
@@ -336,6 +337,7 @@ describe('Renderer - Next Workflow Guidance', () => {
 
     assert.ok(agent.includes('final workflow'));
     assert.ok(agent.includes('sequence is complete'));
+    assert.ok(agent.includes('/clear'));
   });
 
   it('should include next step in skills', () => {
@@ -343,5 +345,13 @@ describe('Renderer - Next Workflow Guidance', () => {
     const skill = renderCodexSkill(workflow);
 
     assert.ok(skill.includes('## Next Step'));
+    assert.ok(skill.includes('/clear'));
+  });
+
+  it('should include clear reminder in command next workflow guidance', () => {
+    const workflow = getWorkflow('map-codebase');
+    const command = renderClaudeCommand(workflow);
+
+    assert.ok(command.includes('/clear'));
   });
 });

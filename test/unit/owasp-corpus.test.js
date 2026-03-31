@@ -49,7 +49,7 @@ const MOCK_CORPUS_ENTRIES = [
       'Use an appropriate iteration count',
     ],
     canonicalRefs: ['sql-injection-prevention'], // Delegate to another specialist in our mock
-    workflowBindings: ['audit', 'remediate', 'verify'],
+    workflowBindings: ['audit', 'plan-remediation', 'verify'],
     stackBindings: [],
     tags: ['crypto', 'authentication'],
     status: 'parsed',
@@ -67,7 +67,7 @@ const MOCK_CORPUS_ENTRIES = [
       'Escape all user supplied input',
     ],
     canonicalRefs: ['input-validation'],
-    workflowBindings: ['audit', 'remediate'],
+    workflowBindings: ['audit', 'plan-remediation'],
     stackBindings: [],
     tags: ['injection', 'sql'],
     status: 'parsed',
@@ -83,7 +83,7 @@ const MOCK_CORPUS_ENTRIES = [
       'Use allow-lists',
     ],
     canonicalRefs: [],
-    workflowBindings: ['audit', 'remediate'],
+    workflowBindings: ['audit', 'plan-remediation'],
     stackBindings: [],
     tags: ['validation'],
     status: 'parsed',
@@ -100,7 +100,7 @@ const MOCK_CORPUS_ENTRIES = [
       'Enable CSRF protection',
     ],
     canonicalRefs: ['authentication'],
-    workflowBindings: ['audit', 'remediate'],
+    workflowBindings: ['audit', 'plan-remediation'],
     stackBindings: ['python', 'django'],
     tags: ['framework', 'python'],
     status: 'parsed',
@@ -113,7 +113,7 @@ const MOCK_CORPUS_ENTRIES = [
     headings: ['Introduction'],
     checklistItems: [],
     canonicalRefs: [],
-    workflowBindings: ['audit', 'remediate', 'verify'],
+    workflowBindings: ['audit', 'plan-remediation', 'verify'],
     stackBindings: [],
     tags: ['auth'],
     status: 'parsed',
@@ -173,7 +173,7 @@ describe('OWASP Corpus Ingestion', () => {
     const bindings = inferWorkflowBindings('sql-injection-prevention', ['Introduction', 'Defenses'], ['injection', 'sql']);
 
     assert.ok(bindings.includes('audit'));
-    assert.ok(bindings.includes('remediate'));
+    assert.ok(bindings.includes('plan-remediation'));
   });
 
   it('should infer stack bindings for framework-specific cheat sheets', () => {
@@ -349,14 +349,14 @@ describe('Workflow-to-Specialist Mapping', () => {
 
   it('should check if specialist is relevant to workflow', () => {
     assert.ok(isSpecialistRelevantToWorkflow('password-storage', 'audit'));
-    assert.ok(isSpecialistRelevantToWorkflow('password-storage', 'remediate'));
+    assert.ok(isSpecialistRelevantToWorkflow('password-storage', 'plan-remediation'));
     assert.ok(isSpecialistRelevantToWorkflow('password-storage', 'verify'));
     assert.ok(!isSpecialistRelevantToWorkflow('password-storage', 'map-codebase'));
   });
 
   it('should get default delegation behavior for workflow', () => {
     assert.equal(getDefaultDelegationBehavior('audit'), 'on-detection');
-    assert.equal(getDefaultDelegationBehavior('remediate'), 'on-detection');
+    assert.equal(getDefaultDelegationBehavior('plan-remediation'), 'on-detection');
     assert.equal(getDefaultDelegationBehavior('verify'), 'always');
     assert.equal(getDefaultDelegationBehavior('map-codebase'), 'manual');
   });
