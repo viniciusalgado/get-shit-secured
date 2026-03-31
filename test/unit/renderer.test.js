@@ -196,6 +196,12 @@ describe('Renderer - README Files', () => {
     const output = renderCommandsReadme(allWorkflows);
     assert.ok(output.includes('## Workflow Execution Order'));
     assert.ok(output.includes('map-codebase'));
+    assert.ok(output.includes('apply-patches'));
+  });
+
+  it('should include apply-patches in commands README', () => {
+    const output = renderCommandsReadme(allWorkflows);
+    assert.ok(output.includes('/gss-apply-patches'));
   });
 
   it('should render agents README with all workflows', () => {
@@ -230,6 +236,7 @@ describe('Renderer - README Files', () => {
     const output = renderHelpCommand(allWorkflows);
     assert.ok(output.includes('## Quick Start'));
     assert.ok(output.includes('/gss-map-codebase'));
+    assert.ok(output.includes('/gss-apply-patches'));
     assert.ok(output.includes('/gss-report'));
   });
 
@@ -283,5 +290,58 @@ describe('Renderer Content Quality', () => {
 
     assert.ok(agent.includes('threat-model'));
     assert.ok(agent.includes('audit'));
+  });
+});
+
+describe('Renderer - Next Workflow Guidance', () => {
+  it('should include next workflow section in commands', () => {
+    const workflow = getWorkflow('map-codebase');
+    const command = renderClaudeCommand(workflow);
+
+    assert.ok(command.includes('## Next Workflow'));
+  });
+
+  it('should show the next workflow to run', () => {
+    const mapCodebase = getWorkflow('map-codebase');
+    const command = renderClaudeCommand(mapCodebase);
+
+    assert.ok(command.includes('/gss-threat-model'));
+  });
+
+  it('should include next workflow section in agents', () => {
+    const workflow = getWorkflow('remediate');
+    const agent = renderClaudeAgent(workflow);
+
+    assert.ok(agent.includes('## Next Recommended Workflow'));
+  });
+
+  it('should show apply-patches as next after remediate', () => {
+    const remediate = getWorkflow('remediate');
+    const agent = renderClaudeAgent(remediate);
+
+    assert.ok(agent.includes('gss-apply-patches'));
+  });
+
+  it('should include completion guidance for non-final workflows', () => {
+    const applyPatches = getWorkflow('apply-patches');
+    const agent = renderClaudeAgent(applyPatches);
+
+    assert.ok(agent.includes('Completion Guidance'));
+    assert.ok(agent.includes('/gss-verify'));
+  });
+
+  it('should show sequence complete for final workflow', () => {
+    const report = getWorkflow('report');
+    const agent = renderClaudeAgent(report);
+
+    assert.ok(agent.includes('final workflow'));
+    assert.ok(agent.includes('sequence is complete'));
+  });
+
+  it('should include next step in skills', () => {
+    const workflow = getWorkflow('audit');
+    const skill = renderCodexSkill(workflow);
+
+    assert.ok(skill.includes('## Next Step'));
   });
 });

@@ -18,15 +18,16 @@ import {
 } from '../../dist/catalog/workflows/registry.js';
 
 describe('Workflow Registry', () => {
-  it('should have all 6 workflows registered', () => {
+  it('should have all 7 workflows registered', () => {
     const workflows = getAllWorkflows();
-    assert.equal(workflows.length, 6);
+    assert.equal(workflows.length, 7);
 
     const workflowIds = workflows.map((w) => w.id);
     assert.ok(workflowIds.includes('map-codebase'));
     assert.ok(workflowIds.includes('threat-model'));
     assert.ok(workflowIds.includes('audit'));
     assert.ok(workflowIds.includes('remediate'));
+    assert.ok(workflowIds.includes('apply-patches'));
     assert.ok(workflowIds.includes('verify'));
     assert.ok(workflowIds.includes('report'));
   });
@@ -80,7 +81,7 @@ describe('Workflow Registry', () => {
 
   it('should return workflows in executable order', () => {
     const order = getExecutableOrder();
-    assert.equal(order.length, 6);
+    assert.equal(order.length, 7);
 
     // First workflow should be map-codebase (no dependencies)
     assert.equal(order[0].id, 'map-codebase');
@@ -88,7 +89,7 @@ describe('Workflow Registry', () => {
 
   it('should provide workflow summary', () => {
     const summary = getWorkflowSummary();
-    assert.equal(summary.length, 6);
+    assert.equal(summary.length, 7);
 
     const mapSummary = summary.find((s) => s.id === 'map-codebase');
     assert.ok(mapSummary);
@@ -183,7 +184,11 @@ describe('Workflow Definition Structure', () => {
     const remediate = getWorkflow('remediate');
     assert.ok(remediate.dependencies.some((d) => d.workflowId === 'audit'));
 
+    const applyPatches = getWorkflow('apply-patches');
+    assert.ok(applyPatches.dependencies.some((d) => d.workflowId === 'remediate'));
+
     const verify = getWorkflow('verify');
     assert.ok(verify.dependencies.some((d) => d.workflowId === 'remediate'));
+    assert.ok(verify.dependencies.some((d) => d.workflowId === 'apply-patches'));
   });
 });

@@ -33,6 +33,12 @@ export const verifyDefinition: WorkflowDefinition = {
       description: 'Patch plan from remediate workflow',
     },
     {
+      name: 'application-report',
+      type: 'json',
+      required: true,
+      description: 'Application report from apply-patches workflow showing what was actually applied',
+    },
+    {
       name: 'test-specifications',
       type: 'json',
       required: true,
@@ -43,6 +49,12 @@ export const verifyDefinition: WorkflowDefinition = {
       type: 'json',
       required: false,
       description: 'Original findings from audit workflow for verification',
+    },
+    {
+      name: 'deviations-log',
+      type: 'markdown',
+      required: false,
+      description: 'Deviations from the plan from apply-patches workflow',
     },
   ],
   outputs: [
@@ -76,6 +88,10 @@ export const verifyDefinition: WorkflowDefinition = {
       workflowId: 'remediate',
       requiredOutputs: ['patch-plan', 'test-specifications'],
     },
+    {
+      workflowId: 'apply-patches',
+      requiredOutputs: ['application-report'],
+    },
   ],
   handoffs: [
     {
@@ -87,34 +103,65 @@ export const verifyDefinition: WorkflowDefinition = {
     {
       id: 'verify-remediations',
       title: 'Verify Each Remediation Implementation',
-      instructions: `For each patch in the patch plan, verify implementation:
+      instructions: `Cross-check the application report against the patch plan to verify what was actually applied:
 
-**Verification Checklist:**
-1. **Code Review**
-   - Patch was applied exactly as specified
-   - No unintended changes included
-   - Code style consistent with project
-   - Comments explain security context
+**Cross-Check Process:**
 
-2. **Vulnerability Fixed**
-   - Original vulnerability no longer exploitable
-   - Attack attempt is now properly blocked
-   - Error handling is appropriate
-   - Edge cases are covered
+1. **Compare Plan vs Actual**
+   - Read patch-plan.json from remediate workflow
+   - Read application-report.json from apply-patches workflow
+   - Cross-check: for each patch in the plan, find its status in the application report
 
-3. **Security Principles Applied**
-   - Input validation at trust boundaries
-   - Output encoding for correct context
-   - Authentication/authorization present
-   - Least privilege principle followed
-   - Fail securely on errors
+2. **Verify Applied Fixes (status: "applied")**
+   For each remediation with status "applied":
+   - **Code Review**
+     - Patch was applied exactly as specified in the plan
+     - No unintended changes included
+     - Code style consistent with project
+     - Comments explain security context
 
-**For each remediation, document:**
+   - **Vulnerability Fixed**
+     - Original vulnerability no longer exploitable
+     - Attack attempt is now properly blocked
+     - Error handling is appropriate
+     - Edge cases are covered
+
+   - **Security Principles Applied**
+     - Input validation at trust boundaries
+     - Output encoding for correct context
+     - Authentication/authorization present
+     - Least privilege principle followed
+     - Fail securely on errors
+
+3. **Verify Partial Fixes (status: "partial")**
+   For each remediation with status "partial":
+   - Review what was actually applied
+   - Assess whether the partial fix provides adequate protection
+   - Review deviations log for rationale
+   - Document risk of incomplete application
+   - Recommend completion or acceptance
+
+4. **Document Blocked Items as Residual Risk (status: "blocked")**
+   For each remediation with status "blocked":
+   - Document as residual risk in residual-risks.md
+   - Include the blocker from the application report
+   - Assess severity of the unaddressed vulnerability
+   - Recommend alternative approaches or next steps
+
+5. **Document Skipped Items (status: "skipped")**
+   For each remediation with status "skipped":
+   - Review the skip reason
+   - If already fixed, verify the fix is in place
+   - If intentionally skipped, document acceptance decision
+   - Include in residual risks if vulnerability remains
+
+**For Each Verified Remediation, Document:**
 - Patch ID and title
-- Implementation status: Complete/Partial/Not Applied
-- Verification method (code review, test, manual check)
+- Application status: applied/partial/blocked/skipped
+- Verification method: code review, test, manual check
 - Evidence: Code snippet, test output, or screenshot
-- Result: Pass/Fail with reasoning
+- Result: Pass/Fail/Needs Review with reasoning
+- Deviations noted (if any)
 
 Reference relevant ASVS controls for verification criteria.`,
       owaspTopics: ['ASVS Security Verification'],

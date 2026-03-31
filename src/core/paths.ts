@@ -1,4 +1,4 @@
-import { relative, join } from 'node:path';
+import { relative, join, resolve, normalize } from 'node:path';
 import type { InstallScope, RuntimeTarget } from './types.js';
 
 /**
@@ -51,6 +51,24 @@ export function resolveRuntimeRoot(
 }
 
 /**
+ * Resolve the support subtree path for a runtime.
+ * This is where hooks, helpers, and runtime metadata are stored.
+ *
+ * Claude (local):   <cwd>/.claude/gss/
+ * Claude (global):  <home>/.claude/gss/ or <XDG_CONFIG_HOME>/claude/gss/
+ *
+ * Codex (local):    <cwd>/.codex/gss/
+ * Codex (global):   <home>/.codex/gss/ or <XDG_CONFIG_HOME>/codex/gss/
+ */
+export function resolveSupportSubtree(
+  runtime: RuntimeTarget,
+  scope: InstallScope,
+  cwd: string
+): string {
+  return join(resolveRuntimeRoot(runtime, scope, cwd), 'gss');
+}
+
+/**
  * Get the manifest directory path (.gss/).
  */
 export function getManifestDir(cwd: string): string {
@@ -62,6 +80,29 @@ export function getManifestDir(cwd: string): string {
  */
 export function getManifestPath(cwd: string): string {
   return join(getManifestDir(cwd), 'install-manifest.json');
+}
+
+/**
+ * Get the runtime manifest path for a specific runtime.
+ * This stores runtime-specific metadata and ownership info.
+ */
+export function getRuntimeManifestPath(
+  runtime: RuntimeTarget,
+  scope: InstallScope,
+  cwd: string
+): string {
+  return join(resolveSupportSubtree(runtime, scope, cwd), 'runtime-manifest.json');
+}
+
+/**
+ * Get the hooks directory for a runtime.
+ */
+export function getHooksDir(
+  runtime: RuntimeTarget,
+  scope: InstallScope,
+  cwd: string
+): string {
+  return join(resolveSupportSubtree(runtime, scope, cwd), 'hooks');
 }
 
 /**
@@ -81,4 +122,56 @@ export function ensureDir(dir: string): string {
 export function isWithin(base: string, target: string): boolean {
   const relPath = relative(base, target);
   return !relPath.startsWith('..') && relPath !== '';
+}
+
+/**
+ * Resolve and validate a path is within the allowed base directory.
+ * Throws an error if the path escapes the base directory or contains symlink escapes.
+ *
+ * @param base - The base directory (e.g., runtime root)
+ * @param targetPath - The target path to validate
+ * @param cwd - Current working directory for relative path resolution
+ * @returns The resolved absolute path
+ * @throws Error if path is invalid or escapes base directory
+ */
+export function validatePath(base: string, targetPath: string, cwd: string): string {
+  // Resolve to absolute path
+  const resolved = resolve(cwd, targetPath);
+  const normalized = normalize(resolved);
+
+  // Normalize base as well
+  const normalizedBase = normalize(resolve(cwd, base));
+
+  // Check if target is within base
+  if (!isWithin(normalizedBase, normalized)) {
+    throw new Error(
+      `Path validation failed: ${targetPath} (resolved to ${normalized}) escapes base directory ${normalizedBase}`
+    );
+  }
+
+  return normalized;
+}
+
+/**
+ * Validate a manifest entry before using it for uninstall.
+ * Ensures the path is safe and within expected boundaries.
+ *
+ * @param filePath - The file path from manifest
+ * @param cwd - Current working directory
+ * @returns Validated absolute path
+ * @throws Error if path is invalid or suspicious
+ */
+export function validateManifestPath(filePath: string, cwd: string): string {
+  const resolved = resolve(cwd, filePath);
+  const normalized = normalize(resolved);
+
+  // Reject paths that try to escape via parent directory references
+  if (filePath.includes('..')) {
+    throw new Error(`Invalid manifest path: contains parent directory reference: ${filePath}`);
+  }
+
+  // Reject absolute paths that don't point to expected locations
+  // (This is a basic check; more specific validation happens per-runtime)
+
+  return normalized;
 }

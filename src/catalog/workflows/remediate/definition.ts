@@ -6,8 +6,8 @@ import type { WorkflowDefinition } from '../../../core/types.js';
  */
 export const remediateDefinition: WorkflowDefinition = {
   id: 'remediate',
-  title: 'Security Remediation',
-  goal: 'Generate safe, minimal security patches and implementation guidance that follows defense in depth and includes test coverage.',
+  title: 'Security Remediation Planning',
+  goal: 'Prepare safe, minimal remediation plans with implementation guidance, test specifications, and rollback procedures. This workflow does NOT mutate code - it creates plans for apply-patches to execute.',
   owaspTopics: [
     {
       name: 'Secure Coding Practices',
@@ -79,12 +79,8 @@ export const remediateDefinition: WorkflowDefinition = {
   ],
   handoffs: [
     {
-      nextWorkflow: 'verify',
-      outputsToPass: ['patch-plan', 'test-specifications'],
-    },
-    {
-      nextWorkflow: 'report',
-      outputsToPass: ['patch-plan', 'implementation-guide'],
+      nextWorkflow: 'apply-patches',
+      outputsToPass: ['patch-plan', 'implementation-guide', 'test-specifications', 'rollback-plan'],
     },
   ],
   steps: [
@@ -261,34 +257,48 @@ For each remediation, document:
       condition: 'Check for findings-report and remediation-priorities',
     },
     {
-      type: 'approval',
-      description: 'Get user approval before applying any code changes',
-      condition: 'Show patches to user and ask for confirmation before writing',
+      type: 'mutation',
+      description: 'This workflow is planning-only - DO NOT write any code changes to the repository',
+      condition: 'Only generate plans and documentation - never modify source files, config files, or test files directly',
     },
     {
-      type: 'mutation',
-      description: 'This workflow can write code - always get explicit approval first',
-      condition: 'Never write code changes without user review and confirmation',
+      type: 'approval',
+      description: 'Remediation plans should be reviewed before apply-patches',
+      condition: 'Inform user that plans are ready for review and will be executed by apply-patches workflow',
     },
     {
       type: 'scope',
-      description: 'Limit remediations to findings provided - don\'t add unrelated changes',
-      condition: 'Only fix what was identified in the audit',
+      description: 'Limit remediation plans to findings provided - don\'t add unrelated changes',
+      condition: 'Only plan fixes for what was identified in the audit',
     },
   ],
   runtimePrompts: {
-    claude: `When generating remediations:
+    claude: `When generating remediation plans:
 
+**IMPORTANT:** This workflow creates PLANS only. It does NOT modify code.
+
+**Planning Process:**
 - Prioritize Critical and High severity findings first
-- Make minimal changes - fix only what's broken
-- Preserve existing code style and conventions
-- Add comments explaining why changes are security-related
-- Generate proper tests for each fix
-- Consider rollback implications
+- Design minimal, safe fixes
+- Create detailed implementation guides
+- Generate test specifications
+- Document rollback procedures
 - Use language/framework best practices
 - Reference OWASP cheat sheets for proven patterns
 
-## Specialist-Guided Remediation
+**DO NOT:**
+- Write to any source files
+- Modify configuration files
+- Create or delete files
+- Run git commands
+
+**DO:**
+- Generate comprehensive patch plans
+- Create detailed implementation instructions
+- Specify test cases for verification
+- Document rollback procedures
+
+## Specialist-Guided Planning
 
 For each finding, delegate to the appropriate OWASP specialist to get remediation guidance:
 
@@ -302,7 +312,7 @@ For each finding, delegate to the appropriate OWASP specialist to get remediatio
 8. **File upload** → \`gss-specialist-file-upload\`
 9. **CSRF** → \`gss-specialist-cross-site-request-forgery-prevention\`
 
-### Framework-Specific Remediation
+### Framework-Specific Planning
 
 When the codebase uses specific frameworks, delegate for idiomatic fixes:
 - **Django** → \`gss-specialist-django-security\`, \`gss-specialist-django-rest-framework\`
@@ -313,26 +323,26 @@ When the codebase uses specific frameworks, delegate for idiomatic fixes:
 - **Java** → \`gss-specialist-java-security\`, \`gss-specialist-injection-prevention-in-java\`
 - **.NET** → \`gss-specialist-dotnet-security\`
 
-### Specialist Remediation Output
+### Output
 
-Each specialist provides:
-- Minimal fix code
-- Test cases for verification
-- Security justification
-- OWASP reference
+Output artifacts to .gss/artifacts/remediate/:
+- patch-plan.json
+- implementation-guide.md
+- test-specs.json
+- rollback-plan.md
 
-**IMPORTANT: Always show patches to the user and get approval before writing files.**
-
-Output artifacts to .gss/artifacts/remediate/ for use by verify and report workflows.`,
-    codex: `Generate security remediations:
+**Next Steps:**
+After completing this workflow, tell the user to review the remediation plan and then run \`/gss-apply-patches\` to apply the approved changes.`,
+    codex: `Generate security remediation PLANS:
 
 1. Review prioritized findings
 2. Design minimal, safe fixes
-3. Generate code patches
-4. Create test specifications
+3. Create implementation guides
+4. Generate test specifications
 5. Document rollback procedures
 
-Focus on secure coding practices and defense in depth.
-Always get user approval before applying changes.`,
+**This workflow does NOT modify code.** It creates detailed plans for the apply-patches workflow to execute.
+
+Focus on secure coding practices and defense in depth.`,
   },
 };

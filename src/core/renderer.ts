@@ -2,7 +2,7 @@
  * Workflow Renderer
  *
  * Converts workflow definitions into runtime-specific file content.
- * Supports Claude commands/agents, Codex skills, and specialists.
+ * Supports Claude commands/agents, Codex skills, specialists, and role agents.
  */
 
 import type {
@@ -14,6 +14,9 @@ import type {
   Guardrail,
   WorkflowStep,
   SpecialistDefinition,
+  WorkflowId,
+  RoleAgentDefinition,
+  AgentAccessLevel,
 } from './types.js';
 
 /**
@@ -26,6 +29,7 @@ export function renderClaudeCommand(workflow: WorkflowDefinition): string {
     renderCommandInputs(workflow),
     renderCommandOutputs(workflow),
     renderCommandDependencies(workflow),
+    renderCommandNextWorkflow(workflow),
     renderCommandGuardrails(workflow),
   ].filter(Boolean);
 
@@ -39,10 +43,12 @@ export function renderClaudeAgent(workflow: WorkflowDefinition): string {
   const sections = [
     renderAgentHeader(workflow),
     renderAgentDescription(workflow),
+    renderDoneMeans(workflow),
     renderAgentOwaspTopics(workflow),
     renderAgentInputs(workflow),
     renderAgentOutputs(workflow),
     renderAgentHandoffs(workflow),
+    renderAgentNextWorkflow(workflow),
     renderAgentSteps(workflow),
     renderAgentGuardrails(workflow),
     renderAgentRuntimePrompts(workflow),
@@ -58,16 +64,28 @@ export function renderCodexSkill(workflow: WorkflowDefinition): string {
   const sections = [
     renderSkillHeader(workflow),
     renderSkillDescription(workflow),
+    renderSkillDoneMeans(workflow),
     renderSkillOwaspTopics(workflow),
     renderSkillInputs(workflow),
     renderSkillOutputs(workflow),
     renderSkillDependencies(workflow),
+    renderSkillNextWorkflow(workflow),
     renderSkillSteps(workflow),
     renderSkillGuardrails(workflow),
     renderSkillRuntimePrompts(workflow),
   ].filter(Boolean);
 
   return sections.join('\n\n');
+}
+
+/**
+ * Render the "Done Means" section for Codex skills.
+ */
+function renderSkillDoneMeans(workflow: WorkflowDefinition): string {
+  return `## Completion Criteria
+
+This skill is **complete** when:${renderDoneMeans(workflow).replace('## "Done" Means\n\nThis workflow is **complete** when:', '').trim()}
+`;
 }
 
 /**
@@ -101,9 +119,10 @@ Run workflows in order for complete security analysis:
 1. \`/gss-map-codebase\` - Analyze codebase structure
 2. \`/gss-threat-model\` - Generate threat models
 3. \`/gss-audit\` - Run security audit
-4. \`/gss-remediate\` - Apply security fixes
-5. \`/gss-verify\` - Verify fixes
-6. \`/gss-report\` - Generate reports
+4. \`/gss-remediate\` - Plan security fixes
+5. \`/gss-apply-patches\` - Apply approved fixes
+6. \`/gss-verify\` - Verify the fixes
+7. \`/gss-report\` - Generate reports
 
 For more information on each workflow, see its command file.
 `;
@@ -200,9 +219,10 @@ For a complete security analysis, run workflows in order:
 1. \`/gss-map-codebase\` - Map your codebase structure
 2. \`/gss-threat-model\` - Identify threats and risks
 3. \`/gss-audit\` - Find security vulnerabilities
-4. \`/gss-remediate\` - Apply security fixes
-5. \`/gss-verify\` - Verify the fixes
-6. \`/gss-report\` - Generate reports
+4. \`/gss-remediate\` - Plan security fixes
+5. \`/gss-apply-patches\` - Apply approved fixes
+6. \`/gss-verify\` - Verify the fixes
+7. \`/gss-report\` - Generate reports
 
 ## Artifacts
 
@@ -300,6 +320,47 @@ function renderCommandGuardrails(workflow: WorkflowDefinition): string {
 ${items}`;
 }
 
+function renderCommandNextWorkflow(workflow: WorkflowDefinition): string {
+  const nextWorkflow = getNextWorkflowInSequence(workflow.id);
+  if (!nextWorkflow) {
+    return `## Next Workflow
+
+This is the final workflow in the security analysis sequence. Run \`/gss-report\` to generate comprehensive reports.`;
+  }
+
+  return `## Next Workflow
+
+After completing this workflow, run:
+
+\`\`\`
+/gss-${nextWorkflow}
+\`\`\`
+
+Use the outputs from this workflow as inputs for the next one.`;
+}
+
+/**
+ * Get the next workflow ID in the canonical sequence.
+ */
+function getNextWorkflowInSequence(currentId: WorkflowId): WorkflowId | null {
+  const sequence: WorkflowId[] = [
+    'map-codebase',
+    'threat-model',
+    'audit',
+    'remediate',
+    'apply-patches',
+    'verify',
+    'report',
+  ];
+
+  const index = sequence.indexOf(currentId);
+  if (index === -1 || index === sequence.length - 1) {
+    return null;
+  }
+
+  return sequence[index + 1];
+}
+
 // =============================================================================
 // Agent Rendering
 // =============================================================================
@@ -387,6 +448,33 @@ function renderAgentHandoffs(workflow: WorkflowDefinition): string {
 ${items}`;
 }
 
+function renderAgentNextWorkflow(workflow: WorkflowDefinition): string {
+  const nextWorkflow = getNextWorkflowInSequence(workflow.id);
+  if (!nextWorkflow) {
+    return `## Next Recommended Workflow
+
+This is the final workflow in the security analysis sequence. All workflows have been completed.
+
+**Completion Guidance:**
+- Direct the user to run \`/gss-report\` if they haven't already
+- The report workflow aggregates all artifacts into comprehensive security reports
+- After reports are generated, the full security analysis sequence is complete`;
+  }
+
+  return `## Next Recommended Workflow
+
+After completing this workflow, the user should run:
+
+\`\`\`
+/gss-${nextWorkflow}
+\`\`\`
+
+**Completion Guidance:**
+- When this workflow completes, explicitly tell the user to run \`/gss-${nextWorkflow}\` next
+- Reference the specific artifacts that should be passed to the next workflow
+- Do not suggest running any other workflows - follow the canonical sequence strictly`;
+}
+
 function renderAgentSteps(workflow: WorkflowDefinition): string {
   if (workflow.steps.length === 0) {
     return '';
@@ -406,6 +494,71 @@ ${s.instructions}`;
   return `## Workflow Steps
 
 ${items}`;
+}
+
+/**
+ * Render the "Done Means" section for workflow agents.
+ */
+function renderDoneMeans(workflow: WorkflowDefinition): string {
+  const doneCriteria: Record<WorkflowId, string> = {
+    'map-codebase': `
+1. All major code components are identified and catalogued
+2. Dependencies (direct and transitive) are listed
+3. Authentication and authorization boundaries are documented
+4. Data flows between components are mapped
+5. External integrations and API endpoints are listed
+6. Artifacts are saved in \`.gss/artifacts/map-codebase/\`
+`,
+    'threat-model': `
+1. All identified threat surfaces have been analyzed
+2. At least one threat model exists per major component
+3. Threats are prioritized by likelihood and impact
+4. Mitigation recommendations are documented
+5. Artifacts are saved in \`.gss/artifacts/threat-model/\`
+`,
+    'audit': `
+1. All findings include: file path, line number, severity, and evidence
+2. Findings are mapped to OWASP Top 10 and relevant cheat sheets
+3. Each finding includes specific remediation guidance
+4. Confidence levels are stated for each finding
+5. Artifacts are saved in \`.gss/artifacts/audit/\`
+`,
+    'remediate': `
+1. All audit findings have a corresponding remediation plan
+2. Plans include specific code changes with file paths
+3. Potential side effects are documented
+4. Verification steps are specified for each remediation
+5. User approval is obtained BEFORE applying any changes
+6. Artifacts are saved in \`.gss/artifacts/remediate/\`
+`,
+    'apply-patches': `
+1. All approved remediations are applied
+2. Changes are tested for regressions
+3. Failed patches are documented with reasons
+4. Artifacts are saved in \`.gss/artifacts/apply-patches/\`
+`,
+    'verify': `
+1. All remediations are verified against original findings
+2. Verification includes test results or manual check results
+3. Any regressions are documented
+4. Confidence levels are stated for each verification
+5. Artifacts are saved in \`.gss/artifacts/verify/\`
+`,
+    'report': `
+1. Executive summary includes key findings and priorities
+2. Technical details reference all previous artifacts
+3. Action items are prioritized with clear ownership
+4. Final report is saved in \`.gss/artifacts/report/\`
+`,
+  };
+
+  return `## "Done" Means
+
+This workflow is **complete** when:${doneCriteria[workflow.id] || `
+1. All specified outputs are generated
+2. Artifacts are saved in the appropriate directory
+3. Success criteria are met
+`}`;
 }
 
 function renderAgentGuardrails(workflow: WorkflowDefinition): string {
@@ -521,6 +674,19 @@ function renderSkillDependencies(workflow: WorkflowDefinition): string {
 ${items}`;
 }
 
+function renderSkillNextWorkflow(workflow: WorkflowDefinition): string {
+  const nextWorkflow = getNextWorkflowInSequence(workflow.id);
+  if (!nextWorkflow) {
+    return `## Next Step
+
+This is the final workflow in the security analysis sequence. Run \`gss-report\` to generate comprehensive reports.`;
+  }
+
+  return `## Next Step
+
+After completing this workflow, run \`gss-${nextWorkflow}\` to continue the security analysis sequence.`;
+}
+
 function renderSkillSteps(workflow: WorkflowDefinition): string {
   if (workflow.steps.length === 0) {
     return '';
@@ -569,25 +735,39 @@ ${workflow.runtimePrompts.codex}`;
 // =============================================================================
 
 function renderWorkflowChain(workflows: WorkflowDefinition[]): string {
-  const chains: string[] = [];
+  const canonicalOrder: WorkflowId[] = [
+    'map-codebase',
+    'threat-model',
+    'audit',
+    'remediate',
+    'apply-patches',
+    'verify',
+    'report',
+  ];
 
-  for (const workflow of workflows) {
-    const deps = workflow.dependencies.map((d) => d.workflowId);
-    const next = workflow.handoffs.map((h) => h.nextWorkflow);
+  const workflowMap = new Map(workflows.map((w) => [w.id, w]));
 
-    const arrows: string[] = [];
-    if (deps.length > 0) {
-      arrows.push(`${deps.join(' + ')} →`);
+  const lines: string[] = [];
+  for (let i = 0; i < canonicalOrder.length; i++) {
+    const id = canonicalOrder[i];
+    const workflow = workflowMap.get(id);
+    if (!workflow) continue;
+
+    const parts: string[] = [];
+
+    // Add previous step arrow
+    if (i > 0) {
+      parts.push('  ↓');
     }
-    arrows.push(`**${workflow.id}**`);
-    if (next.length > 0) {
-      arrows.push(`→ ${next.join(', ')}`);
-    }
 
-    chains.push(arrows.join(' '));
+    // Add current step
+    const arrow = i === 0 ? '▶' : '→';
+    parts.push(`${i + 1}. **${id}** (${workflow.title})`);
+
+    lines.push(parts.join('\n'));
   }
 
-  return chains.map((c) => `- ${c}`).join('\n');
+  return lines.join('\n');
 }
 
 // =============================================================================
@@ -738,4 +918,372 @@ function renderSpecialistClaudePrompt(specialist: SpecialistDefinition): string 
 
 function renderSpecialistCodexPrompt(specialist: SpecialistDefinition): string {
   return `## Specialist Guidance\n\n${specialist.runtimePrompts.codex || 'No specific guidance.'}`;
+}
+
+// =============================================================================
+// Role Agent Rendering
+// =============================================================================
+
+/**
+ * Render a role agent file for Claude.
+ */
+export function renderRoleAgent(agent: {
+  id: string;
+  title: string;
+  description: string;
+}): string {
+  return `# ${agent.title}
+
+**Agent ID:** \`${agent.id}\`
+
+## Description
+
+${agent.description}
+
+## Role and Responsibilities
+
+This is a **role-based agent** within the get-shit-secured framework. You have specific, well-defined responsibilities:
+
+${getRoleSpecificInstructions(agent.id)}
+
+## Access Level
+
+${getAccessLevelText(agent.id)}
+
+## Read Permissions
+
+You may read:
+${getReadPermissions(agent.id)}
+
+## Write Permissions
+
+You may write to:
+${getWritePermissions(agent.id)}
+
+## Required Output Format
+
+All outputs must follow the structured format specified in the execution procedure below.
+
+## Delegation Rules
+
+${getDelegationRules(agent.id)}
+
+## Escalation Rules
+
+${getEscalationRules(agent.id)}
+
+## Evidence Quality Requirements
+
+- All findings must include specific file paths and line numbers
+- All recommendations must be grounded in OWASP standards
+- All remediations must include verification steps
+- Uncertainty must be explicitly stated with confidence levels
+
+## "Done" Means
+
+This workflow is **complete** when:
+${getDoneCriteria(agent.id)}
+`;
+
+}
+
+/**
+ * Get role-specific instructions for each agent.
+ */
+function getRoleSpecificInstructions(agentId: string): string {
+  const instructions: Record<string, string> = {
+    'gss-mapper': `
+- Analyze codebase structure and identify key components
+- Map dependencies and their security relevance
+- Identify authentication/authorization boundaries
+- Document data flows between components
+- Identify external integrations and API endpoints
+- Produce a structured codebase inventory in \`.gss/artifacts/map-codebase/\`
+`,
+    'gss-threat-modeler': `
+- Use the codebase map to identify threat surfaces
+- Identify abuse cases and attack vectors
+- Assess potential impact of each threat
+- Prioritize threats by likelihood and impact
+- Document threat models in \`.gss/artifacts/threat-model/\`
+`,
+    'gss-auditor': `
+- Scan code for security vulnerabilities using OWASP checklists
+- Assess severity of findings with evidence
+- Map findings to OWASP Top 10 and ASVS
+- Require specific file paths and line numbers for all findings
+- Document findings in \`.gss/artifacts/audit/\`
+`,
+    'gss-remediator': `
+- Plan minimal safe changes to address findings
+- Prefer configuration changes over code changes when possible
+- Preserve user changes and custom logic
+- Document all planned changes with rationale
+- Output remediation plans to \`.gss/artifacts/remediate/\`
+`,
+    'gss-verifier': `
+- Verify that remediations address the reported findings
+- Run or specify tests to confirm fixes
+- Check for regressions or new vulnerabilities
+- Document verification results in \`.gss/artifacts/verify/\`
+`,
+    'gss-reporter': `
+- Aggregate all artifacts into comprehensive reports
+- Include executive summary and technical details
+- Provide prioritized action items
+- Generate reports in \`.gss/artifacts/report/\`
+`,
+  };
+
+  return instructions[agentId] || '- Execute specialized security tasks\n- Document all findings and outputs\n';
+}
+
+/**
+ * Get access level text for an agent.
+ */
+function getAccessLevelText(agentId: string): string {
+  const levels: Record<string, { level: AgentAccessLevel; description: string }> = {
+    'gss-mapper': { level: 'read-only', description: 'Read-only analysis. You do not modify code.' },
+    'gss-threat-modeler': { level: 'read-only', description: 'Read-only analysis. You do not modify code.' },
+    'gss-auditor': { level: 'read-only', description: 'Read-only analysis. You do not modify code.' },
+    'gss-remediator': { level: 'write-capable', description: 'Write-capable. You plan but do NOT apply changes without user approval.' },
+    'gss-verifier': { level: 'verification-only', description: 'Verification-focused. You run tests and verify fixes.' },
+    'gss-reporter': { level: 'read-only', description: 'Read-only. You aggregate and format existing artifacts.' },
+  };
+
+  const info = levels[agentId];
+  return info ? `**${info.level}** - ${info.description}` : '**write-capable** - Full agent permissions';
+}
+
+/**
+ * Get read permissions for an agent.
+ */
+function getReadPermissions(agentId: string): string {
+  const commonPermissions = [
+    '- Project source code',
+    '- Configuration files',
+    '- \`.gss/artifacts/\` directory',
+  ];
+
+  const specificPermissions: Record<string, string[]> = {
+    'gss-auditor': [
+      ...commonPermissions,
+      '- Dependency files (package.json, requirements.txt, etc.)',
+      '- Build configurations',
+    ],
+    'gss-verifier': [
+      ...commonPermissions,
+      '- Test files',
+      '- CI/CD configuration',
+    ],
+  };
+
+  return (specificPermissions[agentId] || commonPermissions).join('\n');
+}
+
+/**
+ * Get write permissions for an agent.
+ */
+function getWritePermissions(agentId: string): string {
+  const writePermissions: Record<string, string[]> = {
+    'gss-mapper': [
+      '- \`.gss/artifacts/map-codebase/\` - Create and update mapping artifacts',
+    ],
+    'gss-threat-modeler': [
+      '- \`.gss/artifacts/threat-model/\` - Create and update threat model artifacts',
+    ],
+    'gss-auditor': [
+      '- \`.gss/artifacts/audit/\` - Create and update audit findings',
+    ],
+    'gss-remediator': [
+      '- \`.gss/artifacts/remediate/\` - Create remediation plans',
+      '- Source code (ONLY with explicit user approval)',
+    ],
+    'gss-verifier': [
+      '- \`.gss/artifacts/verify/\` - Create verification reports',
+      '- Test files (to add verification tests)',
+    ],
+    'gss-reporter': [
+      '- \`.gss/artifacts/report/\` - Create final reports',
+    ],
+  };
+
+  return (writePermissions[agentId] || [
+    '- \`.gss/artifacts/\` - Create artifacts in your domain',
+  ]).join('\n');
+}
+
+/**
+ * Get delegation rules for an agent.
+ */
+function getDelegationRules(agentId: string): string {
+  const rules: Record<string, string> = {
+    'gss-mapper': '- No delegation - you are the entry point agent',
+    'gss-threat-modeler': '- Consult gss-auditor if code patterns suggest specific vulnerabilities',
+    'gss-auditor': '- Delegate to OWASP specialists for domain-specific issues',
+    'gss-remediator': '- Consult gss-verifier to plan verification steps',
+    'gss-verifier': '- No delegation - you are the final check',
+    'gss-reporter': '- No delegation - you aggregate completed work',
+  };
+
+  return rules[agentId] || '- May delegate to specialists as needed';
+}
+
+/**
+ * Get escalation rules for an agent.
+ */
+function getEscalationRules(agentId: string): string {
+  const rules: Record<string, string> = {
+    'gss-mapper': '- Escalate if codebase is too large to analyze in one session',
+    'gss-threat-modeler': '- Escalate if critical threats are identified',
+    'gss-auditor': '- Escalate immediately if critical vulnerabilities are found',
+    'gss-remediator': '- Escalate if remediation requires architectural changes',
+    'gss-verifier': '- Escalate if verification fails or reveals new issues',
+    'gss-reporter': '- Escalate if critical findings remain unaddressed',
+  };
+
+  return rules[agentId] || '- Escalate if uncertain or blocked';
+}
+
+/**
+ * Get completion criteria for an agent.
+ */
+function getDoneCriteria(agentId: string): string {
+  const criteria: Record<string, string> = {
+    'gss-mapper': `
+1. All major code components are identified
+2. Dependencies are catalogued
+3. Auth/authz boundaries are documented
+4. Data flows are mapped
+5. External integrations are listed
+6. Artifacts exist in \`.gss/artifacts/map-codebase/\`
+`,
+    'gss-threat-modeler': `
+1. All threat surfaces are identified
+2. At least one threat model is documented per component
+3. Threats are prioritized
+4. Mitigation recommendations are included
+5. Artifacts exist in \`.gss/artifacts/threat-model/\`
+`,
+    'gss-auditor': `
+1. All findings include: file path, line number, severity, evidence
+2. Findings are mapped to OWASP categories
+3. Remediation recommendations are specific
+4. Confidence levels are stated for each finding
+5. Artifacts exist in \`.gss/artifacts/audit/\`
+`,
+    'gss-remediator': `
+1. All findings have a remediation plan
+2. Plans include specific changes with file paths
+3. Potential side effects are documented
+4. Verification steps are specified
+5. User approval is obtained BEFORE applying changes
+6. Artifacts exist in \`.gss/artifacts/remediate/\`
+`,
+    'gss-verifier': `
+1. All remediations are verified
+2. Verification includes test results or manual checks
+3. Regressions are documented if found
+4. Confidence level is stated for each verification
+5. Artifacts exist in \`.gss/artifacts/verify/\`
+`,
+    'gss-reporter': `
+1. Executive summary includes key findings
+2. Technical details are complete
+3. Action items are prioritized
+4. All previous artifacts are referenced
+5. Final report exists in \`.gss/artifacts/report/\`
+`,
+  };
+
+  return criteria[agentId] || `
+1. Your specific outputs are complete
+2. Artifacts are saved in the appropriate directory
+3. Success criteria are met
+`;
+}
+
+/**
+ * Render a Codex role skill file.
+ */
+export function renderCodexRoleSkill(agent: {
+  id: string;
+  title: string;
+  description: string;
+}): string {
+  return `# ${agent.title}
+
+**Skill ID:** \`${agent.id}\`
+
+## Description
+
+${agent.description}
+
+## Role and Responsibilities
+
+This is a **role-based skill** within the get-shit-secured framework.
+
+${getCodexRoleInstructions(agent.id)}
+
+## Access Level
+
+${getCodexAccessLevelText(agent.id)}
+
+## Output Format
+
+All outputs must follow the structured format specified in the execution procedure.
+
+## "Done" Means
+
+This skill is **complete** when:
+${getCodexDoneCriteria(agent.id)}
+`;
+}
+
+/**
+ * Get Codex-specific role instructions.
+ */
+function getCodexRoleInstructions(agentId: string): string {
+  const instructions: Record<string, string> = {
+    'gss-mapper': '- Analyze codebase structure\n- Map dependencies and boundaries\n- Document data flows\n- Output to `.gss/artifacts/map-codebase/`',
+    'gss-threat-modeler': '- Identify threat surfaces\n- Assess threat impact\n- Prioritize threats\n- Output to `.gss/artifacts/threat-model/`',
+    'gss-auditor': '- Scan for vulnerabilities\n- Assess severity with evidence\n- Map to OWASP standards\n- Output to `.gss/artifacts/audit/`',
+    'gss-remediator': '- Plan minimal safe changes\n- Preserve user changes\n- Document with rationale\n- Output to `.gss/artifacts/remediate/`',
+    'gss-verifier': '- Verify remediations\n- Run tests\n- Check for regressions\n- Output to `.gss/artifacts/verify/`',
+    'gss-reporter': '- Aggregate artifacts\n- Create summaries\n- Provide action items\n- Output to `.gss/artifacts/report/`',
+  };
+
+  return instructions[agentId] || '- Execute specialized security tasks\n- Document all outputs\n';
+}
+
+/**
+ * Get Codex access level text.
+ */
+function getCodexAccessLevelText(agentId: string): string {
+  const levels: Record<string, string> = {
+    'gss-mapper': 'Read-only analysis. Do not modify code.',
+    'gss-threat-modeler': 'Read-only analysis. Do not modify code.',
+    'gss-auditor': 'Read-only analysis. Do not modify code.',
+    'gss-remediator': 'Write-capable. Plan changes but do NOT apply without user approval.',
+    'gss-verifier': 'Verification-focused. Run tests and verify fixes.',
+    'gss-reporter': 'Read-only. Aggregate and format existing artifacts.',
+  };
+
+  return levels[agentId] || 'Full permissions with user approval required for writes.';
+}
+
+/**
+ * Get Codex completion criteria.
+ */
+function getCodexDoneCriteria(agentId: string): string {
+  const criteria: Record<string, string> = {
+    'gss-mapper': '1. All major components are identified\n2. Dependencies are catalogued\n3. Artifacts exist in `.gss/artifacts/map-codebase/`',
+    'gss-threat-modeler': '1. Threat surfaces are identified\n2. Threats are prioritized\n3. Artifacts exist in `.gss/artifacts/threat-model/`',
+    'gss-auditor': '1. All findings include file path, line, severity, evidence\n2. Mapped to OWASP categories\n3. Artifacts exist in `.gss/artifacts/audit/`',
+    'gss-remediator': '1. All findings have remediation plans\n2. User approval obtained before changes\n3. Artifacts exist in `.gss/artifacts/remediate/`',
+    'gss-verifier': '1. All remediations are verified\n2. Test results documented\n3. Artifacts exist in `.gss/artifacts/verify/`',
+    'gss-reporter': '1. Executive summary included\n2. Action items prioritized\n3. Final report in `.gss/artifacts/report/`',
+  };
+
+  return criteria[agentId] || '1. Outputs are complete\n2. Artifacts saved\n3. Success criteria met';
 }

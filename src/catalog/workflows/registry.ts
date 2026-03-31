@@ -10,6 +10,7 @@ import { mapCodebaseDefinition } from './map-codebase/definition.js';
 import { threatModelDefinition } from './threat-model/definition.js';
 import { auditDefinition } from './audit/definition.js';
 import { remediateDefinition } from './remediate/definition.js';
+import { applyPatchesDefinition } from './apply-patches/definition.js';
 import { verifyDefinition } from './verify/definition.js';
 import { reportDefinition } from './report/definition.js';
 
@@ -21,6 +22,7 @@ const WORKFLOW_REGISTRY: Record<WorkflowId, WorkflowDefinition> = {
   'threat-model': threatModelDefinition,
   'audit': auditDefinition,
   'remediate': remediateDefinition,
+  'apply-patches': applyPatchesDefinition,
   'verify': verifyDefinition,
   'report': reportDefinition,
 };
@@ -33,6 +35,7 @@ export const WORKFLOW_ORDER: WorkflowId[] = [
   'threat-model',
   'audit',
   'remediate',
+  'apply-patches',
   'verify',
   'report',
 ];

@@ -19,9 +19,20 @@ export type WorkflowId =
   | 'map-codebase'
   | 'threat-model'
   | 'audit'
-  | 'verify'
   | 'remediate'
+  | 'apply-patches'
+  | 'verify'
   | 'report';
+
+/**
+ * File category for distinguishing entrypoint from support files.
+ */
+export type FileCategory = 'entrypoint' | 'support';
+
+/**
+ * Overwrite policy for file writes.
+ */
+export type OverwritePolicy = 'create-only' | 'replace-managed' | 'merge-json';
 
 /**
  * A single file to be created by the installer.
@@ -34,6 +45,113 @@ export interface InstallFile {
   content: string;
   /** Whether to merge if file exists (for config files) */
   merge?: boolean;
+  /** File category - entrypoint or support */
+  category?: FileCategory;
+  /** Overwrite policy for this file */
+  overwritePolicy?: OverwritePolicy;
+}
+
+/**
+ * Runtime file with explicit category and overwrite policy.
+ * Enhanced version of InstallFile for the v2 adapter contract.
+ */
+export interface RuntimeFile {
+  /** Relative path from the runtime root or support subtree */
+  relativePath: string;
+  /** File content to write */
+  content: string;
+  /** File category - entrypoint or support */
+  category: FileCategory;
+  /** Overwrite policy */
+  overwritePolicy: OverwritePolicy;
+  /** Support subtree path (if category is 'support') */
+  supportSubtree?: string;
+}
+
+/**
+ * Merge strategy for JSON patches.
+ */
+export type JsonMergeStrategy = 'shallow' | 'deep';
+
+/**
+ * Managed JSON config patch.
+ * Used to merge GSS-owned config sections into existing JSON files.
+ */
+export interface ManagedJsonPatch {
+  /** Relative path from runtime root */
+  path: string;
+  /** Owner identifier (e.g., "gss") */
+  owner: string;
+  /** Content to merge */
+  content: Record<string, unknown>;
+  /** Merge strategy */
+  mergeStrategy: JsonMergeStrategy;
+  /** Key path where content should be merged (e.g., "gss.hooks") */
+  keyPath?: string;
+}
+
+/**
+ * Text format for managed blocks.
+ */
+export type TextFormat = 'toml' | 'markdown' | 'jsonc';
+
+/**
+ * Managed text block with ownership markers.
+ * Used to insert GSS-owned sections into text config files.
+ */
+export interface ManagedTextBlock {
+  /** Relative path from runtime root */
+  path: string;
+  /** Owner identifier (e.g., "gss") */
+  owner: string;
+  /** Format of the text file */
+  format: TextFormat;
+  /** Start marker (e.g., "# GSS: BEGIN") */
+  startMarker: string;
+  /** End marker (e.g., "# GSS: END") */
+  endMarker: string;
+  /** Content to insert between markers */
+  content: string;
+}
+
+/**
+ * Hook event types.
+ */
+export type HookEvent = 'SessionStart' | 'SessionEnd' | 'PreToolUse' | 'PostToolUse' | 'PreCommand' | 'PostCommand';
+
+/**
+ * Hook definition for runtime integration.
+ */
+export interface RuntimeHook {
+  /** Unique hook identifier */
+  id: string;
+  /** Event that triggers this hook */
+  event: HookEvent;
+  /** Optional matcher for conditional execution (regex pattern) */
+  matcher?: string;
+  /** Command or script to execute */
+  command: string;
+  /** Whether this hook blocks execution until complete */
+  blocking: boolean;
+  /** Hook description */
+  description?: string;
+}
+
+/**
+ * Runtime adapter capabilities.
+ * Indicates what features the runtime adapter supports.
+ */
+export interface RuntimeAdapterCapabilities {
+  /** Supports hook registration */
+  supportsHooks: boolean;
+  /** Supports subagent generation */
+  supportsSubagents: boolean;
+  /** Supports managed config merging */
+  supportsManagedConfig: boolean;
+  /** Supports role-based agents */
+  supportsRoleAgents: boolean;
+  /** Has runtime-specific config format */
+  hasConfigFormat: boolean;
 }
 
 /**
@@ -51,26 +169,99 @@ export interface RuntimeAdapter {
    */
   resolveRootPath(scope: InstallScope, cwd: string): string;
   /**
+   * Resolve the support subtree path for runtime-specific assets.
+   * @param scope - local or global installation
+   * @param cwd - Current working directory for local installs
+   */
+  resolveSupportSubtree(scope: InstallScope, cwd: string): string;
+  /**
+   * Get runtime adapter capabilities.
+   */
+  getCapabilities(): RuntimeAdapterCapabilities;
+  /**
    * List all files to create for a given workflow.
    * @param workflowId - The workflow to install
    * @returns Array of files to create, or empty if workflow not supported
    */
-  getFilesForWorkflow(workflowId: WorkflowId): InstallFile[];
+  getFilesForWorkflow(workflowId: WorkflowId): RuntimeFile[];
   /**
    * List all placeholder files to create for the runtime itself.
    * These are baseline commands/agents, not workflow-specific.
    */
-  getPlaceholderFiles(): InstallFile[];
+  getPlaceholderFiles(): RuntimeFile[];
+  /**
+   * Get support files for the runtime (hooks, helpers, etc.).
+   */
+  getSupportFiles(): RuntimeFile[];
+  /**
+   * Get managed JSON config patches.
+   */
+  getManagedJsonPatches(): ManagedJsonPatch[];
+  /**
+   * Get managed text blocks.
+   */
+  getManagedTextBlocks(): ManagedTextBlock[];
+  /**
+   * Get hook definitions.
+   */
+  getHooks(): RuntimeHook[];
   /**
    * Optional: Runtime-specific settings to merge.
    * Returns path to settings file and partial content to merge.
+   * @deprecated Use getManagedJsonPatches instead.
    */
   getSettingsMerge?: () => { path: string; content: Record<string, unknown> } | null;
 }
 
 /**
+ * Install manifest record version 2.
+ * Written to `.gss/install-manifest.json` to support uninstall/reinstall.
+ */
+export interface InstallManifestV2 {
+  /** Manifest format version */
+  manifestVersion: 2;
+  /** Package version that created this install */
+  packageVersion: string;
+  /** Timestamp of installation (ISO 8601) */
+  installedAt: string;
+  /** Timestamp of last update (ISO 8601) */
+  updatedAt: string;
+  /** Installation scope */
+  scope: InstallScope;
+  /** Runtimes that were installed */
+  runtimes: RuntimeTarget[];
+  /** Workflow IDs that were installed */
+  workflowIds: WorkflowId[];
+  /** Absolute path to the install root for each runtime */
+  roots: Partial<Record<RuntimeTarget, string>>;
+  /** All files that were created, keyed by runtime */
+  files: Partial<Record<RuntimeTarget, string[]>>;
+  /** Managed config paths by runtime */
+  managedConfigs: Partial<Record<RuntimeTarget, ManagedConfigRecord[]>>;
+  /** Registered hooks by runtime */
+  hooks: Partial<Record<RuntimeTarget, string[]>>;
+  /** Runtime-specific manifest paths */
+  runtimeManifests: Partial<Record<RuntimeTarget, string>>;
+}
+
+/**
+ * Managed config record for manifest tracking.
+ */
+export interface ManagedConfigRecord {
+  /** Path to the config file */
+  path: string;
+  /** Owner identifier */
+  owner: string;
+  /** Type of managed config */
+  type: 'json' | 'text-block';
+  /** Key path for JSON configs */
+  keyPath?: string;
+}
+
+/**
  * Install manifest record.
  * Written to `.gss/install-manifest.json` to support uninstall/reinstall.
+ * @deprecated Use InstallManifestV2 for new installs.
  */
 export interface InstallManifest {
   /** Version of gss that created this install */
@@ -114,7 +305,7 @@ export interface CliArgs {
  */
 export interface InstallResult {
   success: boolean;
-  manifest: InstallManifest | null;
+  manifest: InstallManifest | InstallManifestV2 | null;
   filesCreated: number;
   errors: string[];
 }
@@ -429,4 +620,51 @@ export interface WorkflowDefinition {
   guardrails: Guardrail[];
   /** Runtime-specific prompt customizations */
   runtimePrompts: RuntimePrompts;
+}
+
+/**
+ * Role agent identifiers for GSS's fixed role-agent set.
+ */
+export type RoleAgentId =
+  | 'gss-mapper'
+  | 'gss-threat-modeler'
+  | 'gss-auditor'
+  | 'gss-remediator'
+  | 'gss-verifier'
+  | 'gss-reporter';
+
+/**
+ * Access level for role agents.
+ */
+export type AgentAccessLevel = 'read-only' | 'write-capable' | 'verification-only';
+
+/**
+ * Role agent definition.
+ * Represents a fixed specialist agent within the GSS framework.
+ */
+export interface RoleAgentDefinition {
+  /** Unique role agent identifier */
+  id: RoleAgentId;
+  /** Human-readable title */
+  title: string;
+  /** Description of the agent's purpose */
+  description: string;
+  /** Access level for this agent */
+  accessLevel: AgentAccessLevel;
+  /** What the agent may read (file patterns, scopes) */
+  readPermissions: string[];
+  /** What the agent may write (file patterns, scopes) */
+  writePermissions: string[];
+  /** Required artifact format for outputs */
+  requiredOutputFormat: string;
+  /** When the agent must delegate to other agents */
+  delegationRules: string[];
+  /** When the agent must stop and escalate */
+  escalationRules: string[];
+  /** Evidence quality requirements */
+  evidenceRequirements: string[];
+  /** Tests or verification that must be included */
+  verificationRequirements: string[];
+  /** Workflow this agent is primarily associated with */
+  primaryWorkflow: WorkflowId;
 }

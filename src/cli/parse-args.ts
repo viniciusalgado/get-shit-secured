@@ -98,7 +98,7 @@ OPTIONS:
   --local, -l       Install to project directory (default)
   --global, -g      Install to user home directory
   --dry-run, -d     Show what would be done without writing files
-  --uninstall, -u   Uninstall mode (reserved for future use)
+  --uninstall, -u   Uninstall previously installed GSS files
   --help, -h        Show this help message
   --version, -v     Show version
 
@@ -107,6 +107,7 @@ EXAMPLES:
   npx get-shit-secured --codex --global
   npx get-shit-secured --claude --codex --local
   npx get-shit-secured --all --dry-run
+  npx get-shit-secured --uninstall
 
 SCOPE:
   Local installs place files in the current project's runtime directory.
@@ -116,6 +117,10 @@ SCOPE:
   Claude (global):  ~/.claude/
   Codex (local):    ./.codex/
   Codex (global):   ~/.codex/
+
+UNINSTALL:
+  Remove all GSS-installed files. Run from the project directory where GSS was installed.
+  Runtime is inferred from the install manifest if not specified.
 
 See https://github.com/viniciusalgado/get-shit-secured for more information.`;
 }
@@ -127,8 +132,8 @@ See https://github.com/viniciusalgado/get-shit-secured for more information.`;
 export function validateArgs(args: CliArgs): string[] {
   const errors: string[] = [];
 
-  // Must specify at least one runtime unless showing help/version
-  if (args.runtimes.length === 0 && !args.showHelp && !args.showVersion) {
+  // Must specify at least one runtime unless showing help/version or uninstalling
+  if (args.runtimes.length === 0 && !args.showHelp && !args.showVersion && !args.uninstall) {
     errors.push('No runtime specified. Use --claude, --codex, or --all.');
   }
 
@@ -138,10 +143,8 @@ export function validateArgs(args: CliArgs): string[] {
     errors.push('Invalid scope. Must be --local or --global.');
   }
 
-  // Uninstall is reserved for future
-  if (args.uninstall) {
-    errors.push('--uninstall is not yet implemented.');
-  }
+  // For uninstall, we'll infer runtime from manifest if not specified
+  // This allows `gss --uninstall` to work without specifying --claude/--codex
 
   return errors;
 }

@@ -297,6 +297,82 @@ export const WORKFLOW_SPECIALIST_MAPPING: Record<WorkflowId, WorkflowSpecialistB
     ],
   },
 
+  'apply-patches': {
+    workflow: 'apply-patches',
+    primarySpecialists: [
+      // Use same specialists as remediate for consistency
+      'secure-code-review',
+      'input-validation',
+      'sql-injection-prevention',
+      'query-parameterization',
+      'os-command-injection-defense',
+      'nosql-security',
+      'ldap-injection-prevention',
+      'cross-site-scripting-prevention',
+      'dom-based-xss-prevention',
+      'dom-clobbering-prevention',
+      'access-control',
+      'authentication',
+      'authorization',
+      'session-management',
+      'password-storage',
+      'multifactor-authentication',
+      'secrets-management',
+      'cryptographic-storage',
+      'key-management',
+      'file-upload',
+      'deserialization',
+      'server-side-request-forgery-prevention',
+      'xml-external-entity-prevention',
+      'cross-site-request-forgery-prevention',
+      'content-security-policy',
+      'http-headers',
+      'error-handling',
+      'logging',
+    ],
+    optionalSpecialists: [],
+    stackConditionedSpecialists: [
+      // Framework specialists for idiomatic application
+      {
+        stack: 'django',
+        specialists: ['django-security', 'django-rest-framework'],
+      },
+      {
+        stack: 'laravel',
+        specialists: ['laravel'],
+      },
+      {
+        stack: ['nodejs', 'javascript'],
+        specialists: ['nodejs-security', 'nodejs-docker', 'npm-security'],
+      },
+      {
+        stack: ['ruby', 'rails'],
+        specialists: ['ruby-on-rails'],
+      },
+      {
+        stack: 'symfony',
+        specialists: ['symfony'],
+      },
+      {
+        stack: 'java',
+        specialists: [
+          'java-security',
+          'injection-prevention-in-java',
+          'json-web-token-for-java',
+          'jaas',
+        ],
+      },
+      {
+        stack: ['csharp', 'dotnet'],
+        specialists: ['dotnet-security'],
+      },
+      {
+        stack: 'php',
+        specialists: ['php-configuration'],
+      },
+    ],
+  },
+
   'verify': {
     workflow: 'verify',
     primarySpecialists: [
@@ -438,6 +514,7 @@ export function getDefaultDelegationBehavior(workflowId: WorkflowId): 'always' |
   switch (workflowId) {
     case 'audit':
     case 'remediate':
+    case 'apply-patches':
       return 'on-detection';
     case 'verify':
       return 'always';

@@ -58,6 +58,24 @@ export const reportDefinition: WorkflowDefinition = {
       description: 'From remediate workflow',
     },
     {
+      name: 'application-report',
+      type: 'json',
+      required: false,
+      description: 'From apply-patches workflow',
+    },
+    {
+      name: 'change-summary',
+      type: 'markdown',
+      required: false,
+      description: 'From apply-patches workflow',
+    },
+    {
+      name: 'deviations-log',
+      type: 'markdown',
+      required: false,
+      description: 'From apply-patches workflow',
+    },
+    {
       name: 'verification-report',
       type: 'json',
       required: false,
@@ -133,6 +151,11 @@ From remediate:
 - Implementation guide
 - Test specifications
 - Rollback plan
+
+From apply-patches:
+- Application report
+- Change summary
+- Deviations log
 
 From verify:
 - Verification report

@@ -1,10 +1,10 @@
 # Report
 
-**Placeholder workflow** - Full implementation coming soon.
+**Final workflow** - Aggregates all workflow artifacts into comprehensive security reports for stakeholders, auditors, and developers.
 
 ## Description
 
-Generates comprehensive security posture reports suitable for stakeholders, auditors, and developers.
+This is the final workflow in the security analysis pipeline. It gathers artifacts from all previous workflows (map-codebase, threat-model, audit, remediate, apply-patches, and verify) to generate comprehensive security reports.
 
 ## Activities
 
@@ -13,15 +13,36 @@ Generates comprehensive security posture reports suitable for stakeholders, audi
 - Track remediation progress
 - Generate compliance mappings
 - Create executive summary
-- Produce technical appendix
+- Produce technical findings report
+- Document residual risks
+
+## Prerequisites
+
+Best results when all workflows are completed:
+- `map-codebase` - provides codebase inventory
+- `threat-model` - provides threat register and risk assessment
+- `audit` - provides findings report
+- `remediate` - provides patch plan
+- `apply-patches` - provides application report and change summary
+- `verify` - provides verification report
 
 ## Output
 
-- Executive summary
-- Detailed findings report
-- Compliance matrix
-- Remediation roadmap
-- Trend analysis (if historical data)
+- `executive-summary.md` - High-level security posture summary for stakeholders
+- `technical-findings.md` - Detailed findings with code references and evidence
+- `owasp-compliance.md` - OWASP Top 10 and ASVS compliance matrix
+- `remediation-roadmap.md` - Prioritized remediation plan with timelines
+
+## Sequence Complete
+
+After running this workflow, the full security analysis sequence is complete:
+1. map-codebase
+2. threat-model
+3. audit
+4. remediate
+5. apply-patches
+6. verify
+7. report (you are here)
 
 ## References
 

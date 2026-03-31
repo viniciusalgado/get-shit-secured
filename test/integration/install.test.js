@@ -131,10 +131,14 @@ describe('install', () => {
 
       const manifest = await readManifest(tempDir);
       assert.ok(manifest);
-      assert.equal(manifest.version, '0.1.0');
+      // Support both v1 (version) and v2 (packageVersion) manifests
+      const version = manifest.manifestVersion === 2 ? manifest.packageVersion : manifest.version;
+      assert.equal(version, '0.1.0');
       assert.equal(manifest.scope, 'local');
       assert.ok(Array.isArray(manifest.runtimes));
-      assert.ok(Array.isArray(manifest.workflows));
+      // Support both v1 (workflows) and v2 (workflowIds) manifests
+      const workflows = manifest.manifestVersion === 2 ? manifest.workflowIds : manifest.workflows;
+      assert.ok(Array.isArray(workflows));
       assert.ok(manifest.files);
       assert.ok(manifest.roots);
     } finally {
@@ -443,6 +447,56 @@ describe('install', () => {
     } finally {
       await cleanupTempDir(tempDir);
     }
+  });
+
+  describe('role agents', () => {
+    it('should install role agent files for Claude', async () => {
+      const tempDir = await createTempDir();
+      try {
+        const adapters = [new ClaudeAdapter()];
+        await install(adapters, 'local', tempDir, false);
+
+        const roleAgents = ['gss-mapper', 'gss-threat-modeler', 'gss-auditor', 'gss-remediator', 'gss-verifier', 'gss-reporter'];
+        const agentsDir = join(tempDir, '.claude/agents');
+
+        for (const agentId of roleAgents) {
+          const agentFile = join(agentsDir, `${agentId}.md`);
+          assert.ok(existsSync(agentFile), `Role agent ${agentId} should exist`);
+
+          // Verify content has key elements
+          const agentContent = await readFile(agentFile, 'utf-8');
+          assert.ok(agentContent.includes('# '), 'Should have title heading');
+          assert.ok(agentContent.includes('## Role and Responsibilities'), 'Should have responsibilities section');
+          assert.ok(agentContent.includes('## Access Level'), 'Should have access level section');
+        }
+      } finally {
+        await cleanupTempDir(tempDir);
+      }
+    });
+
+    it('should install role skill files for Codex', async () => {
+      const tempDir = await createTempDir();
+      try {
+        const adapters = [new CodexAdapter()];
+        await install(adapters, 'local', tempDir, false);
+
+        const roleSkills = ['gss-mapper', 'gss-threat-modeler', 'gss-auditor', 'gss-remediator', 'gss-verifier', 'gss-reporter'];
+        const skillsDir = join(tempDir, '.codex/skills');
+
+        for (const skillId of roleSkills) {
+          const skillFile = join(skillsDir, skillId, 'SKILL.md');
+          assert.ok(existsSync(skillFile), `Role skill ${skillId} should exist`);
+
+          // Verify content has key elements
+          const skillContent = await readFile(skillFile, 'utf-8');
+          assert.ok(skillContent.includes('# '), 'Should have title heading');
+          assert.ok(skillContent.includes('## Role and Responsibilities'), 'Should have responsibilities section');
+          assert.ok(skillContent.includes('## "Done" Means'), 'Should have completion criteria');
+        }
+      } finally {
+        await cleanupTempDir(tempDir);
+      }
+    });
   });
 });
 
