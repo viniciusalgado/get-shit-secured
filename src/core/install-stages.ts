@@ -5,7 +5,7 @@
  *   Stage 0: Target detection
  *   Stage 1: Packaged corpus resolution
  *   Stage 2: Runtime artifact install
- *   Stage 3: MCP registration (stub — no-op in Phase 3)
+ *   Stage 3: MCP registration (implemented in Phase 5)
  *   Stage 4: Manifest and verification
  */
 

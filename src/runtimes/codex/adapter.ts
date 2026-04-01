@@ -135,6 +135,25 @@ export class CodexAdapter implements RuntimeAdapter {
   }
 
   /**
+   * Get MCP server registration for Codex settings.
+   *
+   * @param serverPath - Absolute path to the compiled MCP server entrypoint
+   * @param corpusPath - Absolute path to the corpus snapshot
+   */
+  getMcpRegistration(serverPath: string, corpusPath: string): ManagedJsonPatch {
+    return {
+      path: 'settings.json',
+      owner: 'gss',
+      content: {
+        command: 'node',
+        args: [serverPath, '--corpus-path', corpusPath],
+      },
+      mergeStrategy: 'deep',
+      keyPath: 'mcpServers.gss-security-docs',
+    };
+  }
+
+  /**
    * Get managed text blocks.
    */
   getManagedTextBlocks(): ManagedTextBlock[] {

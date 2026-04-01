@@ -1,6 +1,7 @@
 import { existsSync, lstatSync, readdirSync } from 'node:fs';
-import { rm, unlink, readFile, writeFile, mkdir } from 'node:fs/promises';
+import { rm, unlink, readFile, writeFile, mkdir, copyFile } from 'node:fs/promises';
 import { join, dirname, resolve, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type {
   FileWriteResult,
   InstallFile,
@@ -104,7 +105,70 @@ export async function install(
     { dryRun, legacySpecialists, specialists }
   );
 
-  // Stage 3: MCP registration (stub — no-op in Phase 3)
+  // Stage 3: MCP registration
+  const mcpRegistrations: Partial<Record<RuntimeTarget, string>> = {};
+  if (!dryRun && corpus) {
+    for (const adapter of adapters) {
+      const adapterWithMcp = adapter as unknown as {
+        getMcpRegistration?: (serverPath: string, corpusPath: string) => ManagedJsonPatch;
+      };
+      if (typeof adapterWithMcp.getMcpRegistration === 'function') {
+        const runtime = adapter.runtime;
+        const supportSubtree = targets.supportSubtrees[runtime]!;
+        const mcpDir = join(supportSubtree, 'mcp');
+
+        // Copy compiled MCP server to support subtree
+        const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+        const srcServerPath = resolve(pkgRoot, 'dist', 'mcp', 'server.js');
+        const destServerPath = join(mcpDir, 'server.js');
+
+        try {
+          await mkdir(mcpDir, { recursive: true });
+          await copyFile(srcServerPath, destServerPath);
+        } catch (error) {
+          // MCP server copy is non-fatal — warn but continue
+          process.stderr.write(
+            `[GSS] Warning: Failed to copy MCP server for ${runtime}: ${error instanceof Error ? error.message : String(error)}\n`
+          );
+          continue;
+        }
+
+        // Get corpus destination path for this runtime
+        const corpusDestPath = corpus.destinationPaths[runtime]!;
+        const registration = adapterWithMcp.getMcpRegistration(destServerPath, corpusDestPath);
+
+        // Merge MCP registration into runtime config
+        try {
+          const rootPath = targets.roots[runtime]!;
+          const settingsPath = join(rootPath, registration.path);
+          await mkdir(dirname(settingsPath), { recursive: true });
+
+          let existing: Record<string, unknown> = {};
+          if (existsSync(settingsPath)) {
+            const content = await readFile(settingsPath, 'utf-8');
+            existing = content.trim() ? JSON.parse(content) : {};
+          }
+
+          // Deep merge the MCP registration into the config
+          const keys = registration.keyPath ? registration.keyPath.split('.') : [];
+          let target = existing;
+          for (const key of keys.slice(0, -1)) {
+            if (!(key in target)) target[key] = {};
+            target = target[key] as Record<string, unknown>;
+          }
+          const finalKey = keys[keys.length - 1] ?? registration.owner;
+          target[finalKey] = registration.content;
+
+          await writeFile(settingsPath, JSON.stringify(existing, null, 2), 'utf-8');
+          mcpRegistrations[runtime] = settingsPath;
+        } catch (error) {
+          process.stderr.write(
+            `[GSS] Warning: Failed to register MCP server for ${runtime}: ${error instanceof Error ? error.message : String(error)}\n`
+          );
+        }
+      }
+    }
+  }
 
   // Stage 4: Manifests and verification
   let manifest: InstallManifest | InstallManifestV2 | null = null;
