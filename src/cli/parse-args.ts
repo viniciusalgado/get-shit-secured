@@ -23,6 +23,7 @@ export function parseArgs(argv: string[]): CliArgs & { showHelp: boolean; showVe
     all: false,
     showHelp: false,
     showVersion: false,
+    legacySpecialists: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -65,6 +66,9 @@ export function parseArgs(argv: string[]): CliArgs & { showHelp: boolean; showVe
       case '-v':
         result.showVersion = true;
         break;
+      case '--legacy-specialists':
+        result.legacySpecialists = true;
+        break;
       default:
         // Ignore unknown args for now
         break;
@@ -97,10 +101,11 @@ OPTIONS:
   --all, -a         Install for all supported runtimes
   --local, -l       Install to project directory (default)
   --global, -g      Install to user home directory
-  --dry-run, -d     Show what would be done without writing files
-  --uninstall, -u   Uninstall previously installed GSS files
-  --help, -h        Show this help message
-  --version, -v     Show version
+  --dry-run, -d         Show what would be done without writing files
+  --uninstall, -u       Uninstall previously installed GSS files
+  --legacy-specialists  Use legacy specialist generation (fetch + generate at install time)
+  --help, -h            Show this help message
+  --version, -v         Show version
 
 EXAMPLES:
   npx get-shit-secured --claude --local

@@ -26,12 +26,14 @@ export function createManifestV2(
   files: Partial<Record<RuntimeTarget, string[]>>,
   managedConfigs?: Partial<Record<RuntimeTarget, ManagedConfigRecord[]>>,
   hooks?: Partial<Record<RuntimeTarget, string[]>>,
-  runtimeManifests?: Partial<Record<RuntimeTarget, string>>
+  runtimeManifests?: Partial<Record<RuntimeTarget, string>>,
+  corpusVersion?: string
 ): InstallManifestV2 {
   const now = new Date().toISOString();
   return {
     manifestVersion: 2,
     packageVersion: PACKAGE_VERSION,
+    corpusVersion: corpusVersion ?? 'unknown',
     installedAt: now,
     updatedAt: now,
     scope,

@@ -224,6 +224,8 @@ export interface InstallManifestV2 {
   manifestVersion: 2;
   /** Package version that created this install */
   packageVersion: string;
+  /** Corpus snapshot version used for this install */
+  corpusVersion?: string;
   /** Timestamp of installation (ISO 8601) */
   installedAt: string;
   /** Timestamp of last update (ISO 8601) */
@@ -300,6 +302,8 @@ export interface CliArgs {
   showHelp?: boolean;
   /** Show version */
   showVersion?: boolean;
+  /** Use legacy specialist generation (fetch + generate at install time) */
+  legacySpecialists?: boolean;
 }
 
 /**

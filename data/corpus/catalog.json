@@ -1,0 +1,817 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-03-31T13:50:44.354Z",
+  "sources": [
+    {
+      "id": "ai-agent-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/AI_Agent_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "ai-security"
+      ]
+    },
+    {
+      "id": "ajax-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/AJAX_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "abuse-case",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Abuse_Case_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "access-control",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Access_Control_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "access-control"
+      ]
+    },
+    {
+      "id": "attack-surface-analysis",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Attack_Surface_Analysis_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "authentication",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "authn"
+      ]
+    },
+    {
+      "id": "authorization",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "authorization"
+      ]
+    },
+    {
+      "id": "authorization-testing-automation",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Testing_Automation_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "automotive-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Automotive_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "bean-validation",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Bean_Validation_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "browser-extension-vulnerabilities",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Browser_Extension_Vulnerabilities_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "c-based-toolchain-hardening",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/C-Based_Toolchain_Hardening_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "ci-cd-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/CI_CD_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "choosing-and-using-security-questions",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Choosing_and_Using_Security_Questions_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "clickjacking-defense",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Clickjacking_Defense_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "clickjacking",
+        "clickjacking"
+      ]
+    },
+    {
+      "id": "content-security-policy",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "csp"
+      ]
+    },
+    {
+      "id": "cookie-theft-mitigation",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cookie_Theft_Mitigation_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "cookies"
+      ]
+    },
+    {
+      "id": "credential-stuffing-prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Credential_Stuffing_Prevention_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "credential-stuffing",
+        "credential-stuffing"
+      ]
+    },
+    {
+      "id": "cross-site-request-forgery-prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "cross-site-request-forgery",
+        "csrf-prevention",
+        "csrf"
+      ]
+    },
+    {
+      "id": "cross-site-scripting-prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "cross-site-scripting",
+        "xss-prevention",
+        "xss"
+      ]
+    },
+    {
+      "id": "cryptographic-storage",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "crypto"
+      ]
+    },
+    {
+      "id": "dom-clobbering-prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/DOM_Clobbering_Prevention_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "dom-clobbering",
+        "dom-clobbering"
+      ]
+    },
+    {
+      "id": "dom-based-xss-prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "dom-based-xss",
+        "dom-xss"
+      ]
+    },
+    {
+      "id": "database-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Database_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "denial-of-service",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "dependency-graph-sbom",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Dependency_Graph_SBOM_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "sbom"
+      ]
+    },
+    {
+      "id": "deserialization",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "deser"
+      ]
+    },
+    {
+      "id": "django-rest-framework",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Django_REST_Framework_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "django-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Django_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "docker-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "dotnet-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/DotNet_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "drone-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Drone_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "email-validation-and-verification",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Email_Validation_and_Verification_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "error-handling",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "error"
+      ]
+    },
+    {
+      "id": "file-upload",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "upload"
+      ]
+    },
+    {
+      "id": "forgot-password",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "graphql",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/GraphQL_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "gql"
+      ]
+    },
+    {
+      "id": "html5-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "http-headers",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "http-strict-transport-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Strict_Transport_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "hsts"
+      ]
+    },
+    {
+      "id": "infrastructure-as-code-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Infrastructure_as_Code_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "iac"
+      ]
+    },
+    {
+      "id": "injection-prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Injection_Prevention_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "injection"
+      ]
+    },
+    {
+      "id": "injection-prevention-in-java",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Injection_Prevention_in_Java_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "input-validation",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "input-val"
+      ]
+    },
+    {
+      "id": "insecure-direct-object-reference-prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "insecure-direct-object-reference",
+        "idor"
+      ]
+    },
+    {
+      "id": "jaas",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/JAAS_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "json-web-token-for-java",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "java-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Java_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "key-management",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Key_Management_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "key-mgmt"
+      ]
+    },
+    {
+      "id": "kubernetes-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Kubernetes_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "ldap-injection-prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "ldap-injection",
+        "ldap-injection"
+      ]
+    },
+    {
+      "id": "llm-prompt-injection-prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "llm-prompt-injection",
+        "prompt-injection"
+      ]
+    },
+    {
+      "id": "laravel",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Laravel_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "legacy-application-management",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Legacy_Application_Management_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "logging",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "logging-vocabulary",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Logging_Vocabulary_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "logging-vocab"
+      ]
+    },
+    {
+      "id": "mcp-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/MCP_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "mcp"
+      ]
+    },
+    {
+      "id": "mass-assignment",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "mass-assignment"
+      ]
+    },
+    {
+      "id": "microservices-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Microservices_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "microservices-based-security-arch-doc",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Microservices_based_Security_Arch_Doc_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "mobile-application-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Mobile_Application_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "multi-tenant-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Multi_Tenant_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "multifactor-authentication",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Multifactor_Authentication_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "mfa"
+      ]
+    },
+    {
+      "id": "npm-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/NPM_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "network-segmentation",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Network_Segmentation_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "nosql-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/NoSQL_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "nosql-injection"
+      ]
+    },
+    {
+      "id": "nodejs-docker",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/NodeJS_Docker_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "nodejs-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Nodejs_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "oauth2",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/OAuth2_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "os-command-injection-defense",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "os-command-injection",
+        "cmd-injection",
+        "command-injection"
+      ]
+    },
+    {
+      "id": "php-configuration",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/PHP_Configuration_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "password-storage",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "password"
+      ]
+    },
+    {
+      "id": "pinning",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Pinning_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "certificate-pinning"
+      ]
+    },
+    {
+      "id": "prototype-pollution-prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Prototype_Pollution_Prevention_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "prototype-pollution",
+        "prototype-pollution"
+      ]
+    },
+    {
+      "id": "query-parameterization",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Query_Parameterization_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "rest-assessment",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/REST_Assessment_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "rest-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "rest"
+      ]
+    },
+    {
+      "id": "ruby-on-rails",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Ruby_on_Rails_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "saml-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/SAML_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "sql-injection-prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "sql-injection",
+        "sql-injection",
+        "sqli"
+      ]
+    },
+    {
+      "id": "secrets-management",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "secrets"
+      ]
+    },
+    {
+      "id": "secure-ai-model-ops",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Secure_AI_Model_Ops_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "secure-cloud-architecture",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Secure_Cloud_Architecture_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "secure-code-review",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Secure_Code_Review_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "secure-product-design",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Secure_Product_Design_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "securing-cascading-style-sheets",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Securing_Cascading_Style_Sheets_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "security-terminology",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Security_Terminology_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "terminology"
+      ]
+    },
+    {
+      "id": "server-side-request-forgery-prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "server-side-request-forgery",
+        "ssrf-prevention",
+        "ssrf"
+      ]
+    },
+    {
+      "id": "serverless-faas-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Serverless_FaaS_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "serverless"
+      ]
+    },
+    {
+      "id": "session-management",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "session"
+      ]
+    },
+    {
+      "id": "software-supply-chain-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "supply-chain"
+      ]
+    },
+    {
+      "id": "subdomain-takeover-prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Subdomain_Takeover_Prevention_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "subdomain-takeover",
+        "subdomain-takeover"
+      ]
+    },
+    {
+      "id": "symfony",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Symfony_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "tls-cipher-string",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "third-party-javascript-management",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Third_Party_Javascript_Management_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "third-party-payment-gateway-integration",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Third_Party_Payment_Gateway_Integration_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "threat-modeling",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "transaction-authorization",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Transaction_Authorization_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "transport-layer-protection",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "ssl"
+      ]
+    },
+    {
+      "id": "transport-layer-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "tls"
+      ]
+    },
+    {
+      "id": "unvalidated-redirects-and-forwards",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "open-redirect"
+      ]
+    },
+    {
+      "id": "user-privacy-protection",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/User_Privacy_Protection_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "privacy"
+      ]
+    },
+    {
+      "id": "virtual-patching",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Virtual_Patching_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "virtual-patch"
+      ]
+    },
+    {
+      "id": "vulnerability-disclosure",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Vulnerability_Disclosure_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "disclosure"
+      ]
+    },
+    {
+      "id": "vulnerable-dependency-management",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Vulnerable_Dependency_Management_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "dependency-management"
+      ]
+    },
+    {
+      "id": "websocket-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/WebSocket_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "ws"
+      ]
+    },
+    {
+      "id": "web-service-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Web_Service_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "xml-external-entity-prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "xml-external-entity",
+        "xxe-prevention",
+        "xxe"
+      ]
+    },
+    {
+      "id": "xml-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/XML_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "xss-filter-evasion",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/XSS_Filter_Evasion_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "xss-evasion"
+      ]
+    },
+    {
+      "id": "xs-leaks",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/XS_Leaks_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "xs-leaks"
+      ]
+    },
+    {
+      "id": "zero-trust-architecture",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Zero_Trust_Architecture_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": []
+    },
+    {
+      "id": "grpc-security",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/gRPC_Security_Cheat_Sheet.html",
+      "sourceType": "owasp-cheatsheet",
+      "aliases": [
+        "grpc"
+      ]
+    }
+  ]
+}

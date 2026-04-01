@@ -10,6 +10,7 @@ import { parseArgs, getHelpText, validateArgs } from './parse-args.js';
 import { install, uninstall } from '../core/installer.js';
 import { ClaudeAdapter } from '../runtimes/claude/adapter.js';
 import { CodexAdapter } from '../runtimes/codex/adapter.js';
+import { corpusInspect, corpusValidate, corpusRefresh } from './corpus-commands.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -34,6 +35,23 @@ async function main(): Promise<number> {
   if (args.showHelp) {
     console.log(getHelpText());
     return 0;
+  }
+
+  // Handle corpus subcommand
+  const firstArg = process.argv[2];
+  if (firstArg === 'corpus') {
+    const subcommand = process.argv[3];
+    switch (subcommand) {
+      case 'inspect':
+        return await corpusInspect();
+      case 'validate':
+        return await corpusValidate();
+      case 'refresh':
+        return await corpusRefresh();
+      default:
+        console.error('Usage: gss corpus <inspect|validate|refresh>');
+        return 1;
+    }
   }
 
   // Validate arguments
@@ -102,7 +120,9 @@ async function main(): Promise<number> {
   }
 
   // Run installation
-  const result = await install(adapters, args.scope, cwd, args.dryRun);
+  const result = await install(adapters, args.scope, cwd, args.dryRun, {
+    legacySpecialists: args.legacySpecialists ?? false,
+  });
 
   if (args.dryRun) {
     console.log('[Dry run] Would create the following files:\n');

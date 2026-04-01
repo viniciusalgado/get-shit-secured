@@ -1,0 +1,1457 @@
+{
+  "version": "1.0.0",
+  "overrides": {
+    "secure-code-review": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "required"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "threat-modeling": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "required"
+        },
+        {
+          "workflowId": "threat-model",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "attack-surface-analysis": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "required"
+        },
+        {
+          "workflowId": "map-codebase",
+          "priority": "required"
+        },
+        {
+          "workflowId": "threat-model",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "access-control": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "authentication": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "verify",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "authorization": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "verify",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "session-management": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "verify",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "password-storage": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "verify",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "secrets-management": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "cryptographic-storage": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "key-management": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "content-security-policy": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "verify",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "http-headers": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "verify",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "http-strict-transport-security": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "transport-layer-security": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "verify",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "transport-layer-protection": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "verify",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "input-validation": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "sql-injection-prevention": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "query-parameterization": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "os-command-injection-defense": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "cross-site-scripting-prevention": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "dom-based-xss-prevention": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "cross-site-request-forgery-prevention": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "server-side-request-forgery-prevention": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "file-upload": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "deserialization": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "error-handling": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "verify",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "logging": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "validate-findings",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "verify",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "vulnerable-dependency-management": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "software-supply-chain-security": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "map-codebase",
+          "priority": "required"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "mcp-security": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "threat-model",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "ai-agent-security": {
+      "workflowBindings": [
+        {
+          "workflowId": "security-review",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "threat-model",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "django-security": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "django"
+        }
+      ],
+      "issueTypes": []
+    },
+    "django-rest-framework": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "django"
+        }
+      ],
+      "issueTypes": []
+    },
+    "laravel": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "laravel"
+        }
+      ],
+      "issueTypes": []
+    },
+    "nodejs-security": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "nodejs"
+        },
+        {
+          "stack": "javascript"
+        }
+      ],
+      "issueTypes": []
+    },
+    "nodejs-docker": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "nodejs"
+        },
+        {
+          "stack": "javascript"
+        }
+      ],
+      "issueTypes": []
+    },
+    "npm-security": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "nodejs"
+        },
+        {
+          "stack": "javascript"
+        }
+      ],
+      "issueTypes": []
+    },
+    "ruby-on-rails": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "ruby"
+        },
+        {
+          "stack": "rails"
+        }
+      ],
+      "issueTypes": []
+    },
+    "symfony": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "symfony"
+        }
+      ],
+      "issueTypes": []
+    },
+    "java-security": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "java"
+        }
+      ],
+      "issueTypes": []
+    },
+    "injection-prevention-in-java": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "java"
+        }
+      ],
+      "issueTypes": []
+    },
+    "json-web-token-for-java": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "java"
+        }
+      ],
+      "issueTypes": []
+    },
+    "jaas": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "java"
+        }
+      ],
+      "issueTypes": []
+    },
+    "dotnet-security": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "csharp"
+        },
+        {
+          "stack": "dotnet"
+        }
+      ],
+      "issueTypes": []
+    },
+    "php-configuration": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "php"
+        }
+      ],
+      "issueTypes": []
+    },
+    "abuse-case": {
+      "workflowBindings": [
+        {
+          "workflowId": "map-codebase",
+          "priority": "required"
+        },
+        {
+          "workflowId": "threat-model",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "dependency-graph-sbom": {
+      "workflowBindings": [
+        {
+          "workflowId": "map-codebase",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "secure-cloud-architecture": {
+      "workflowBindings": [
+        {
+          "workflowId": "map-codebase",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "microservices-based-security-arch-doc": {
+      "workflowBindings": [
+        {
+          "workflowId": "map-codebase",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "network-segmentation": {
+      "workflowBindings": [
+        {
+          "workflowId": "map-codebase",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "zero-trust-architecture": {
+      "workflowBindings": [
+        {
+          "workflowId": "map-codebase",
+          "priority": "required"
+        },
+        {
+          "workflowId": "threat-model",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "docker-security": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "docker"
+        }
+      ],
+      "issueTypes": []
+    },
+    "kubernetes-security": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "kubernetes"
+        }
+      ],
+      "issueTypes": []
+    },
+    "serverless-faas-security": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "aws-lambda"
+        },
+        {
+          "stack": "serverless"
+        },
+        {
+          "stack": "faas"
+        }
+      ],
+      "issueTypes": []
+    },
+    "infrastructure-as-code-security": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "terraform"
+        },
+        {
+          "stack": "cloudformation"
+        },
+        {
+          "stack": "iac"
+        }
+      ],
+      "issueTypes": []
+    },
+    "graphql": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "graphql"
+        }
+      ],
+      "issueTypes": []
+    },
+    "rest-security": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "api"
+        },
+        {
+          "stack": "rest"
+        }
+      ],
+      "issueTypes": []
+    },
+    "web-service-security": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "api"
+        },
+        {
+          "stack": "rest"
+        }
+      ],
+      "issueTypes": []
+    },
+    "grpc-security": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "grpc"
+        }
+      ],
+      "issueTypes": []
+    },
+    "third-party-javascript-management": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "javascript"
+        }
+      ],
+      "issueTypes": []
+    },
+    "third-party-payment-gateway-integration": {
+      "workflowBindings": [],
+      "stackBindings": [
+        {
+          "stack": "payment"
+        },
+        {
+          "stack": "stripe"
+        },
+        {
+          "stack": "paypal"
+        }
+      ],
+      "issueTypes": []
+    },
+    "secure-product-design": {
+      "workflowBindings": [
+        {
+          "workflowId": "threat-model",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "multi-tenant-security": {
+      "workflowBindings": [
+        {
+          "workflowId": "threat-model",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "microservices-security": {
+      "workflowBindings": [
+        {
+          "workflowId": "threat-model",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "llm-prompt-injection-prevention": {
+      "workflowBindings": [
+        {
+          "workflowId": "threat-model",
+          "priority": "optional"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "secure-ai-model-ops": {
+      "workflowBindings": [
+        {
+          "workflowId": "threat-model",
+          "priority": "optional"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "nosql-security": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "ldap-injection-prevention": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "dom-clobbering-prevention": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "multifactor-authentication": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "verify",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "forgot-password": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "transaction-authorization": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "xml-external-entity-prevention": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "plan-remediation",
+          "priority": "required"
+        },
+        {
+          "workflowId": "execute-remediation",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "logging-vocabulary": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "required"
+        },
+        {
+          "workflowId": "report",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": [
+        "logging",
+        "reporting"
+      ]
+    },
+    "clickjacking-defense": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "optional"
+        },
+        {
+          "workflowId": "verify",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "cookie-theft-mitigation": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "optional"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "credential-stuffing-prevention": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "optional"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "insecure-direct-object-reference-prevention": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "optional"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "mass-assignment": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "optional"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "pinning": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "optional"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "prototype-pollution-prevention": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "optional"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "subdomain-takeover-prevention": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "optional"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "unvalidated-redirects-and-forwards": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "optional"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "user-privacy-protection": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "optional"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "virtual-patching": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "optional"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "xss-filter-evasion": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "optional"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "xs-leaks": {
+      "workflowBindings": [
+        {
+          "workflowId": "audit",
+          "priority": "optional"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "authorization-testing-automation": {
+      "workflowBindings": [
+        {
+          "workflowId": "verify",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "rest-assessment": {
+      "workflowBindings": [
+        {
+          "workflowId": "verify",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": []
+    },
+    "vulnerability-disclosure": {
+      "workflowBindings": [
+        {
+          "workflowId": "report",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": [
+        "disclosure",
+        "reporting"
+      ]
+    },
+    "security-terminology": {
+      "workflowBindings": [
+        {
+          "workflowId": "report",
+          "priority": "required"
+        }
+      ],
+      "stackBindings": [],
+      "issueTypes": [
+        "terminology",
+        "reporting"
+      ]
+    }
+  }
+}
