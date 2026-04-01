@@ -499,6 +499,159 @@ export interface CorpusSnapshot {
   stats: CorpusSnapshotStats;
 }
 
+// =============================================================================
+// Consultation Planning Types (Phase 4 — Runtime Engine)
+// =============================================================================
+
+/**
+ * Schema version for consultation plan artifacts.
+ */
+export const CONSULTATION_PLAN_SCHEMA_VERSION = 1;
+
+/**
+ * Schema version for consultation validation artifacts.
+ */
+export const CONSULTATION_VALIDATION_SCHEMA_VERSION = 1;
+
+/**
+ * Signal types that trigger a document's inclusion in a consultation plan.
+ */
+export type ConsultationSignalType =
+  | 'workflow-binding'      // from DocWorkflowBinding
+  | 'stack-binding'         // from DocStackBinding
+  | 'issue-tag'             // from SecurityDoc.issueTypes
+  | 'related-doc'           // from SecurityDoc.relatedDocIds
+  | 'fallback-default';     // from workflow-level defaults
+
+/**
+ * Input signals for consultation plan computation.
+ * Each workflow produces different signal profiles from its artifacts.
+ */
+export interface ConsultationSignals {
+  /** Issue tags from findings/taxonomy classification */
+  issueTags: string[];
+  /** Normalized stack tags */
+  stacks: string[];
+  /** Changed file paths (for file-path-conditioned bindings) */
+  changedFiles: string[];
+}
+
+/**
+ * A single document entry in the consultation plan.
+ */
+export interface ConsultationEntry {
+  /** Document ID (e.g., "sql-injection-prevention") */
+  docId: string;
+  /** Document URI (e.g., "security://owasp/cheatsheet/sql-injection-prevention") */
+  docUri: string;
+  /** Why this document was included */
+  reason: string;
+  /** Signal type that triggered inclusion */
+  signalType: ConsultationSignalType;
+  /** Score contribution */
+  score: number;
+  /** Stable ordering index */
+  orderIndex: number;
+}
+
+/**
+ * Constraints for consultation plan generation.
+ * Controls fan-out and enforcement behavior.
+ */
+export interface ConsultationConstraints {
+  /** Maximum required documents (default: 5) */
+  maxRequired: number;
+  /** Maximum optional documents (default: 8) */
+  maxOptional: number;
+  /** Maximum follow-up documents (default: 3) */
+  maxFollowup: number;
+  /** Whether to expand follow-ups via related-doc graph (default: true) */
+  allowFollowUpExpansion: boolean;
+  /** Whether to fail on missing required docs (default: true) */
+  failOnMissingRequired: boolean;
+}
+
+/** Default constraint values for consultation plans */
+export const DEFAULT_CONSULTATION_CONSTRAINTS: ConsultationConstraints = {
+  maxRequired: 5,
+  maxOptional: 8,
+  maxFollowup: 3,
+  allowFollowUpExpansion: true,
+  failOnMissingRequired: true,
+};
+
+/**
+ * Consultation plan — the planner's primary output.
+ *
+ * Replaces DelegationPlan for the corpus-native runtime engine.
+ * Operates on document IDs instead of specialist IDs.
+ */
+export interface ConsultationPlan {
+  /** Schema version */
+  schemaVersion: typeof CONSULTATION_PLAN_SCHEMA_VERSION;
+  /** Which workflow this plan is for */
+  workflowId: WorkflowId;
+  /** Timestamp of plan generation */
+  generatedAt: string;
+  /** Input signals used to compute the plan */
+  signals: ConsultationSignals;
+  /** Required documents — must be consulted */
+  required: ConsultationEntry[];
+  /** Optional documents — should be consulted if relevant */
+  optional: ConsultationEntry[];
+  /** Follow-up documents — consult if required docs reference them */
+  followup: ConsultationEntry[];
+  /** Documents that could not be resolved (corpus gaps) */
+  blocked?: ConsultationEntry[];
+  /** Constraints applied during plan generation */
+  constraints: ConsultationConstraints;
+  /** Corpus version used to generate this plan */
+  corpusVersion: string;
+}
+
+/**
+ * Consultation validation result.
+ *
+ * Replaces DelegationComplianceReport for the corpus-native runtime engine.
+ *
+ * Severity semantics:
+ * - pass: All required docs consulted, no unexpected issues. Artifact is clean.
+ * - warn: Required missing but failOnMissingRequired=false, or significant optional gaps.
+ *         Artifact includes warning; workflow may continue.
+ * - fail: Required missing and failOnMissingRequired=true.
+ *         Artifact must include remediation note; downstream workflows should treat
+ *         findings as potentially incomplete.
+ *
+ * JSON-serializable and artifact-friendly. No runtime-specific references.
+ */
+export interface ConsultationValidation {
+  /** Schema version */
+  schemaVersion: typeof CONSULTATION_VALIDATION_SCHEMA_VERSION;
+  /** Which workflow this validation covers */
+  workflowId: WorkflowId;
+  /** Timestamp of validation */
+  checkedAt: string;
+  /** Documents that were actually consulted */
+  consulted: string[];
+  /** Required documents that were NOT consulted */
+  requiredMissing: string[];
+  /** Documents consulted that were not in the plan */
+  unexpectedConsulted: string[];
+  /** Optional documents that were missed (informational) */
+  optionalMissed: string[];
+  /** Overall coverage status */
+  coverageStatus: 'pass' | 'warn' | 'fail';
+  /** Individual notes about coverage decisions */
+  notes: string[];
+  /** Stats */
+  stats: {
+    requiredTotal: number;
+    requiredConsulted: number;
+    optionalTotal: number;
+    optionalConsulted: number;
+  };
+}
+
 /**
  * Specialist definition for OWASP-based security specialists.
  * Each specialist represents one OWASP cheat sheet as an installable agent/skill.
