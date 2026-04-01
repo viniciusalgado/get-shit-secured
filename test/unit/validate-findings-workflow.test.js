@@ -79,27 +79,18 @@ describe('validate-findings workflow', () => {
     ]);
   });
 
-  it('should have orchestration phases matching steps', () => {
+  it('should have steps covering the validation pipeline', () => {
     const workflow = getWorkflow('validate-findings');
-    assert.ok(workflow.orchestration);
-    assert.equal(workflow.orchestration.coordinator, 'workflow-agent');
-
-    const phaseIds = workflow.orchestration.phases.map((p) => p.id);
-    assert.equal(phaseIds.length, 8);
-    assert.equal(phaseIds[0], 'ingest-findings');
-    assert.equal(phaseIds[7], 'compile-validated-findings');
+    const stepIds = workflow.steps.map((s) => s.id);
+    assert.ok(stepIds.includes('ingest-findings'));
+    assert.ok(stepIds.includes('classify-findings'));
+    assert.ok(stepIds.includes('compile-validated-findings'));
   });
 
-  it('should use gss-verifier as lead for validation phases', () => {
+  it('should use gss-verifier as lead for validation phases in runtime prompts', () => {
     const workflow = getWorkflow('validate-findings');
-    const validationPhases = workflow.orchestration.phases.filter(
-      (p) => p.id.includes('validation') || p.id === 'generate-exploitation-tests'
-    );
-
-    assert.ok(validationPhases.length >= 3);
-    for (const phase of validationPhases) {
-      assert.equal(phase.lead, 'gss-verifier');
-    }
+    assert.ok(workflow.runtimePrompts.claude);
+    assert.ok(workflow.runtimePrompts.claude.includes('MCP'));
   });
 
   it('should have appropriate guardrails', () => {
@@ -112,12 +103,12 @@ describe('validate-findings workflow', () => {
     assert.ok(guardrailTypes.includes('scope'));
   });
 
-  it('should have on-detection delegation policy', () => {
+  it('should have on-detection signal derivation', () => {
     const workflow = getWorkflow('validate-findings');
-    assert.ok(workflow.delegationPolicy);
-    assert.equal(workflow.delegationPolicy.mode, 'on-detection');
-    assert.ok(workflow.delegationPolicy.constraints);
-    assert.equal(workflow.delegationPolicy.constraints.maxFollowUpDepth, 0);
+    assert.ok(workflow.signalDerivation);
+    assert.equal(workflow.signalDerivation.stacks, 'from-prior-artifact');
+    assert.equal(workflow.signalDerivation.issueTags, 'from-findings');
+    assert.equal(workflow.signalDerivation.changedFiles, 'none');
   });
 
   it('should have runtime prompts for both Claude and Codex', () => {

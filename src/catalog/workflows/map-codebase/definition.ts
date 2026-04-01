@@ -12,30 +12,18 @@ export const mapCodebaseDefinition: WorkflowDefinition = {
     {
       name: 'Attack Surface Analysis',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Attack_Surface_Analysis_Cheat_Sheet.html',
-      ],
     },
     {
       name: 'Authentication',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html',
-      ],
     },
     {
       name: 'Authorization',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html',
-      ],
     },
     {
       name: 'Access Control',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Access_Control_Cheat_Sheet.html',
-      ],
     },
   ],
   inputs: [
@@ -243,16 +231,9 @@ Output artifacts to .gss/artifacts/map-codebase/ for use by subsequent workflows
 
 Focus on understanding before evaluating.`,
   },
-  delegationPolicy: {
-    mode: 'artifact-driven',
-    subjectSource: 'architecture domains and detected stack segments',
-    constraints: {
-      maxRequiredPerSubject: 3,
-      maxOptionalPerSubject: 2,
-      allowFollowUpSpecialists: true,
-      maxFollowUpDepth: 1,
-      failOnMissingRequired: false,
-      allowOutOfPlanConsults: false,
-    },
+  signalDerivation: {
+    stacks: 'from-codebase',
+    issueTags: 'none',
+    changedFiles: 'none',
   },
 };

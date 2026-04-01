@@ -12,54 +12,34 @@ export const auditDefinition: WorkflowDefinition = {
     {
       name: 'OWASP Top 10',
       glossaryUrl: 'https://owasp.org/www-project-top-ten/',
-      cheatSheetUrls: [],
     },
     {
       name: 'ASVS (Application Security Verification Standard)',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [],
     },
     {
       name: 'Secure Code Review',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Secure_Code_Review_Cheat_Sheet.html',
-      ],
     },
     {
       name: 'Input Validation',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html',
-      ],
     },
     {
       name: 'Output Encoding',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Cross_Scripting_Prevention_Cheat_Sheet.html',
-      ],
     },
     {
       name: 'Secrets Management',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html',
-      ],
     },
     {
       name: 'Logging',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Logging_Vocabulary_Cheat_Sheet.html',
-      ],
     },
     {
       name: 'AI Agent Security',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/AI_Agent_Security_Cheat_Sheet.html',
-      ],
     },
   ],
   inputs: [
@@ -406,54 +386,33 @@ Output as structured JSON for downstream workflows.`,
 - Include code snippets as evidence
 - Map each finding to OWASP Top 10 categories
 - Prioritize by severity and exploitability
-- Reference OWASP cheat sheets for remediation guidance
 
-## Delegation to Specialists
+## MCP Consultation
 
-When you detect a security issue, delegate to the appropriate OWASP specialist:
+Use MCP consultation tools for domain-specific security guidance:
 
-1. **Password handling** → delegate to \`gss-specialist-password-storage\`
-2. **SQL injection** → delegate to \`gss-specialist-sql-injection-prevention\` and \`gss-specialist-query-parameterization\`
-3. **XSS** → delegate to \`gss-specialist-cross-site-scripting-prevention\`
-4. **Command injection** → delegate to \`gss-specialist-os-command-injection-defense\`
-5. **Auth/session issues** → delegate to \`gss-specialist-authentication\`, \`gss-specialist-authorization\`, \`gss-specialist-session-management\`
-6. **Secrets exposure** → delegate to \`gss-specialist-secrets-management\`
-7. **Crypto issues** → delegate to \`gss-specialist-cryptographic-storage\`
-8. **File upload** → delegate to \`gss-specialist-file-upload\`
-9. **Deserialization** → delegate to \`gss-specialist-deserialization\`
-10. **SSRF** → delegate to \`gss-specialist-server-side-request-forgery-prevention\`
-11. **XXE** → delegate to \`gss-specialist-xml-external-entity-prevention\`
-12. **CSRF** → delegate to \`gss-specialist-cross-site-request-forgery-prevention\`
+1. Derive signals from codebase inventory and findings
+2. Call get_workflow_consultation_plan(workflowId="audit", stacks=<from inventory>, issueTags=<from findings>)
+3. Read required security documents via MCP resources
+4. Use consulted documents as grounding for finding analysis
+5. Call validate_security_consultation before finalizing
 
-### Stack-Conditioned Specialists
+Each finding must include:
+- verdict: pass/fail/needs-review
+- confidence: 0-1 score
+- evidence: code snippets or configuration
+- affectedFiles: files and line numbers
+- remediationNotes: specific fix recommendations
+- verificationNotes: how to verify the fix
+- owaspSourceUrl: governing cheat sheet URL
 
-When the codebase uses specific frameworks, also delegate to:
-- **Django** → \`gss-specialist-django-security\`, \`gss-specialist-django-rest-framework\`
-- **Laravel** → \`gss-specialist-laravel\`
-- **Node.js** → \`gss-specialist-nodejs-security\`
-- **Rails** → \`gss-specialist-ruby-on-rails\`
-- **Symfony** → \`gss-specialist-symfony\`
-- **Java** → \`gss-specialist-java-security\`, \`gss-specialist-injection-prevention-in-java\`
-- **.NET** → \`gss-specialist-dotnet-security\`
+### Aggregation
 
-### Specialist Output Format
-
-Each specialist should return:
-- \`verdict\`: pass/fail/needs-review
-- \`confidence\`: 0-1 score
-- \`evidence\`: code snippets or configuration
-- \`affectedFiles\`: files and line numbers
-- \`remediationNotes\`: specific fix recommendations
-- \`verificationNotes\`: how to verify the fix
-- \`owaspSourceUrl\`: governing cheat sheet URL
-
-### Aggregating Specialist Verdicts
-
-After delegating to specialists:
-1. Collect all specialist verdicts
+After MCP consultation:
+1. Collect all consultation results
 2. Merge overlapping findings
 3. Prioritize by severity and confidence
-4. Generate a consolidated findings report
+4. Generate a consolidated findings report with consultation trace
 
 Output artifacts to .gss/artifacts/audit/ for use by plan-remediation and report workflows.`,
     codex: `Conduct a comprehensive security audit:
@@ -464,22 +423,15 @@ Output artifacts to .gss/artifacts/audit/ for use by plan-remediation and report
 4. Validate findings with source code review
 5. Document evidence and remediation steps
 
-## Delegation
+## MCP Consultation
 
-When you detect specific vulnerability types, consult the corresponding OWASP specialist for detailed guidance. Specialists provide verdicts structured as: verdict, confidence, evidence, affectedFiles, remediationNotes, verificationNotes, and owaspSourceUrl.
+Use MCP consultation tools for domain-specific security guidance. When you detect specific vulnerability types, consult the MCP for detailed guidance on that vulnerability class.
 
-Ground all findings in OWASP standards and cheat sheets.`,
+Ground all findings in OWASP standards and include consultation traces.`,
   },
-  delegationPolicy: {
-    mode: 'on-detection',
-    subjectSource: 'finding clusters and vulnerability classes',
-    constraints: {
-      maxRequiredPerSubject: 3,
-      maxOptionalPerSubject: 3,
-      allowFollowUpSpecialists: true,
-      maxFollowUpDepth: 1,
-      failOnMissingRequired: true,
-      allowOutOfPlanConsults: false,
-    },
+  signalDerivation: {
+    stacks: 'from-prior-artifact',
+    issueTags: 'from-findings',
+    changedFiles: 'none',
   },
 };

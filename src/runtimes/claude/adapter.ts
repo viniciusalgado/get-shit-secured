@@ -4,7 +4,6 @@ import type {
   InstallScope,
   RuntimeAdapter,
   WorkflowId,
-  SpecialistDefinition,
   RuntimeFile,
   ManagedJsonPatch,
   ManagedTextBlock,
@@ -25,8 +24,6 @@ import {
   renderCommandsReadme,
   renderAgentsReadme,
   renderHelpCommand,
-  renderClaudeSpecialist,
-  renderClaudeSpecialistsReadme,
   renderRoleAgent,
 } from '../../core/renderer.js';
 
@@ -36,14 +33,6 @@ import {
  */
 export class ClaudeAdapter implements RuntimeAdapter {
   readonly runtime = 'claude' as const;
-  private specialists: SpecialistDefinition[] = [];
-
-  /**
-   * Set specialists to be installed.
-   */
-  setSpecialists(specialists: SpecialistDefinition[]): void {
-    this.specialists = specialists;
-  }
 
   /**
    * Get adapter capabilities.
@@ -88,16 +77,6 @@ export class ClaudeAdapter implements RuntimeAdapter {
         overwritePolicy: 'create-only',
       },
     ];
-
-    // Add specialists README if specialists are available
-    if (this.specialists.length > 0) {
-      files.push({
-        relativePath: 'agents/gss-specialists-README.md',
-        content: renderClaudeSpecialistsReadme(this.specialists),
-        category: 'entrypoint',
-        overwritePolicy: 'replace-managed',
-      });
-    }
 
     return files;
   }
@@ -147,7 +126,7 @@ export class ClaudeAdapter implements RuntimeAdapter {
           version: '0.1.0',
           enabled: true,
           installedAt: new Date().toISOString(),
-          specialists: this.specialists.map(s => s.id),
+          specialists: [],
         },
         mergeStrategy: 'deep',
         keyPath: 'gss',
@@ -257,17 +236,6 @@ export class ClaudeAdapter implements RuntimeAdapter {
         description: 'Log artifact writes for validation',
       },
     ];
-  }
-
-  /**
-   * Get files for all specialists.
-   */
-  getSpecialistFiles(): InstallFile[] {
-    return this.specialists.map(specialist => ({
-      relativePath: `agents/gss-specialist-${specialist.id}.md`,
-      content: renderClaudeSpecialist(specialist),
-      merge: false,
-    }));
   }
 
   /**

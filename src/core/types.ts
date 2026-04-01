@@ -336,7 +336,8 @@ export interface OwaspTopic {
   name: string;
   /** URL to OWASP glossary entry */
   glossaryUrl?: string;
-  /** URLs to relevant OWASP cheat sheets */
+  /** URLs to relevant OWASP cheat sheets
+   *  @deprecated Cheat sheet URLs are now managed by the MCP corpus. */
   cheatSheetUrls?: string[];
 }
 
@@ -984,6 +985,51 @@ export interface DelegationComplianceReport {
 }
 
 // =============================================================================
+// Phase 6 — MCP Consultation Types
+// =============================================================================
+
+/**
+ * Signal derivation strategy for a workflow.
+ * Replaces DelegationPolicy with explicit signal source declarations.
+ */
+export interface SignalDerivation {
+  /** How stack signals are derived for this workflow */
+  stacks: 'from-codebase' | 'from-prior-artifact' | 'from-diff-heuristics' | 'none';
+  /** How issue tags are derived for this workflow */
+  issueTags: 'from-findings' | 'from-diff-heuristics' | 'none';
+  /** How changed files are derived for this workflow */
+  changedFiles: 'from-diff' | 'from-prior-artifact' | 'none';
+}
+
+/**
+ * Consultation trace embedded in workflow artifacts.
+ * Every workflow must produce this as part of its output artifacts.
+ */
+export interface ConsultationTrace {
+  /** Summary of the consultation plan that governed this run */
+  plan: {
+    workflowId: WorkflowId;
+    generatedAt: string;
+    corpusVersion: string;
+    requiredCount: number;
+    optionalCount: number;
+    followupCount: number;
+  };
+  /** Document IDs actually consulted with metadata */
+  consultedDocs: Array<{
+    id: string;
+    title: string;
+    sourceUrl: string;
+  }>;
+  /** Coverage validation result */
+  coverageStatus: 'pass' | 'warn' | 'fail';
+  /** Required documents that were not consulted */
+  requiredMissing: string[];
+  /** Notes about coverage decisions */
+  notes: string[];
+}
+
+// =============================================================================
 // Extended Workflow Definition
 // =============================================================================
 
@@ -1106,8 +1152,11 @@ export interface WorkflowOrchestrationPhase {
   inputs: string[];
   /** Output artifact names produced by this phase */
   outputs: string[];
-  /** Specialist engagement mode for this phase */
-  specialistMode: string;
+  /** Specialist engagement mode for this phase
+   *  @deprecated Use mcpConsultation instead. */
+  specialistMode?: string;
+  /** MCP consultation level for this phase */
+  mcpConsultation?: 'full' | 'minimal' | 'none';
 }
 
 /**
@@ -1172,8 +1221,11 @@ export interface WorkflowDefinition {
   runtimePrompts: RuntimePrompts;
   /** Optional coordinator orchestration metadata */
   orchestration?: WorkflowOrchestration;
-  /** Delegation policy governing specialist spawning for this workflow */
+  /** Delegation policy governing specialist spawning for this workflow
+   *  @deprecated Use signalDerivation instead. MCP handles consultation planning. */
   delegationPolicy?: DelegationPolicy;
+  /** Signal derivation strategy for MCP consultation */
+  signalDerivation?: SignalDerivation;
 }
 
 /**

@@ -12,12 +12,6 @@ export const reportDefinition: WorkflowDefinition = {
     {
       name: 'Security Reporting',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [],
-    },
-    {
-      name: 'ASVS Reporting',
-      glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [],
     },
   ],
   inputs: [
@@ -361,7 +355,14 @@ Output reports to .gss/report/ directory:
 1. executive-summary.md - For stakeholders
 2. technical-findings.md - For developers
 3. owasp-compliance.md - For auditors/compliance
-4. remediation-roadmap.md - For project planning`,
+4. remediation-roadmap.md - For project planning
+
+## Consultation Trace Aggregation
+
+Aggregate consultation traces from all prior workflow artifacts into the final report. Include:
+- Total documents consulted across all workflows
+- Coverage status per workflow (pass/warn/fail)
+- Any gaps where MCP was unavailable`,
     codex: `Generate comprehensive security reports:
 
 1. Aggregate all workflow artifacts
@@ -369,19 +370,13 @@ Output reports to .gss/report/ directory:
 3. Document technical findings with evidence
 4. Map findings to OWASP standards
 5. Create prioritized remediation roadmap
+6. Aggregate consultation traces from prior workflows
 
 Tailor each report to its audience with appropriate level of detail.`,
   },
-  delegationPolicy: {
-    mode: 'none',
-    subjectSource: 'report sections and unresolved risk themes',
-    constraints: {
-      maxRequiredPerSubject: 0,
-      maxOptionalPerSubject: 1,
-      allowFollowUpSpecialists: false,
-      maxFollowUpDepth: 0,
-      failOnMissingRequired: false,
-      allowOutOfPlanConsults: false,
-    },
+  signalDerivation: {
+    stacks: 'none',
+    issueTags: 'none',
+    changedFiles: 'none',
   },
 };

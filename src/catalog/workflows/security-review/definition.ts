@@ -12,23 +12,14 @@ export const securityReviewDefinition: WorkflowDefinition = {
     {
       name: 'Secure Code Review',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Secure_Code_Review_Cheat_Sheet.html',
-      ],
     },
     {
       name: 'Threat Modeling',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html',
-      ],
     },
     {
       name: 'Attack Surface Analysis',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Attack_Surface_Analysis_Cheat_Sheet.html',
-      ],
     },
   ],
   inputs: [
@@ -127,13 +118,13 @@ Generate deterministic delegation-plan.json from changed files, issue tags, and 
     },
     {
       id: 'specialist-pass',
-      title: 'Specialist Pass (Deterministic Sequential)',
-      instructions: `Spawn specialists in deterministic sequence:
-1. Required specialists first
-2. One bounded round of derived follow-up specialists
-3. Optional specialists only for unresolved findings
+      title: 'Consultation Pass (MCP-Backed)',
+      instructions: `Consult MCP security documents in deterministic sequence:
+1. Required docs first (from consultation plan)
+2. One bounded round of follow-up docs if required docs reference them
+3. Optional docs only for unresolved findings
 
-Keep sequential execution in v1 for determinism and evidence aggregation.`,
+Keep sequential execution for determinism and evidence aggregation.`,
       owaspTopics: ['Secure Code Review'],
     },
     {
@@ -176,18 +167,21 @@ Ensure each finding includes file path, line, snippet, OWASP reference, severity
 - Prefer current uncommitted working set when commit-ref is absent.
 - When commit-ref is supplied, review that exact commit against its parent only.
 - Stop early with a minimal report when security relevance gate is below threshold.
-- Use ordered role-agent and specialist execution exactly as declared in orchestration.
+- Use ordered role-agent execution exactly as declared in orchestration.
+- Use MCP consultation tools for deterministic security document access.
 - Validate aggressively without mutating tracked files.
 - Produce TDD remediation specs, not implementation patches.
+- Include consultation trace in all artifacts.
 
 Persist all artifacts under .gss/artifacts/security-review/.`,
     codex: `Run an ordered, change-scoped security review.
 
 1. Collect the diff scope (uncommitted set by default, or commit-ref vs parent).
 2. Gate for security significance and short-circuit when low.
-3. Execute impact, audit, specialist, and validation phases sequentially.
-4. Validate findings without mutating tracked files.
-5. Emit remediation-oriented TDD test specs and structured artifacts.
+3. Execute impact, audit, consultation, and validation phases sequentially.
+4. Use MCP tools to consult security documents for grounding.
+5. Validate findings without mutating tracked files.
+6. Emit remediation-oriented TDD test specs and structured artifacts.
 
 Keep execution deterministic and evidence-first.`,
   },
@@ -201,7 +195,7 @@ Keep execution deterministic and evidence-first.`,
         execution: 'sequential',
         inputs: ['change-set', 'commit-ref', 'repository-context'],
         outputs: ['change-scope.json'],
-        specialistMode: 'none',
+        mcpConsultation: 'none',
       },
       {
         id: 'security-relevance-gate',
@@ -210,7 +204,7 @@ Keep execution deterministic and evidence-first.`,
         execution: 'sequential-stop-on-low-significance',
         inputs: ['change-scope.json'],
         outputs: ['change-scope.json', 'findings.json', 'validation-report.json', 'security-test-specs.json'],
-        specialistMode: 'none',
+        mcpConsultation: 'none',
       },
       {
         id: 'impact-pass',
@@ -219,7 +213,7 @@ Keep execution deterministic and evidence-first.`,
         execution: 'sequential',
         inputs: ['change-scope.json', 'repository-context'],
         outputs: ['delegation-plan.json'],
-        specialistMode: 'core-required-only',
+        mcpConsultation: 'minimal',
       },
       {
         id: 'audit-pass',
@@ -228,7 +222,7 @@ Keep execution deterministic and evidence-first.`,
         execution: 'sequential',
         inputs: ['change-scope.json', 'repository-context', 'delegation-plan.json'],
         outputs: ['findings.json', 'delegation-plan.json'],
-        specialistMode: 'required-and-derived-candidates',
+        mcpConsultation: 'full',
       },
       {
         id: 'specialist-pass',
@@ -237,7 +231,7 @@ Keep execution deterministic and evidence-first.`,
         execution: 'sequential-deterministic',
         inputs: ['findings.json', 'delegation-plan.json'],
         outputs: ['findings.json', 'validation-report.json'],
-        specialistMode: 'required-then-derived-then-optional',
+        mcpConsultation: 'full',
       },
       {
         id: 'validation-and-tdd',
@@ -246,7 +240,7 @@ Keep execution deterministic and evidence-first.`,
         execution: 'sequential',
         inputs: ['findings.json', 'repository-context'],
         outputs: ['validation-report.json', 'security-test-specs.json'],
-        specialistMode: 'validation-focused',
+        mcpConsultation: 'minimal',
       },
       {
         id: 'finalize',
@@ -255,20 +249,13 @@ Keep execution deterministic and evidence-first.`,
         execution: 'sequential',
         inputs: ['change-scope.json', 'delegation-plan.json', 'findings.json', 'validation-report.json', 'security-test-specs.json'],
         outputs: ['change-scope.json', 'delegation-plan.json', 'findings.json', 'validation-report.json', 'security-test-specs.json'],
-        specialistMode: 'none',
+        mcpConsultation: 'none',
       },
     ],
   },
-  delegationPolicy: {
-    mode: 'on-detection',
-    subjectSource: 'changed files, issue tags, trust-boundary deltas, and diff semantics',
-    constraints: {
-      maxRequiredPerSubject: 3,
-      maxOptionalPerSubject: 2,
-      allowFollowUpSpecialists: true,
-      maxFollowUpDepth: 1,
-      failOnMissingRequired: true,
-      allowOutOfPlanConsults: false,
-    },
+  signalDerivation: {
+    stacks: 'from-diff-heuristics',
+    issueTags: 'from-diff-heuristics',
+    changedFiles: 'from-diff',
   },
 };

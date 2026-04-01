@@ -3,7 +3,6 @@ import type {
   InstallScope,
   RuntimeAdapter,
   WorkflowId,
-  SpecialistDefinition,
   RuntimeFile,
   ManagedJsonPatch,
   ManagedTextBlock,
@@ -21,8 +20,6 @@ import {
 import {
   renderCodexSkill,
   renderSkillsReadme,
-  renderCodexSpecialist,
-  renderCodexSpecialistsReadme,
   renderCodexRoleSkill,
 } from '../../core/renderer.js';
 
@@ -32,14 +29,6 @@ import {
  */
 export class CodexAdapter implements RuntimeAdapter {
   readonly runtime = 'codex' as const;
-  private specialists: SpecialistDefinition[] = [];
-
-  /**
-   * Set specialists to be installed.
-   */
-  setSpecialists(specialists: SpecialistDefinition[]): void {
-    this.specialists = specialists;
-  }
 
   /**
    * Get adapter capabilities.
@@ -72,16 +61,6 @@ export class CodexAdapter implements RuntimeAdapter {
         overwritePolicy: 'create-only',
       },
     ];
-
-    // Add specialists README if specialists are available
-    if (this.specialists.length > 0) {
-      files.push({
-        relativePath: 'skills/gss-specialists-README.md',
-        content: renderCodexSpecialistsReadme(this.specialists),
-        category: 'entrypoint',
-        overwritePolicy: 'replace-managed',
-      });
-    }
 
     return files;
   }
@@ -126,7 +105,7 @@ export class CodexAdapter implements RuntimeAdapter {
           version: '0.1.0',
           enabled: true,
           installedAt: new Date().toISOString(),
-          specialists: this.specialists.map(s => s.id),
+          specialists: [],
         },
         mergeStrategy: 'deep',
         keyPath: 'gss',
@@ -166,17 +145,6 @@ export class CodexAdapter implements RuntimeAdapter {
    */
   getHooks(): RuntimeHook[] {
     return [];
-  }
-
-  /**
-   * Get files for all specialists.
-   */
-  getSpecialistFiles(): InstallFile[] {
-    return this.specialists.map(specialist => ({
-      relativePath: `skills/gss-specialist-${specialist.id}/SKILL.md`,
-      content: renderCodexSpecialist(specialist),
-      merge: false,
-    }));
   }
 
   /**

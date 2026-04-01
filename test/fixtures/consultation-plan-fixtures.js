@@ -197,6 +197,44 @@ export function makeMinimalSnapshot() {
       provenance: { inferred: [], overridden: [] },
     },
     {
+      id: 'nodejs-security',
+      uri: 'security://owasp/cheatsheet/nodejs-security',
+      title: 'Node.js Security Cheat Sheet',
+      sourceUrl: 'https://cheatsheetseries.owasp.org/cheatsheets/Nodejs_Security_Cheat_Sheet.html',
+      sourceType: 'owasp-cheatsheet',
+      corpusVersion: '1.0.0',
+      status: 'ready',
+      summary: 'Node.js specific security guidance',
+      headings: ['Node.js Security'],
+      checklist: ['Validate input'],
+      tags: ['nodejs', 'javascript'],
+      issueTypes: [],
+      workflowBindings: [],
+      stackBindings: [{ stack: 'nodejs' }],
+      relatedDocIds: [],
+      aliases: [],
+      provenance: { inferred: [], overridden: [] },
+    },
+    {
+      id: 'csrf-protection',
+      uri: 'security://owasp/cheatsheet/csrf-protection',
+      title: 'CSRF Protection Cheat Sheet',
+      sourceUrl: 'https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html',
+      sourceType: 'owasp-cheatsheet',
+      corpusVersion: '1.0.0',
+      status: 'ready',
+      summary: 'CSRF prevention guidance',
+      headings: ['CSRF'],
+      checklist: ['Use anti-CSRF tokens'],
+      tags: ['csrf'],
+      issueTypes: ['csrf'],
+      workflowBindings: [],
+      stackBindings: [],
+      relatedDocIds: [],
+      aliases: [],
+      provenance: { inferred: [], overridden: [] },
+    },
+    {
       id: 'docker-security',
       uri: 'security://owasp/cheatsheet/docker-security',
       title: 'Docker Security',
@@ -263,5 +301,121 @@ export function makeEmptySnapshot() {
     },
     byId: new Map(),
     byUri: new Map(),
+  };
+}
+
+/**
+ * Create a LoadedSnapshot from an array of doc objects.
+ * Builds byId/byUri lookup Maps.
+ */
+export function createLoadedSnapshot(docs) {
+  const byId = new Map();
+  const byUri = new Map();
+  for (const doc of docs) {
+    byId.set(doc.id, doc);
+    byUri.set(doc.uri, doc);
+  }
+  return {
+    snapshot: {
+      schemaVersion: 1,
+      corpusVersion: docs[0]?.corpusVersion ?? '1.0.0',
+      generatedAt: '2026-03-30T00:00:00.000Z',
+      documents: docs,
+      stats: {
+        totalDocs: docs.length,
+        readyDocs: docs.filter(d => d.status === 'ready').length,
+        pendingDocs: docs.filter(d => d.status === 'pending').length,
+        totalBindings: docs.reduce((n, d) => n + d.workflowBindings.length, 0),
+        totalRelatedEdges: docs.reduce((n, d) => n + d.relatedDocIds.length, 0),
+      },
+    },
+    byId,
+    byUri,
+  };
+}
+
+/**
+ * Create a snapshot with a broken related-doc edge.
+ * sql-injection-prevention references 'non-existent-doc' which doesn't exist.
+ */
+export function createSnapshotWithBrokenEdge() {
+  const docs = [
+    {
+      id: 'sql-injection-prevention',
+      uri: 'security://owasp/cheatsheet/sql-injection-prevention',
+      title: 'SQL Injection Prevention',
+      sourceUrl: 'https://example.com/sql',
+      sourceType: 'owasp-cheatsheet',
+      corpusVersion: '1.0.0',
+      status: 'ready',
+      summary: 'SQL injection prevention',
+      headings: [],
+      checklist: [],
+      tags: ['sql'],
+      issueTypes: ['sql-injection', 'injection'],
+      workflowBindings: [{ workflowId: 'audit', priority: 'required' }],
+      stackBindings: [],
+      relatedDocIds: ['non-existent-doc'],
+      aliases: [],
+      provenance: { inferred: [], overridden: [] },
+    },
+  ];
+  return createLoadedSnapshot(docs);
+}
+
+/**
+ * Create a snapshot with many docs matching a single workflow as required,
+ * useful for testing constraint caps.
+ */
+export function createLargeSnapshot() {
+  const issueTypes = [
+    'sql-injection', 'xss', 'csrf', 'ssrf', 'xxe',
+    'deserialization', 'command-injection',
+  ];
+  const docs = issueTypes.map((type, i) => ({
+    id: `${type}-cheatsheet`,
+    uri: `security://owasp/cheatsheet/${type}-cheatsheet`,
+    title: `${type} Cheat Sheet`,
+    sourceUrl: `https://example.com/${type}`,
+    sourceType: 'owasp-cheatsheet',
+    corpusVersion: '1.0.0',
+    status: 'ready',
+    summary: `${type} prevention`,
+    headings: [],
+    checklist: [],
+    tags: [type],
+    issueTypes: [type],
+    workflowBindings: [{ workflowId: 'audit', priority: 'required' }],
+    stackBindings: [],
+    relatedDocIds: [],
+    aliases: [],
+    provenance: { inferred: [], overridden: [] },
+  }));
+  return createLoadedSnapshot(docs);
+}
+
+/**
+ * Helper to create a minimal valid doc object.
+ */
+export function createDoc(overrides = {}) {
+  return {
+    id: 'test-doc',
+    uri: 'security://owasp/cheatsheet/test-doc',
+    title: 'Test Doc',
+    sourceUrl: 'https://example.com/test',
+    sourceType: 'owasp-cheatsheet',
+    corpusVersion: '1.0.0',
+    status: 'ready',
+    summary: 'A test document',
+    headings: [],
+    checklist: [],
+    tags: [],
+    issueTypes: [],
+    workflowBindings: [],
+    stackBindings: [],
+    relatedDocIds: [],
+    aliases: [],
+    provenance: { inferred: [], overridden: [] },
+    ...overrides,
   };
 }

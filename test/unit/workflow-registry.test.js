@@ -121,7 +121,8 @@ describe('Workflow Definition Structure', () => {
     assert.ok(workflow.owaspTopics.length > 0);
     const firstTopic = workflow.owaspTopics[0];
     assert.ok(firstTopic.name);
-    assert.ok(Array.isArray(firstTopic.cheatSheetUrls));
+    // Phase 6: cheatSheetUrls removed, replaced by MCP consultation
+    assert.equal(firstTopic.cheatSheetUrls, undefined);
 
     // Inputs
     assert.ok(workflow.inputs.length > 0);
@@ -167,17 +168,16 @@ describe('Workflow Definition Structure', () => {
     assert.ok(workflow.runtimePrompts.claude || workflow.runtimePrompts.codex);
   });
 
-  it('should have OWASP topics with cheat sheet URLs', () => {
+  it('should have OWASP topics with glossary URLs', () => {
     const workflow = getWorkflow('threat-model');
 
     const threatModelingTopic = workflow.owaspTopics.find(
       (t) => t.name === 'Threat Modeling'
     );
     assert.ok(threatModelingTopic, 'Should have Threat Modeling topic');
-    assert.ok(threatModelingTopic.cheatSheetUrls);
-    assert.ok(threatModelingTopic.cheatSheetUrls.length > 0);
+    assert.ok(threatModelingTopic.glossaryUrl);
     assert.ok(
-      threatModelingTopic.cheatSheetUrls.some((url) => url.includes('owasp.org'))
+      threatModelingTopic.glossaryUrl.includes('owasp.org') || threatModelingTopic.glossaryUrl.includes('cheatsheetseries')
     );
   });
 

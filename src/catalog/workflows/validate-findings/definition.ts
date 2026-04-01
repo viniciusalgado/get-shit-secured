@@ -14,19 +14,10 @@ export const validateFindingsDefinition: WorkflowDefinition = {
     {
       name: 'Security Testing',
       glossaryUrl: 'https://owasp.org/www-project-web-security-testing-guide/',
-      cheatSheetUrls: [],
-    },
-    {
-      name: 'Secure Code Review',
-      glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Secure_Code_Review_Cheat_Sheet.html',
-      ],
     },
     {
       name: 'Vulnerability Verification',
       glossaryUrl: 'https://owasp.org/www-project-web-security-testing-guide/',
-      cheatSheetUrls: [],
     },
   ],
   inputs: [
@@ -439,13 +430,13 @@ consume it directly:
 - Multi-step attacks → e2e tests with full request lifecycle
 - Crypto issues → unit tests verifying algorithm/parameter choices
 
-**Delegation to Specialists:**
-For re-evaluation, delegate to the specialist matching the vulnerability category:
-- SQL injection → \`gss-specialist-sql-injection-prevention\`
-- XSS → \`gss-specialist-cross-site-scripting-prevention\`
-- Auth issues → \`gss-specialist-authentication\`, \`gss-specialist-authorization\`
-- Crypto → \`gss-specialist-cryptographic-storage\`
-- General → \`gss-specialist-secure-code-review\`
+**MCP Consultation for Re-evaluation:**
+For re-evaluation, consult MCP tools for the vulnerability category:
+- SQL injection → MCP sql-injection-prevention doc
+- XSS → MCP cross-site-scripting-prevention doc
+- Auth issues → MCP authentication and authorization docs
+- Crypto → MCP cryptographic-storage doc
+- General → MCP secure-code-review doc
 
 **Output:**
 Persist all artifacts under .gss/artifacts/validate-findings/.
@@ -456,101 +447,16 @@ The validated-findings.json and tdd-test-document.json feed into plan-remediatio
 2. Generate exploitation test cases (unit/integration/e2e)
 3. Run tests in sandboxed environment
 4. Classify as confirmed/unconfirmed/hallucinated
-5. Re-evaluate disputed findings with specialists
+5. Re-evaluate disputed findings using MCP consultation
 6. Compile validated findings and TDD test specs
 
 Only confirmed and unconfirmed findings proceed to remediation.
-Hallucinated findings require specialist confirmation before dismissal.
 
 Output artifacts to .gss/artifacts/validate-findings/.`,
   },
-  orchestration: {
-    coordinator: 'workflow-agent',
-    phases: [
-      {
-        id: 'ingest-findings',
-        title: 'Ingest and Triage Findings',
-        lead: 'workflow-agent',
-        execution: 'sequential',
-        inputs: ['findings-report', 'remediation-priorities', 'owasp-mapping'],
-        outputs: ['validation-report.json'],
-        specialistMode: 'none',
-      },
-      {
-        id: 'generate-exploitation-tests',
-        title: 'Generate Exploitation Test Cases',
-        lead: 'gss-verifier',
-        execution: 'sequential',
-        inputs: ['findings-report'],
-        outputs: ['exploitation-tests.json'],
-        specialistMode: 'none',
-      },
-      {
-        id: 'run-unit-validation',
-        title: 'Run Unit-Level Validation',
-        lead: 'gss-verifier',
-        execution: 'sequential',
-        inputs: ['exploitation-tests.json'],
-        outputs: ['validation-report.json'],
-        specialistMode: 'none',
-      },
-      {
-        id: 'run-integration-validation',
-        title: 'Run Integration-Level Validation',
-        lead: 'gss-verifier',
-        execution: 'sequential',
-        inputs: ['exploitation-tests.json', 'validation-report.json'],
-        outputs: ['validation-report.json'],
-        specialistMode: 'none',
-      },
-      {
-        id: 'run-e2e-validation',
-        title: 'Run End-to-End Validation',
-        lead: 'gss-verifier',
-        execution: 'sequential-with-approval-gate',
-        inputs: ['exploitation-tests.json', 'validation-report.json'],
-        outputs: ['validation-report.json'],
-        specialistMode: 'none',
-      },
-      {
-        id: 'classify-findings',
-        title: 'Classify Findings',
-        lead: 'workflow-agent',
-        execution: 'sequential',
-        inputs: ['validation-report.json', 'findings-report'],
-        outputs: ['validated-findings.json'],
-        specialistMode: 'none',
-      },
-      {
-        id: 're-evaluate-unconfirmed',
-        title: 'Re-evaluate Disputed Findings',
-        lead: 'workflow-agent',
-        execution: 'sequential',
-        inputs: ['validated-findings.json', 'validation-report.json'],
-        outputs: ['re-evaluation-report.json', 'validated-findings.json'],
-        specialistMode: 'required-for-disputed',
-      },
-      {
-        id: 'compile-validated-findings',
-        title: 'Compile Outputs',
-        lead: 'workflow-agent',
-        execution: 'sequential',
-        inputs: ['validated-findings.json', 'validation-report.json', 'exploitation-tests.json', 're-evaluation-report.json'],
-        outputs: ['validated-findings.json', 'validation-report.json', 'exploitation-tests.json', 're-evaluation-report.json', 'tdd-test-document.json'],
-        specialistMode: 'none',
-      },
-    ],
-  },
-  delegationPolicy: {
-    mode: 'on-detection',
-    subjectSource: 'findings classified as unconfirmed or hallucinated, routed by OWASP category',
-    constraints: {
-      maxRequiredPerSubject: 2,
-      maxOptionalPerSubject: 2,
-      allowFollowUpSpecialists: false,
-      maxFollowUpDepth: 0,
-      failOnMissingRequired: false,
-      allowOutOfPlanConsults: false,
-    },
+  signalDerivation: {
+    stacks: 'from-prior-artifact',
+    issueTags: 'from-findings',
+    changedFiles: 'none',
   },
 };

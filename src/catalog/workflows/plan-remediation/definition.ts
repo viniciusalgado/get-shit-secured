@@ -12,17 +12,10 @@ export const planRemediationDefinition: WorkflowDefinition = {
     {
       name: 'Secure Coding Practices',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [],
-    },
-    {
-      name: 'Patch Management',
-      glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [],
     },
     {
       name: 'Defense in Depth',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [],
     },
   ],
   inputs: [
@@ -298,30 +291,14 @@ For each remediation, document:
 - Specify test cases for verification
 - Document rollback procedures
 
-## Specialist-Guided Planning
+## MCP-Guided Planning
 
-For each finding, delegate to the appropriate OWASP specialist to get remediation guidance:
+For each finding, use MCP consultation tools for remediation guidance:
 
-1. **Password issues** → \`gss-specialist-password-storage\`
-2. **SQL injection** → \`gss-specialist-sql-injection-prevention\`, \`gss-specialist-query-parameterization\`
-3. **XSS** → \`gss-specialist-cross-site-scripting-prevention\`
-4. **Command injection** → \`gss-specialist-os-command-injection-defense\`
-5. **Auth/authorization** → \`gss-specialist-authentication\`, \`gss-specialist-authorization\`
-6. **Session issues** → \`gss-specialist-session-management\`
-7. **Crypto/secrets** → \`gss-specialist-cryptographic-storage\`, \`gss-specialist-secrets-management\`
-8. **File upload** → \`gss-specialist-file-upload\`
-9. **CSRF** → \`gss-specialist-cross-site-request-forgery-prevention\`
-
-### Framework-Specific Planning
-
-When the codebase uses specific frameworks, delegate for idiomatic fixes:
-- **Django** → \`gss-specialist-django-security\`, \`gss-specialist-django-rest-framework\`
-- **Laravel** → \`gss-specialist-laravel\`
-- **Node.js** → \`gss-specialist-nodejs-security\`
-- **Rails** → \`gss-specialist-ruby-on-rails\`
-- **Symfony** → \`gss-specialist-symfony\`
-- **Java** → \`gss-specialist-java-security\`, \`gss-specialist-injection-prevention-in-java\`
-- **.NET** → \`gss-specialist-dotnet-security\`
+1. Derive signals from validated findings (stacks, issueTags, changedFiles)
+2. Call get_workflow_consultation_plan(workflowId="plan-remediation", ...)
+3. Read required security documents via MCP resources
+4. Use consulted documents to design idiomatic fixes
 
 ### Output
 
@@ -343,18 +320,13 @@ After completing this workflow, tell the user to review the remediation plan and
 
 **This workflow does NOT modify code.** It creates detailed plans for the execute-remediation workflow to execute.
 
-Focus on secure coding practices and defense in depth.`,
+Focus on secure coding practices and defense in depth.
+
+Use MCP consultation tools for domain-specific remediation guidance.`,
   },
-  delegationPolicy: {
-    mode: 'artifact-driven',
-    subjectSource: 'confirmed findings from validate-findings',
-    constraints: {
-      maxRequiredPerSubject: 3,
-      maxOptionalPerSubject: 3,
-      allowFollowUpSpecialists: true,
-      maxFollowUpDepth: 1,
-      failOnMissingRequired: false,
-      allowOutOfPlanConsults: false,
-    },
+  signalDerivation: {
+    stacks: 'from-prior-artifact',
+    issueTags: 'from-findings',
+    changedFiles: 'from-prior-artifact',
   },
 };

@@ -13,7 +13,6 @@ import type {
   WorkflowHandoff,
   Guardrail,
   WorkflowStep,
-  SpecialistDefinition,
   WorkflowId,
   RoleAgentDefinition,
   AgentAccessLevel,
@@ -54,7 +53,7 @@ export function renderClaudeAgent(workflow: WorkflowDefinition): string {
     renderAgentOrchestration(workflow),
     renderAgentGuardrails(workflow),
     renderAgentRuntimePrompts(workflow),
-    renderClaudeDelegationPlanSection(workflow),
+    renderMcpConsultationSection(workflow),
   ].filter(Boolean);
 
   return sections.join('\n\n');
@@ -77,7 +76,7 @@ export function renderCodexSkill(workflow: WorkflowDefinition): string {
     renderSkillOrchestration(workflow),
     renderSkillGuardrails(workflow),
     renderSkillRuntimePrompts(workflow),
-    renderCodexDelegationPlanSection(workflow),
+    renderMcpConsultationSection(workflow),
   ].filter(Boolean);
 
   return sections.join('\n\n');
@@ -401,10 +400,8 @@ function renderAgentOwaspTopics(workflow: WorkflowDefinition): string {
 
   const items = workflow.owaspTopics
     .map((t) => {
-      const refs = t.cheatSheetUrls?.length
-        ? `\n  - ${t.cheatSheetUrls.join('\n  - ')}`
-        : '';
-      return `- **${t.name}**${refs}`;
+      const glossary = t.glossaryUrl ? ` ([Glossary](${t.glossaryUrl}))` : '';
+      return `- **${t.name}**${glossary}`;
     })
     .join('\n');
 
@@ -517,6 +514,10 @@ ${items}`;
  * Render the "Done Means" section for workflow agents.
  */
 function renderDoneMeans(workflow: WorkflowDefinition): string {
+  const mcpTrace = workflow.signalDerivation
+    ? '\n' + (workflow.signalDerivation ? '0. Consultation trace is included in all artifacts with coverageStatus' : '')
+    : '';
+
   const doneCriteria: Record<WorkflowId, string> = {
     'security-review': `
 1. Change scope is captured from uncommitted set or commit-ref
@@ -524,6 +525,7 @@ function renderDoneMeans(workflow: WorkflowDefinition): string {
 3. Findings include evidence, OWASP mapping, severity, and confidence
 4. Validation is performed without mutating tracked files
 5. TDD remediation specs are generated in .gss/artifacts/security-review/
+${mcpTrace}
 `,
     'map-codebase': `
 1. All major code components are identified and catalogued
@@ -532,6 +534,7 @@ function renderDoneMeans(workflow: WorkflowDefinition): string {
 4. Data flows between components are mapped
 5. External integrations and API endpoints are listed
 6. Artifacts are saved in \`.gss/artifacts/map-codebase/\`
+${mcpTrace}
 `,
     'threat-model': `
 1. All identified threat surfaces have been analyzed
@@ -539,6 +542,7 @@ function renderDoneMeans(workflow: WorkflowDefinition): string {
 3. Threats are prioritized by likelihood and impact
 4. Mitigation recommendations are documented
 5. Artifacts are saved in \`.gss/artifacts/threat-model/\`
+${mcpTrace}
 `,
     'audit': `
 1. All findings include: file path, line number, severity, and evidence
@@ -546,6 +550,7 @@ function renderDoneMeans(workflow: WorkflowDefinition): string {
 3. Each finding includes specific remediation guidance
 4. Confidence levels are stated for each finding
 5. Artifacts are saved in \`.gss/artifacts/audit/\`
+${mcpTrace}
 `,
     'validate-findings': `
 1. All audit findings have been tested with exploitation test cases
@@ -554,6 +559,7 @@ function renderDoneMeans(workflow: WorkflowDefinition): string {
 4. Validated findings include adjusted confidence scores
 5. TDD test document is generated for downstream remediation
 6. Artifacts are saved in \`.gss/artifacts/validate-findings/\`
+${mcpTrace}
 `,
     'plan-remediation': `
 1. All validated findings have a corresponding remediation plan
@@ -562,12 +568,14 @@ function renderDoneMeans(workflow: WorkflowDefinition): string {
 4. Verification steps are specified for each remediation
 5. User approval is obtained BEFORE applying any changes
 6. Artifacts are saved in \`.gss/artifacts/plan-remediation/\`
+${mcpTrace}
 `,
     'execute-remediation': `
 1. All approved remediations are applied
 2. Changes are tested for regressions
 3. Failed patches are documented with reasons
 4. Artifacts are saved in \`.gss/artifacts/execute-remediation/\`
+${mcpTrace}
 `,
     'verify': `
 1. All remediations are verified against original findings
@@ -575,12 +583,14 @@ function renderDoneMeans(workflow: WorkflowDefinition): string {
 3. Any regressions are documented
 4. Confidence levels are stated for each verification
 5. Artifacts are saved in \`.gss/artifacts/verify/\`
+${mcpTrace}
 `,
     'report': `
 1. Executive summary includes key findings and priorities
 2. Technical details reference all previous artifacts
 3. Action items are prioritized with clear ownership
 4. Final report is saved in \`.gss/artifacts/report/\`
+${mcpTrace}
 `,
   };
 
@@ -627,15 +637,18 @@ function renderAgentOrchestration(workflow: WorkflowDefinition): string {
   }
 
   const phaseLines = workflow.orchestration.phases
-    .map((phase, index) => (
-      `### ${index + 1}. ${phase.title} (\`${phase.id}\`)
+    .map((phase, index) => {
+      const modeLabel = phase.mcpConsultation
+        ? `MCP Consultation: \`${phase.mcpConsultation}\``
+        : `Specialist Mode: \`${phase.specialistMode}\``;
+      return `### ${index + 1}. ${phase.title} (\`${phase.id}\`)
 
 - Lead: \`${phase.lead}\`
 - Execution: \`${phase.execution}\`
 - Inputs: ${phase.inputs.map((i) => `\`${i}\``).join(', ') || 'None'}
 - Outputs: ${phase.outputs.map((o) => `\`${o}\``).join(', ') || 'None'}
-- Specialist Mode: \`${phase.specialistMode}\``
-    ))
+- ${modeLabel}`;
+    })
     .join('\n\n');
 
   return `## Orchestration
@@ -670,10 +683,8 @@ function renderSkillOwaspTopics(workflow: WorkflowDefinition): string {
 
   const items = workflow.owaspTopics
     .map((t) => {
-      const refs = t.cheatSheetUrls?.length
-        ? `\n  - ${t.cheatSheetUrls.join('\n  - ')}`
-        : '';
-      return `- **${t.name}**${refs}`;
+      const glossary = t.glossaryUrl ? ` ([Glossary](${t.glossaryUrl}))` : '';
+      return `- **${t.name}**${glossary}`;
     })
     .join('\n');
 
@@ -802,7 +813,8 @@ function renderSkillOrchestration(workflow: WorkflowDefinition): string {
    - Execution: \`${phase.execution}\`
    - Inputs: ${phase.inputs.map((i) => `\`${i}\``).join(', ') || 'None'}
    - Outputs: ${phase.outputs.map((o) => `\`${o}\``).join(', ') || 'None'}
-   - Specialist mode: \`${phase.specialistMode}\``
+   - Specialist mode: \`${phase.specialistMode}\`
+   - MCP consultation: \`${phase.mcpConsultation ?? 'inherit'}\``
     )
     .join('\n\n');
 
@@ -853,156 +865,6 @@ function renderWorkflowChain(workflows: WorkflowDefinition[]): string {
   }
 
   return lines.join('\n');
-}
-
-// =============================================================================
-// Specialist Rendering
-// =============================================================================
-
-/**
- * Render a Claude specialist agent file.
- */
-export function renderClaudeSpecialist(specialist: SpecialistDefinition): string {
-  const sections = [
-    renderSpecialistHeader(specialist),
-    renderSpecialistDescription(specialist),
-    renderSpecialistBindings(specialist),
-    renderSpecialistTriggers(specialist),
-    renderSpecialistDelegates(specialist),
-    renderSpecialistClaudePrompt(specialist),
-  ].filter(Boolean);
-
-  return sections.join('\n\n');
-}
-
-/**
- * Render a Codex specialist skill file.
- */
-export function renderCodexSpecialist(specialist: SpecialistDefinition): string {
-  const sections = [
-    renderSpecialistHeader(specialist),
-    renderSpecialistDescription(specialist),
-    renderSpecialistBindings(specialist),
-    renderSpecialistTriggers(specialist),
-    renderSpecialistCodexPrompt(specialist),
-  ].filter(Boolean);
-
-  return sections.join('\n\n');
-}
-
-/**
- * Render a specialists README for Claude.
- */
-export function renderClaudeSpecialistsReadme(specialists: SpecialistDefinition[]): string {
-  const specialistList = specialists
-    .map((s) => `- \`gss-specialist-${s.id}\` - ${s.title}`)
-    .join('\n');
-
-  return `# get-shit-secured Specialists
-
-This directory contains OWASP-based security specialists for Claude Code.
-
-Each specialist represents an OWASP Cheat Sheet and provides expert guidance for that domain.
-
-## Available Specialists
-
-${specialistList}
-
-## Specialist Usage
-
-Specialists are invoked automatically by workflow agents when:
-1. The workflow step matches the specialist's bindings
-2. An issue type triggers the specialist's activation rules
-3. The detected stack matches the specialist's stack bindings
-4. Another specialist delegates to this specialist
-
-## Delegation Graph
-
-Specialists can delegate to other specialists based on OWASP cheat sheet references.
-This creates a knowledge graph where specialists consult each other for comprehensive coverage.
-
-## See Also
-
-- [Agents README](../agents/gss-README.md)
-- [Commands README](../commands/gss/README.md)
-`;
-}
-
-/**
- * Render a specialists README for Codex.
- */
-export function renderCodexSpecialistsReadme(specialists: SpecialistDefinition[]): string {
-  const specialistList = specialists
-    .map((s) => `- \`gss-specialist-${s.id}\` - ${s.title}`)
-    .join('\n');
-
-  return `# get-shit-secured Specialists
-
-OWASP-based security specialist skills for Codex.
-
-## Available Specialists
-
-${specialistList}
-
-Each specialist encapsulates guidance from a specific OWASP Cheat Sheet.
-`;
-}
-
-function renderSpecialistHeader(specialist: SpecialistDefinition): string {
-  return `# ${specialist.title}
-
-**Specialist ID:** \`gss-specialist-${specialist.id}\`
-
-**Source:** [OWASP Cheat Sheet](${specialist.sourceUrl})`;
-}
-
-function renderSpecialistDescription(specialist: SpecialistDefinition): string {
-  return `## Description
-
-${specialist.intentSummary}`;
-}
-
-function renderSpecialistBindings(specialist: SpecialistDefinition): string {
-  const workflowBindings = specialist.primaryWorkflowIds.map(w => `- \`${w}\``).join('\n');
-  const stackBindings = specialist.stackBindings?.map(s => `- \`${s}\``).join('\n') || '';
-
-  let output = `## Workflow Bindings\n\nThis specialist is used in these workflows:\n\n${workflowBindings}`;
-
-  if (stackBindings) {
-    output += `\n\n### Stack-Conditioned Activation\n\nThis specialist activates when these technologies are detected:\n\n${stackBindings}`;
-  }
-
-  return output;
-}
-
-function renderSpecialistTriggers(specialist: SpecialistDefinition): string {
-  const triggerPhrases = specialist.activationRules
-    .flatMap(r => r.triggerPhrases)
-    .slice(0, 20)
-    .map(p => `- \`${p}\``)
-    .join('\n');
-
-  return `## Activation Triggers\n\nThis specialist is activated by:\n\n${triggerPhrases}`;
-}
-
-function renderSpecialistDelegates(specialist: SpecialistDefinition): string {
-  if (!specialist.delegatesTo || specialist.delegatesTo.length === 0) {
-    return '';
-  }
-
-  const delegates = specialist.delegatesTo
-    .map(d => `- \`gss-specialist-${d}\``)
-    .join('\n');
-
-  return `## Delegates To\n\nThis specialist may delegate to:\n\n${delegates}`;
-}
-
-function renderSpecialistClaudePrompt(specialist: SpecialistDefinition): string {
-  return `## Specialist Instructions\n\n${specialist.runtimePrompts.claude || 'No specific instructions.'}`;
-}
-
-function renderSpecialistCodexPrompt(specialist: SpecialistDefinition): string {
-  return `## Specialist Guidance\n\n${specialist.runtimePrompts.codex || 'No specific guidance.'}`;
 }
 
 // =============================================================================
@@ -1096,6 +958,7 @@ function getRoleSpecificInstructions(agentId: string): string {
 - Scan code for security vulnerabilities using OWASP checklists
 - Assess severity of findings with evidence
 - Map findings to OWASP Top 10 and ASVS
+- Use MCP consultation tools for domain-specific security guidance
 - Require specific file paths and line numbers for all findings
 - Document findings in \`.gss/artifacts/audit/\`
 `,
@@ -1203,12 +1066,12 @@ function getWritePermissions(agentId: string): string {
  */
 function getDelegationRules(agentId: string): string {
   const rules: Record<string, string> = {
-    'gss-mapper': '- No delegation - you are the entry point agent',
-    'gss-threat-modeler': '- Consult gss-auditor if code patterns suggest specific vulnerabilities',
-    'gss-auditor': '- Delegate to OWASP specialists for domain-specific issues',
-    'gss-remediator': '- Consult gss-verifier to plan verification steps',
-    'gss-verifier': '- No delegation - you are the final check',
-    'gss-reporter': '- No delegation - you aggregate completed work',
+    'gss-mapper': '- No delegation — you are the entry point agent',
+    'gss-threat-modeler': '- Consult MCP security docs if code patterns suggest specific vulnerabilities',
+    'gss-auditor': '- Use MCP consultation tools for domain-specific security guidance',
+    'gss-remediator': '- Consult MCP security docs for remediation best practices',
+    'gss-verifier': '- No delegation — you are the final check',
+    'gss-reporter': '- No delegation — you aggregate completed work',
   };
 
   return rules[agentId] || '- May delegate to specialists as needed';
@@ -1374,102 +1237,110 @@ function getCodexDoneCriteria(agentId: string): string {
 }
 
 // =============================================================================
-// Delegation Plan Rendering
+// MCP Consultation Section (Phase 6)
 // =============================================================================
 
 /**
- * Render a delegation plan section for a Claude workflow agent.
- * This is a template section that instructs the runtime to compute and
- * follow the delegation plan at runtime.
+ * Render the MCP consultation section for a workflow.
+ * This replaces the old delegation plan sections for MCP-aware workflows.
  */
-export function renderClaudeDelegationPlanSection(workflow: WorkflowDefinition): string {
-  if (!workflow.delegationPolicy || workflow.delegationPolicy.mode === 'none') {
+export function renderMcpConsultationSection(workflow: WorkflowDefinition): string {
+  const sig = workflow.signalDerivation;
+  if (!sig) {
     return '';
   }
 
-  const policy = workflow.delegationPolicy;
-  const constraints = policy.constraints;
+  const stackSource = sig.stacks === 'from-codebase' ? 'Analyze the codebase to detect languages, frameworks, and platforms'
+    : sig.stacks === 'from-prior-artifact' ? 'Read stack tags from the prior workflow artifact'
+    : sig.stacks === 'from-diff-heuristics' ? 'Infer stack from changed file extensions and patterns in the diff'
+    : 'No stack derivation for this workflow';
 
-  return `## Delegation Plan
+  const issueTagSource = sig.issueTags === 'from-findings' ? 'Extract issue tags from findings (e.g., "sql-injection", "xss")'
+    : sig.issueTags === 'from-diff-heuristics' ? 'Infer issue categories from the types of changes in the diff'
+    : 'No issue tag derivation for this workflow';
 
-This workflow uses **deterministic delegation planning** to select specialists.
+  const changedFilesSource = sig.changedFiles === 'from-diff' ? 'Extract file paths from the current diff or change set'
+    : sig.changedFiles === 'from-prior-artifact' ? 'Read changed file paths from the prior workflow artifact'
+    : 'No changed file derivation for this workflow';
 
-**Delegation Mode:** ${policy.mode}
-**Subject Source:** ${policy.subjectSource}
+  return `## MCP Security Consultation
 
-### Required Specialist Consultations
+This workflow uses the GSS MCP server for deterministic security knowledge access.
 
-Before consulting specialists, compute the delegation plan using the signals available in this workflow's artifacts. The plan determines which specialists MUST be consulted (required), MAY be consulted (optional), and are derived as follow-ups.
+### Step 1: Derive Signals
 
-### Consultation Constraints
+Before consulting the MCP, derive these signals from the current context:
 
-- Maximum required specialists per subject: **${constraints.maxRequiredPerSubject}**
-- Maximum optional specialists per subject: **${constraints.maxOptionalPerSubject}**
-- Follow-up specialists allowed: **${constraints.allowFollowUpSpecialists ? 'Yes' : 'No'}**
-- Maximum follow-up depth: **${constraints.maxFollowUpDepth}**
-- Fail if required specialist missing: **${constraints.failOnMissingRequired ? 'Yes' : 'No'}**
-- Out-of-plan consults allowed: **${constraints.allowOutOfPlanConsults ? 'Yes' : 'No'}**
+- **stacks**: ${stackSource}
+- **issueTags**: ${issueTagSource}
+- **changedFiles**: ${changedFilesSource}
 
-### Specialist Output Format
+### Step 2: Get Consultation Plan
 
-Each specialist consultation MUST produce:
-- \`verdict\`: \`pass\` | \`fail\` | \`needs-review\`
-- \`confidence\`: 0-1 score
-- \`evidence\`: code snippets or configuration
-- \`affectedFiles\`: files and line numbers
-- \`remediationNotes\`: specific fix recommendations
-- \`verificationNotes\`: how to verify the fix
-- \`owaspSourceUrl\`: governing cheat sheet URL
+Call the MCP tool:
+\`\`\`
+get_workflow_consultation_plan(workflowId="${workflow.id}", stacks=<derived>, issueTags=<derived>, changedFiles=<derived>)
+\`\`\`
 
-### Required Output Capture
+This returns required, optional, and followup documents.
 
-1. Every specialist response MUST be captured in \`.gss/artifacts/${workflow.id}/specialist-results.json\`
-2. The delegation plan MUST be saved to \`.gss/artifacts/${workflow.id}/delegation-plan.json\`
-3. Compliance validation MUST be saved to \`.gss/artifacts/${workflow.id}/delegation-compliance.json\`
-4. A human-readable summary MUST be saved to \`.gss/artifacts/${workflow.id}/delegation-summary.md\`
+### Step 3: Read Required Documents
 
-### Compliance Rules
+For each required document, read via MCP resource:
+\`\`\`
+security://owasp/cheatsheet/{docId}
+\`\`\`
 
-- Missing a required specialist consultation is a **hard failure** for this workflow
-- Consulting a specialist not in the plan is recorded and excluded from aggregation
-- Duplicate consultations are resolved by keeping the highest-confidence result
-- The workflow MUST NOT self-certify as complete if delegation compliance fails`;
+### Step 4: Optionally Expand
+
+If a required doc references related topics, call:
+\`\`\`
+get_related_security_docs(id=<docId>)
+\`\`\`
+
+### Step 5: Perform Reasoning
+
+Use the consulted documents as grounding for workflow-specific analysis.
+
+### Step 6: Validate Coverage
+
+Before finalizing, call:
+\`\`\`
+validate_security_consultation(workflowId="${workflow.id}", consultedDocs=[<ids>], stacks=<derived>, issueTags=<derived>)
+\`\`\`
+
+### Step 7: Include Consultation Trace
+
+Every artifact MUST include a consultation trace section:
+\`\`\`json
+{
+  "consultation": {
+    "plan": {
+      "workflowId": "${workflow.id}",
+      "generatedAt": "<timestamp>",
+      "corpusVersion": "<version>",
+      "requiredCount": <n>,
+      "optionalCount": <n>,
+      "followupCount": <n>
+    },
+    "consultedDocs": [
+      { "id": "<doc-id>", "title": "<doc-title>", "sourceUrl": "<url>" }
+    ],
+    "coverageStatus": "pass" | "warn" | "fail",
+    "requiredMissing": [],
+    "notes": []
+  }
+}
+\`\`\`
+
+### Fallback
+
+If the MCP server is unavailable, proceed with workflow-specific analysis and note in the consultation trace that MCP was unavailable. Do not block on MCP failure.`;
 }
 
 /**
- * Render a delegation plan section for a Codex workflow skill.
+ * Render the consultation trace requirement for a workflow.
  */
-export function renderCodexDelegationPlanSection(workflow: WorkflowDefinition): string {
-  if (!workflow.delegationPolicy) {
-    return '';
-  }
-
-  const policy = workflow.delegationPolicy;
-  const constraints = policy.constraints;
-
-  return `## Delegation Plan
-
-This skill uses **deterministic delegation planning** for specialist selection.
-
-**Mode:** ${policy.mode}
-**Subject Source:** ${policy.subjectSource}
-
-### Constraints
-
-- Max required per subject: ${constraints.maxRequiredPerSubject}
-- Max optional per subject: ${constraints.maxOptionalPerSubject}
-- Follow-ups allowed: ${constraints.allowFollowUpSpecialists ? 'Yes' : 'No'} (depth: ${constraints.maxFollowUpDepth})
-- Fail on missing required: ${constraints.failOnMissingRequired ? 'Yes' : 'No'}
-
-### Output Requirements
-
-1. Save specialist results to \`.gss/artifacts/${workflow.id}/specialist-results.json\`
-2. Save delegation plan to \`.gss/artifacts/${workflow.id}/delegation-plan.json\`
-3. Save compliance check to \`.gss/artifacts/${workflow.id}/delegation-compliance.json\`
-
-### Compliance
-
-- Required specialist consultations are mandatory
-- Out-of-plan consults are recorded but excluded
-- Highest-confidence result retained for duplicates`;
+export function renderConsultationTraceRequirement(workflowId: string): string {
+  return `**Consultation trace is included in all artifacts** with coverageStatus (pass/warn/fail). Workflow: ${workflowId}.`;
 }

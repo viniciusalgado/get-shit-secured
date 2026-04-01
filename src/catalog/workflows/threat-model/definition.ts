@@ -12,21 +12,14 @@ export const threatModelDefinition: WorkflowDefinition = {
     {
       name: 'Threat Modeling',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html',
-      ],
     },
     {
       name: 'Risk Assessment',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [],
     },
     {
       name: 'Attack Surface Analysis',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [
-        'https://cheatsheetseries.owasp.org/cheatsheets/Attack_Surface_Analysis_Cheat_Sheet.html',
-      ],
     },
   ],
   inputs: [
@@ -273,7 +266,9 @@ These abuse cases will guide the audit workflow's testing approach.`,
 - Distinguish between "theoretical" and "practical" threats
 - Focus on threats relevant to this application's context
 
-Output artifacts to .gss/artifacts/threat-model/ for use by audit and plan-remediation workflows.`,
+Output artifacts to .gss/artifacts/threat-model/ for use by audit and plan-remediation workflows.
+
+Use MCP consultation tools for domain-specific threat analysis guidance.`,
     codex: `Build a comprehensive threat model:
 
 1. Read the codebase mapping artifacts
@@ -282,18 +277,11 @@ Output artifacts to .gss/artifacts/threat-model/ for use by audit and plan-remed
 4. Recommend prioritized mitigations
 5. Document abuse scenarios
 
-Ground all analysis in OWASP threat modeling practices.`,
+Ground all analysis in OWASP threat modeling practices. Use MCP consultation for domain-specific guidance.`,
   },
-  delegationPolicy: {
-    mode: 'on-detection',
-    subjectSource: 'abuse cases and trust-boundary risks',
-    constraints: {
-      maxRequiredPerSubject: 3,
-      maxOptionalPerSubject: 3,
-      allowFollowUpSpecialists: true,
-      maxFollowUpDepth: 1,
-      failOnMissingRequired: false,
-      allowOutOfPlanConsults: false,
-    },
+  signalDerivation: {
+    stacks: 'from-prior-artifact',
+    issueTags: 'none',
+    changedFiles: 'none',
   },
 };

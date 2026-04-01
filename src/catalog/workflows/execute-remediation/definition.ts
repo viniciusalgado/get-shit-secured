@@ -15,17 +15,10 @@ export const executeRemediationDefinition: WorkflowDefinition = {
     {
       name: 'Secure Coding Practices',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [],
-    },
-    {
-      name: 'Patch Management',
-      glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [],
     },
     {
       name: 'Secure Deployment',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [],
     },
   ],
   inputs: [
@@ -497,7 +490,9 @@ After completing this workflow:
 **Handoff:**
 When complete, tell the user to run \`/gss-verify\` to verify the applied fixes.
 
-Do NOT refactor beyond what's specified. Do NOT add unrelated changes.`,
+Do NOT refactor beyond what's specified. Do NOT add unrelated changes.
+
+Use MCP consultation tools if unexpected security issues arise during patch application.`,
     codex: `Apply security patches from the approved remediation plan:
 
 1. Validate all required artifacts exist
@@ -508,18 +503,13 @@ Do NOT refactor beyond what's specified. Do NOT add unrelated changes.`,
 6. Document deviations from the plan
 7. Generate application report and change summary
 
-Only apply changes specified in the approved patch plan.`,
+Only apply changes specified in the approved patch plan.
+
+Use MCP consultation tools for domain-specific guidance when unexpected issues arise.`,
   },
-  delegationPolicy: {
-    mode: 'on-detection',
-    subjectSource: 'approved patch items and high-risk remediations',
-    constraints: {
-      maxRequiredPerSubject: 2,
-      maxOptionalPerSubject: 2,
-      allowFollowUpSpecialists: true,
-      maxFollowUpDepth: 1,
-      failOnMissingRequired: false,
-      allowOutOfPlanConsults: false,
-    },
+  signalDerivation: {
+    stacks: 'from-prior-artifact',
+    issueTags: 'from-findings',
+    changedFiles: 'from-prior-artifact',
   },
 };

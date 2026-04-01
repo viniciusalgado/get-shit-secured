@@ -12,17 +12,14 @@ export const verifyDefinition: WorkflowDefinition = {
     {
       name: 'ASVS Security Verification',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [],
     },
     {
       name: 'Security Testing',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [],
     },
     {
       name: 'Regression Testing',
       glossaryUrl: 'https://cheatsheetseries.owasp.org/Glossary.html',
-      cheatSheetUrls: [],
     },
   ],
   inputs: [
@@ -378,34 +375,20 @@ This feeds into the final report for stakeholders.`,
 - Document any residual risks or partial fixes
 - Reference ASVS controls for verification criteria
 
-## Specialist Confirmation Required
+## MCP Consultation for Verification
 
-For fixes touching these areas, always delegate to the corresponding specialist for confirmation:
-
-1. **Authentication/Authorization** → \`gss-specialist-authentication\`, \`gss-specialist-authorization\`, \`gss-specialist-multifactor-authentication\`
-2. **Session Management** → \`gss-specialist-session-management\`
-3. **Password/Secrets** → \`gss-specialist-password-storage\`, \`gss-specialist-secrets-management\`
-4. **Cryptography** → \`gss-specialist-cryptographic-storage\`, \`gss-specialist-key-management\`
-5. **TLS/Transport** → \`gss-specialist-transport-layer-security\`, \`gss-specialist-transport-layer-protection\`
-6. **Headers/CSP** → \`gss-specialist-http-headers\`, \`gss-specialist-content-security-policy\`
-7. **Configuration** → \`gss-specialist-error-handling\`, \`gss-specialist-logging\`
+1. Derive signals from findings and applied patches
+2. Call get_workflow_consultation_plan(workflowId="verify", stacks=..., issueTags=...)
+3. Read required docs to understand what the correct fix should look like
+4. Compare applied fix against MCP document guidance
+5. Call validate_security_consultation before finalizing
 
 ### Verification Protocol
 
 1. **Review the fix** - Understand what was changed
-2. **Identify affected domain** - Map to OWASP specialist
-3. **Delegate to specialist** - Get specialist verdict on the fix
-4. **Run tests** - Execute test specifications
-5. **Aggregate results** - Combine specialist verdicts with test results
-
-### Specialist Verification Output
-
-Each specialist should provide:
-- \`verdict\`: pass/fail/needs-review on the fix
-- \`confidence\`: 0-1 score
-- \`evidence\`: what was checked
-- \`verificationNotes\`: how to verify the fix
-- \`owaspSourceUrl\`: governing cheat sheet
+2. **Consult MCP docs** - Get the governing security document for the fix domain
+3. **Run tests** - Execute test specifications
+4. **Aggregate results** - Combine MCP guidance with test results
 
 Output artifacts to .gss/artifacts/verify/ for use by the report workflow.`,
     codex: `Verify security remediations:
@@ -417,22 +400,15 @@ Output artifacts to .gss/artifacts/verify/ for use by the report workflow.`,
 5. Assess test coverage
 6. Document residual risks
 
-## Specialist Consultation
+## MCP Consultation
 
-For fixes involving authentication, crypto, sessions, config, or transport, delegate to the corresponding OWASP specialist for confirmation. Specialists return structured verdicts with verification notes.
+Use MCP consultation tools to get domain-specific verification guidance for each remediation domain.
 
 Focus on evidence-based verification.`,
   },
-  delegationPolicy: {
-    mode: 'always',
-    subjectSource: 'applied, partial, and blocked patches from execute-remediation',
-    constraints: {
-      maxRequiredPerSubject: 3,
-      maxOptionalPerSubject: 2,
-      allowFollowUpSpecialists: false,
-      maxFollowUpDepth: 0,
-      failOnMissingRequired: true,
-      allowOutOfPlanConsults: false,
-    },
+  signalDerivation: {
+    stacks: 'from-prior-artifact',
+    issueTags: 'from-findings',
+    changedFiles: 'from-prior-artifact',
   },
 };
