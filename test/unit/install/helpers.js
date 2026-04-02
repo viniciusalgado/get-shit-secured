@@ -35,6 +35,7 @@ export function createMockAdapter(overrides = {}) {
       supportsRoleAgents: true,
       hasConfigFormat: true,
     }),
+    getRoleFiles: () => overrides.roleFiles || [],
     ...overrides,
   };
 }

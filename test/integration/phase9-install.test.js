@@ -73,6 +73,7 @@ function createTestAdapter(rootPath, supportSubtree) {
       mergeStrategy: 'deep',
       keyPath: 'mcpServers.gss-security-docs',
     }),
+    getRoleFiles: () => [],
   };
 }
 

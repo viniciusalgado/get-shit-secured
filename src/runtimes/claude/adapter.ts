@@ -27,6 +27,9 @@ import {
   renderRoleAgent,
 } from '../../core/renderer.js';
 import {
+  getAllRoles,
+} from '../../catalog/roles/registry.js';
+import {
   ARTIFACT_VALIDATION_RULES,
 } from '../../hooks/artifact-validator.js';
 
@@ -216,48 +219,23 @@ export class ClaudeAdapter implements RuntimeAdapter {
   }
 
   /**
-   * Get role agent files.
+   * Get role agent files using the shared role catalog.
+   */
+  getRoleFiles(): RuntimeFile[] {
+    return getAllRoles().map(role => ({
+      relativePath: `agents/${role.id}.md`,
+      content: renderRoleAgent(role),
+      category: 'entrypoint' as const,
+      overwritePolicy: 'replace-managed' as const,
+    }));
+  }
+
+  /**
+   * @deprecated Use getRoleFiles() instead.
+   * Kept for backward compatibility during transition.
    */
   getRoleAgentFiles(): RuntimeFile[] {
-    const roleAgents: Array<{id: string; title: string; description: string}> = [
-      {
-        id: 'gss-mapper',
-        title: 'Codebase Mapper',
-        description: 'Analyzes codebase structure, dependencies, and security-relevant patterns',
-      },
-      {
-        id: 'gss-threat-modeler',
-        title: 'Threat Modeler',
-        description: 'Generates threat models and identifies security risks',
-      },
-      {
-        id: 'gss-auditor',
-        title: 'Security Auditor',
-        description: 'Performs security audits based on OWASP standards',
-      },
-      {
-        id: 'gss-remediator',
-        title: 'Security Remediator',
-        description: 'Plans and applies security fixes with minimal safe changes',
-      },
-      {
-        id: 'gss-verifier',
-        title: 'Security Verifier',
-        description: 'Verifies security fixes and runs validation checks',
-      },
-      {
-        id: 'gss-reporter',
-        title: 'Security Reporter',
-        description: 'Generates comprehensive security reports',
-      },
-    ];
-
-    return roleAgents.map(agent => ({
-      relativePath: `agents/${agent.id}.md`,
-      content: renderRoleAgent(agent),
-      category: 'entrypoint',
-      overwritePolicy: 'replace-managed',
-    }));
+    return this.getRoleFiles();
   }
 
   getSettingsMerge(): { path: string; content: Record<string, unknown> } | null {
@@ -449,12 +427,19 @@ try {
   // 9. One-line diagnostic summary
   const gssVersion = runtimeManifest.gssVersion || 'unknown';
   const corpusVersion = runtimeManifest.corpusVersion || 'unknown';
+  const workflowCount = (runtimeManifest.installedWorkflows || []).length;
+  const roleCount = (runtimeManifest.installedRoles || []).length;
+  const mcpName = runtimeManifest.mcpServerName || 'gss-security-docs';
+  const legacyMode = runtimeManifest.legacyMode || false;
   if (mcpReady && corpusReady) {
-    console.log('[GSS] v' + gssVersion + ' | corpus v' + corpusVersion + ' | ' + docCount + ' docs | MCP ready | installed ' + runtimeManifest.installedAt.split('T')[0]);
+    console.log('[GSS] v' + gssVersion + ' | corpus v' + corpusVersion + ' | ' + docCount + ' docs | MCP ready | ' + workflowCount + ' workflows | ' + roleCount + ' roles | ' + mcpName + ' | installed ' + runtimeManifest.installedAt.split('T')[0]);
   } else {
     const parts = ['v' + gssVersion];
     parts.push(corpusReady ? 'corpus v' + corpusVersion : 'corpus MISSING');
     parts.push(mcpReady ? 'MCP ready' : 'MCP unavailable');
+    parts.push(workflowCount + ' workflows');
+    parts.push(roleCount + ' roles');
+    if (legacyMode) parts.push('legacy: on');
     parts.push('DEGRADED MODE');
     console.warn('[GSS] ' + parts.join(' | '));
     console.warn('[GSS] Running in degraded mode — MCP consultation unavailable.');

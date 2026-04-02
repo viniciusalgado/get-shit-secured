@@ -108,9 +108,9 @@ describe('resolveInstallPlan — File operations', () => {
     assert.equal(plan.fileOps[0].hooks.length, 4);
   });
 
-  it('file ops include role agent files when adapter provides them', () => {
+  it('file ops include role files when adapter provides them', () => {
     const adapter = createMockAdapterWithMcp();
-    adapter.getRoleAgentFiles = () => [
+    adapter.getRoleFiles = () => [
       { relativePath: 'agents/gss-auditor.md', content: 'auditor', category: 'entrypoint', overwritePolicy: 'create-only' },
     ];
     const targets = makeTargets();
@@ -118,7 +118,7 @@ describe('resolveInstallPlan — File operations', () => {
       dryRun: false, legacySpecialists: false, pkgRoot: '/pkg',
     });
     const agents = plan.fileOps[0].entrypointFiles.filter(f => f.includes('gss-auditor'));
-    assert.ok(agents.length > 0, 'Should include role agent files');
+    assert.ok(agents.length > 0, 'Should include role files');
   });
 
   it('multiple runtimes produce multiple file ops', () => {

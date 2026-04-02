@@ -22,6 +22,9 @@ import {
   renderSkillsReadme,
   renderCodexRoleSkill,
 } from '../../core/renderer.js';
+import {
+  getAllRoles,
+} from '../../catalog/roles/registry.js';
 
 /**
  * Codex runtime adapter.
@@ -148,48 +151,23 @@ export class CodexAdapter implements RuntimeAdapter {
   }
 
   /**
-   * Get role skill files for Codex.
+   * Get role skill files for Codex using the shared role catalog.
+   */
+  getRoleFiles(): RuntimeFile[] {
+    return getAllRoles().map(role => ({
+      relativePath: `skills/${role.id}/SKILL.md`,
+      content: renderCodexRoleSkill(role),
+      category: 'entrypoint' as const,
+      overwritePolicy: 'replace-managed' as const,
+    }));
+  }
+
+  /**
+   * @deprecated Use getRoleFiles() instead.
+   * Kept for backward compatibility during transition.
    */
   getRoleSkillFiles(): RuntimeFile[] {
-    const roleSkills: Array<{id: string; title: string; description: string}> = [
-      {
-        id: 'gss-mapper',
-        title: 'Codebase Mapper',
-        description: 'Analyzes codebase structure, dependencies, and security-relevant patterns',
-      },
-      {
-        id: 'gss-threat-modeler',
-        title: 'Threat Modeler',
-        description: 'Generates threat models and identifies security risks',
-      },
-      {
-        id: 'gss-auditor',
-        title: 'Security Auditor',
-        description: 'Performs security audits based on OWASP standards',
-      },
-      {
-        id: 'gss-remediator',
-        title: 'Security Remediator',
-        description: 'Plans and applies security fixes with minimal safe changes',
-      },
-      {
-        id: 'gss-verifier',
-        title: 'Security Verifier',
-        description: 'Verifies security fixes and runs validation checks',
-      },
-      {
-        id: 'gss-reporter',
-        title: 'Security Reporter',
-        description: 'Generates comprehensive security reports',
-      },
-    ];
-
-    return roleSkills.map(skill => ({
-      relativePath: `skills/${skill.id}/SKILL.md`,
-      content: renderCodexRoleSkill(skill),
-      category: 'entrypoint',
-      overwritePolicy: 'replace-managed',
-    }));
+    return this.getRoleFiles();
   }
 
   getSettingsMerge(): { path: string; content: Record<string, unknown> } | null {

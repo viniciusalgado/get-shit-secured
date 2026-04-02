@@ -295,10 +295,11 @@ function checkRuntime(
 
   // Check 6: Manifest consistency
   const runtimeManifestPath = join(supportSubtree, 'runtime-manifest.json');
+  let runtimeManifest: RuntimeManifest | null = null;
   if (existsSync(runtimeManifestPath) && corpusVersion !== 'unknown') {
     try {
       const content = readFileSync(runtimeManifestPath, 'utf-8');
-      const runtimeManifest = JSON.parse(content) as RuntimeManifest;
+      runtimeManifest = JSON.parse(content) as RuntimeManifest;
       if (runtimeManifest.corpusVersion === corpusVersion) {
         checks.push({
           name: 'Manifest consistency',
@@ -322,17 +323,57 @@ function checkRuntime(
       });
     }
   } else if (existsSync(runtimeManifestPath)) {
-    checks.push({
-      name: 'Manifest consistency',
-      status: 'ok',
-      message: 'runtime manifest present',
-    });
+    try {
+      const content = readFileSync(runtimeManifestPath, 'utf-8');
+      runtimeManifest = JSON.parse(content) as RuntimeManifest;
+      checks.push({
+        name: 'Manifest consistency',
+        status: 'ok',
+        message: 'runtime manifest present',
+      });
+    } catch {
+      checks.push({
+        name: 'Manifest consistency',
+        status: 'warn',
+        message: 'cannot read runtime manifest',
+        fixHint: `Check ${relative(cwd, runtimeManifestPath)}`,
+      });
+    }
   } else {
     checks.push({
       name: 'Manifest consistency',
       status: 'warn',
       message: `runtime manifest not found at ${relative(cwd, runtimeManifestPath)}`,
       fixHint: 'Re-run: npx get-shit-secured --claude --local',
+    });
+  }
+
+  // Check 7: Phase 10 diagnostic metadata
+  if (runtimeManifest) {
+    const workflowCount = (runtimeManifest as RuntimeManifest & { installedWorkflows?: string[] }).installedWorkflows?.length;
+    const roleCount = (runtimeManifest as RuntimeManifest & { installedRoles?: string[] }).installedRoles?.length;
+    const mcpServerName = (runtimeManifest as RuntimeManifest & { mcpServerName?: string }).mcpServerName;
+    const legacyMode = (runtimeManifest as RuntimeManifest & { legacyMode?: boolean }).legacyMode;
+
+    const parts: string[] = [];
+    if (workflowCount !== undefined) {
+      parts.push(`${workflowCount} workflows`);
+    }
+    if (roleCount !== undefined) {
+      parts.push(`${roleCount} roles`);
+    }
+    if (mcpServerName) {
+      parts.push(`MCP: ${mcpServerName}`);
+    }
+    if (legacyMode !== undefined) {
+      parts.push(`mode: ${legacyMode ? 'legacy' : 'hybrid'}`);
+    }
+
+    checks.push({
+      name: 'Diagnostic metadata',
+      status: parts.length >= 3 ? 'ok' : 'warn',
+      message: parts.length > 0 ? parts.join(', ') : 'no Phase 10 metadata found',
+      fixHint: parts.length < 3 ? 'Re-run: npx get-shit-secured --claude --local to update manifest' : undefined,
     });
   }
 
