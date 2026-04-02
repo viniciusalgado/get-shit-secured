@@ -112,7 +112,7 @@ function determineStatus(
   if (requiredMissing.length > 0) {
     if (failOnMissingRequired) {
       notes.push(
-        `FAIL: ${requiredMissing.length} required document(s) not consulted: ${requiredMissing.join(', ')}`,
+        `FAIL: ${requiredMissing.length} required document(s) missing (not consulted): ${requiredMissing.join(', ')}`,
       );
       return 'fail';
     } else {

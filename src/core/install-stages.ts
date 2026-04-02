@@ -337,6 +337,11 @@ export async function installRuntimeArtifacts(
           corpusVersion: corpus?.corpusVersion ?? 'legacy',
           hooks: hooks.map(h => h.id),
           managedConfigs: jsonConfigRecords.map(r => r.path),
+          // Phase 8 additions for session-start health checks:
+          corpusPath: corpus?.destinationPaths[runtime] ?? null,
+          mcpServerPath: corpus ? join(supportSubtreePath, 'mcp', 'server.js') : null,
+          mcpConfigPath: join(rootPath, 'settings.json'),
+          gssVersion: '0.1.0',
         };
         await writeFile(runtimeManifestPath, JSON.stringify(runtimeManifest, null, 2), 'utf-8');
       } catch (error) {

@@ -33,6 +33,7 @@
     "build-corpus": "node dist/corpus/snapshot-builder.js",
     "validate-corpus": "node scripts/validate-corpus.mjs",
     "inspect-corpus": "node dist/cli/index.js corpus inspect",
+    "migration:phases": "node scripts/run-migration-phase-pipeline.mjs",
     "lint": "eslint src",
     "format": "prettier --write \"src/**/*.ts\""
   },

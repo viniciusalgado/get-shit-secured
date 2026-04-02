@@ -1240,6 +1240,28 @@ export type RoleAgentId =
   | 'gss-reporter';
 
 /**
+ * MCP consultation interaction level for a role agent.
+ * - 'full': Role reads all required + optional docs, validates coverage
+ * - 'moderate': Role reads subset of docs relevant to its reasoning
+ * - 'minimal': Role reads only stack-relevant docs for context
+ * - 'none': Role does not initiate new MCP consultation
+ */
+export type RoleMcpConsultationLevel = 'full' | 'moderate' | 'minimal' | 'none';
+
+/**
+ * Role agent MCP consultation configuration.
+ * Determines how each role interacts with the GSS MCP server.
+ */
+export interface RoleMcpConfig {
+  /** MCP interaction level */
+  level: RoleMcpConsultationLevel;
+  /** When this role should consult the MCP */
+  when: string;
+  /** Which MCP tools this role uses */
+  tools: string[];
+}
+
+/**
  * Access level for role agents.
  */
 export type AgentAccessLevel = 'read-only' | 'write-capable' | 'verification-only';
@@ -1273,4 +1295,64 @@ export interface RoleAgentDefinition {
   verificationRequirements: string[];
   /** Workflow this agent is primarily associated with */
   primaryWorkflow: WorkflowId;
+}
+
+// =============================================================================
+// Phase 8 — Hook Retargeting Types
+// =============================================================================
+
+/**
+ * Active workflow tracking file written by workflow commands.
+ * Used by hooks to enforce mode-specific policies.
+ *
+ * Written to `.gss/artifacts/active-workflow.json` at workflow start.
+ * Removed at workflow completion. If found at session start, indicates
+ * an interrupted workflow and is cleaned up by the session-start hook.
+ */
+export interface ActiveWorkflow {
+  /** Workflow ID currently running */
+  workflowId: WorkflowId;
+  /** ISO 8601 timestamp of workflow start */
+  startedAt: string;
+  /** Mode: review-only, write-capable, verification */
+  mode: 'review-only' | 'write-capable' | 'verification';
+  /** Files in scope for this workflow (from prior artifacts) */
+  scopeFiles?: string[];
+}
+
+/**
+ * Workflow mode classification for hook policy enforcement.
+ */
+export type WorkflowMode = ActiveWorkflow['mode'];
+
+/**
+ * Runtime manifest — written to {supportSubtree}/runtime-manifest.json.
+ * Tracks per-runtime installation metadata for health checks and diagnostics.
+ *
+ * Extended in Phase 8 to include corpus/MCP paths and GSS version for
+ * session-start hook health checks.
+ */
+export interface RuntimeManifest {
+  /** Runtime target (claude | codex) */
+  runtime: RuntimeTarget;
+  /** Installation scope (local | global) */
+  scope: InstallScope;
+  /** ISO 8601 timestamp of installation */
+  installedAt: string;
+  /** Manifest format version */
+  version: string;
+  /** Corpus snapshot version used for this install */
+  corpusVersion: string;
+  /** Hook IDs registered for this runtime */
+  hooks: string[];
+  /** Managed config file paths */
+  managedConfigs: string[];
+  /** Absolute path to the corpus snapshot file */
+  corpusPath: string | null;
+  /** Absolute path to the MCP server binary */
+  mcpServerPath: string | null;
+  /** Absolute path to the runtime settings.json (for MCP registration check) */
+  mcpConfigPath: string;
+  /** GSS package version */
+  gssVersion: string;
 }

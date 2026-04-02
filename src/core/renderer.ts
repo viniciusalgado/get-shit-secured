@@ -17,6 +17,8 @@ import type {
   RoleAgentDefinition,
   AgentAccessLevel,
   DelegationPolicy,
+  RoleMcpConsultationLevel,
+  RoleMcpConfig,
 } from './types.js';
 
 /**
@@ -868,122 +870,386 @@ function renderWorkflowChain(workflows: WorkflowDefinition[]): string {
 }
 
 // =============================================================================
-// Role Agent Rendering
+// Role Agent Rendering (Phase 7 — MCP-aware role template)
 // =============================================================================
 
 /**
- * Render a role agent file for Claude.
+ * Map a role agent ID to its primary workflow.
  */
-export function renderRoleAgent(agent: {
-  id: string;
-  title: string;
-  description: string;
-}): string {
-  return `# ${agent.title}
-
-**Agent ID:** \`${agent.id}\`
-
-## Description
-
-${agent.description}
-
-## Role and Responsibilities
-
-This is a **role-based agent** within the get-shit-secured framework. You have specific, well-defined responsibilities:
-
-${getRoleSpecificInstructions(agent.id)}
-
-## Access Level
-
-${getAccessLevelText(agent.id)}
-
-## Read Permissions
-
-You may read:
-${getReadPermissions(agent.id)}
-
-## Write Permissions
-
-You may write to:
-${getWritePermissions(agent.id)}
-
-## Required Output Format
-
-All outputs must follow the structured format specified in the execution procedure below.
-
-## Delegation Rules
-
-${getDelegationRules(agent.id)}
-
-## Escalation Rules
-
-${getEscalationRules(agent.id)}
-
-## Evidence Quality Requirements
-
-- All findings must include specific file paths and line numbers
-- All recommendations must be grounded in OWASP standards
-- All remediations must include verification steps
-- Uncertainty must be explicitly stated with confidence levels
-
-## "Done" Means
-
-This workflow is **complete** when:
-${getDoneCriteria(agent.id)}
-`;
-
+function getPrimaryWorkflowForRole(agentId: string): WorkflowId {
+  const mapping: Record<string, WorkflowId> = {
+    'gss-mapper': 'map-codebase',
+    'gss-threat-modeler': 'threat-model',
+    'gss-auditor': 'audit',
+    'gss-remediator': 'plan-remediation',
+    'gss-verifier': 'verify',
+    'gss-reporter': 'report',
+  };
+  return mapping[agentId] || 'security-review';
 }
 
 /**
- * Get role-specific instructions for each agent.
+ * Get MCP consultation configuration for a role.
  */
-function getRoleSpecificInstructions(agentId: string): string {
-  const instructions: Record<string, string> = {
-    'gss-mapper': `
-- Analyze codebase structure and identify key components
-- Map dependencies and their security relevance
-- Identify authentication/authorization boundaries
-- Document data flows between components
-- Identify external integrations and API endpoints
-- Produce a structured codebase inventory in \`.gss/artifacts/map-codebase/\`
-`,
-    'gss-threat-modeler': `
-- Use the codebase map to identify threat surfaces
-- Identify abuse cases and attack vectors
-- Assess potential impact of each threat
-- Prioritize threats by likelihood and impact
-- Document threat models in \`.gss/artifacts/threat-model/\`
-`,
-    'gss-auditor': `
-- Scan code for security vulnerabilities using OWASP checklists
-- Assess severity of findings with evidence
-- Map findings to OWASP Top 10 and ASVS
-- Use MCP consultation tools for domain-specific security guidance
-- Require specific file paths and line numbers for all findings
-- Document findings in \`.gss/artifacts/audit/\`
-`,
-    'gss-remediator': `
-- Plan minimal safe changes to address findings
-- Prefer configuration changes over code changes when possible
-- Preserve user changes and custom logic
-- Document all planned changes with rationale
-- Output remediation plans to \`.gss/artifacts/plan-remediation/\`
-`,
-    'gss-verifier': `
-- Verify that remediations address the reported findings
-- Run or specify tests to confirm fixes
-- Check for regressions or new vulnerabilities
-- Document verification results in \`.gss/artifacts/verify/\`
-`,
-    'gss-reporter': `
-- Aggregate all artifacts into comprehensive reports
-- Include executive summary and technical details
-- Provide prioritized action items
-- Generate reports in \`.gss/artifacts/report/\`
-`,
+function getRoleMcpConfig(agentId: string): RoleMcpConfig {
+  const configs: Record<string, RoleMcpConfig> = {
+    'gss-mapper': {
+      level: 'minimal',
+      when: 'After identifying the tech stack, request stack-relevant security documents to inform the inventory',
+      tools: ['get_workflow_consultation_plan', 'read_security_doc'],
+    },
+    'gss-threat-modeler': {
+      level: 'moderate',
+      when: 'After STRIDE analysis begins, consult threat-modeling-relevant documents from the MCP',
+      tools: ['get_workflow_consultation_plan', 'read_security_doc', 'get_related_security_docs'],
+    },
+    'gss-auditor': {
+      level: 'full',
+      when: 'Before, during, and after audit reasoning — this is the heaviest MCP user',
+      tools: ['get_workflow_consultation_plan', 'read_security_doc', 'get_related_security_docs', 'validate_security_consultation'],
+    },
+    'gss-remediator': {
+      level: 'full',
+      when: 'Before planning remediation and during fix design — reads remediation-relevant docs',
+      tools: ['get_workflow_consultation_plan', 'read_security_doc', 'get_related_security_docs', 'validate_security_consultation'],
+    },
+    'gss-verifier': {
+      level: 'moderate',
+      when: 'Before verification — reads the SAME documents that governed the original findings',
+      tools: ['get_workflow_consultation_plan', 'read_security_doc', 'validate_security_consultation'],
+    },
+    'gss-reporter': {
+      level: 'none',
+      when: 'Does not initiate new MCP consultation — reads consultation traces from prior workflow artifacts',
+      tools: [],
+    },
   };
 
-  return instructions[agentId] || '- Execute specialized security tasks\n- Document all findings and outputs\n';
+  return configs[agentId] || {
+    level: 'minimal',
+    when: 'As needed for security knowledge',
+    tools: ['get_workflow_consultation_plan'],
+  };
+}
+
+/**
+ * Get the mission statement for a role agent.
+ */
+function getRoleMission(agentId: string): string {
+  const missions: Record<string, string> = {
+    'gss-mapper': 'Produce a comprehensive, structured inventory of the codebase — including components, dependencies, trust boundaries, data flows, and external integrations — that downstream security workflows can build on.',
+    'gss-threat-modeler': 'Identify and assess security threats against the codebase using STRIDE methodology, producing a prioritized threat register with risk scores and mitigation recommendations.',
+    'gss-auditor': 'Find and document security vulnerabilities with precision — every finding must include file path, line number, code snippet, severity, OWASP mapping, and confidence level. Never fix issues; only document them.',
+    'gss-remediator': 'Design minimal, safe code changes that address validated security findings while preserving user code style and conventions. Always obtain explicit user approval before writing any changes.',
+    'gss-verifier': 'Confirm that remediations correctly address the reported findings by verifying against the SAME security documents that identified the original issues. Run tests and check for regressions.',
+    'gss-reporter': 'Aggregate all workflow artifacts into comprehensive reports with executive summaries, technical details, and prioritized action items. Include consultation coverage from all prior workflows.',
+  };
+
+  return missions[agentId] || 'Execute specialized security analysis tasks within the GSS framework.';
+}
+
+/**
+ * Get required context inputs for a role agent.
+ */
+function getRoleContextInputs(agentId: string): string {
+  const inputs: Record<string, string> = {
+    'gss-mapper': `- Access to the project source code and configuration files
+- Dependency manifests (package.json, requirements.txt, pom.xml, etc.)
+- Build and deployment configuration files`,
+    'gss-threat-modeler': `- The codebase inventory from \`.gss/artifacts/map-codebase/\`
+- Detected stack tags (languages, frameworks, platforms) from the mapper
+- MCP consultation plan for threat-model workflow`,
+    'gss-auditor': `- The codebase inventory from \`.gss/artifacts/map-codebase/\`
+- The threat register from \`.gss/artifacts/threat-model/\` (if available)
+- Detected stack signals and issue tag candidates
+- MCP consultation plan for audit workflow`,
+    'gss-remediator': `- Validated findings from \`.gss/artifacts/validate-findings/\` or \`.gss/artifacts/audit/\`
+- Issue tags and target files from findings
+- MCP consultation plan for plan-remediation workflow
+- Explicit user approval before any code write`,
+    'gss-verifier': `- Original findings from \`.gss/artifacts/audit/\` or \`.gss/artifacts/validate-findings/\`
+- Applied changes from \`.gss/artifacts/execute-remediation/\`
+- The SAME MCP consultation plan that governed the original findings
+- Test suite access`,
+    'gss-reporter': `- All prior workflow artifacts from \`.gss/artifacts/\`
+- Consultation traces from all prior workflows
+- Findings, remediation plans, and verification results`,
+  };
+
+  return inputs[agentId] || '- Relevant project context and artifacts';
+}
+
+/**
+ * Get MCP consultation rules for a role agent.
+ */
+function getRoleMcpRules(agentId: string): string {
+  const config = getRoleMcpConfig(agentId);
+  const primaryWorkflow = getPrimaryWorkflowForRole(agentId);
+
+  const rules: Record<string, string> = {
+    'gss-mapper': `1. After identifying the tech stack: Call \`get_workflow_consultation_plan\` with \`workflowId="map-codebase"\` and detected stacks
+2. Read stack-relevant security documents to inform the inventory
+3. No full consultation needed — mapping is primarily discovery
+4. No coverage validation required — this is a lightweight consultation`,
+    'gss-threat-modeler': `1. After STRIDE analysis begins: Call \`get_workflow_consultation_plan\` with \`workflowId="threat-model"\` and stack signals from map-codebase
+2. Read threat-modeling-relevant documents (Threat Modeling Cheat Sheet, Attack Surface Analysis)
+3. No issue-tag-driven consultation — threat modeling is pre-finding
+4. No coverage validation required — consultation is advisory`,
+    'gss-auditor': `1. **Before audit**: Call \`get_workflow_consultation_plan\` with \`workflowId="audit"\`, stacks from map-codebase, and issue tags from findings
+2. Read ALL required documents from the plan
+3. For each finding, cross-reference against consulted documents
+4. **Before finalizing**: Call \`validate_security_consultation\` with \`workflowId="audit"\` and the list of consulted docs
+5. Include consultation trace in findings artifact`,
+    'gss-remediator': `1. **Before planning**: Call \`get_workflow_consultation_plan\` with \`workflowId="plan-remediation"\`, issue tags from validated findings, and target files
+2. Read required documents for remediation guidance
+3. Design minimal fixes grounded in consulted documents
+4. **Before finalizing**: Call \`validate_security_consultation\` with \`workflowId="plan-remediation"\` and consulted docs
+5. Include consultation trace in patch plan artifact
+6. ALWAYS get user approval before writing any code`,
+    'gss-verifier': `1. **Before verification**: Call \`get_workflow_consultation_plan\` with \`workflowId="verify"\` and issue tags from original findings
+2. Read the SAME documents that governed the original findings
+3. Verify each remediation against those documents
+4. **Before finalizing**: Call \`validate_security_consultation\` with \`workflowId="verify"\` and consulted docs
+5. Include consultation trace in verification artifact`,
+    'gss-reporter': `1. This role does NOT call MCP for new consultation
+2. Read consultation traces from ALL prior workflow artifacts
+3. Aggregate consultation coverage across the full pipeline
+4. Report overall coverage status in the final report
+5. Flag any workflows that had warn/fail coverage status`,
+  };
+
+  return rules[agentId] || 'Use MCP consultation tools as specified by the workflow context.';
+}
+
+/**
+ * Get reasoning guardrails for a role agent.
+ */
+function getRoleReasoningGuardrails(agentId: string): string {
+  const guardrails: Record<string, string> = {
+    'gss-mapper': `- Focus on discovery and documentation, not assessment
+- Identify all trust boundaries, even if they seem minor
+- Document assumptions explicitly
+- Flag any components that could not be analyzed`,
+    'gss-threat-modeler': `- Apply STRIDE systematically to EVERY identified component
+- Distinguish theoretical from practical threats
+- Score both impact and likelihood with rationale
+- Consider the application's specific threat context`,
+    'gss-auditor': `- Every finding MUST include: file path, line number, code snippet, severity, confidence level
+- Every finding MUST be mapped to at least one OWASP Top 10 category
+- Severity MUST be justified with an exploit scenario
+- Never fix issues during audit — only document them
+- State confidence as high/medium/low for each finding
+- Use Grep strategically; confirm issues by reading actual source files`,
+    'gss-remediator': `- Minimal changes only — fix the security issue, nothing else
+- Preserve user code style and conventions
+- Prefer configuration changes over code changes when possible
+- Apply defense in depth where the fix warrants layers
+- Generate verification tests for each remediation
+- Document side effects of every change`,
+    'gss-verifier': `- Verify against the SAME OWASP documents that identified the original finding
+- Each verification MUST include: test results OR manual check evidence
+- Document regressions explicitly
+- State confidence level for each verification
+- Run existing test suite — flag any new failures
+- Aim for >80% line coverage on fixed code`,
+    'gss-reporter': `- Separate executive summary from technical detail
+- Every finding in the technical report must reference its source artifact
+- Include consultation coverage summary showing which OWASP docs were consulted
+- Note any gaps where coverage was incomplete`,
+  };
+
+  return guardrails[agentId] || '- Reason carefully and document all findings with evidence';
+}
+
+/**
+ * Get output schema for a role agent.
+ */
+function getRoleOutputSchema(agentId: string): string {
+  const schemas: Record<string, string> = {
+    'gss-mapper': `Structured codebase inventory containing:
+- Component list with types and purposes
+- Dependency map (direct and transitive)
+- Trust boundary diagram
+- Data flow descriptions
+- External integration catalog
+- Detected stack signals for downstream workflows
+
+Saved to \`.gss/artifacts/map-codebase/\``,
+    'gss-threat-modeler': `Threat register containing:
+- Per-component STRIDE analysis
+- Threat descriptions with attack vectors
+- Impact and likelihood scores with rationale
+- Prioritized risk ranking
+- Mitigation recommendations
+
+Saved to \`.gss/artifacts/threat-model/\``,
+    'gss-auditor': `\`\`\`json
+{
+  "findings": [{
+    "title": "string",
+    "severity": "critical|high|medium|low|info",
+    "owaspCategory": "string",
+    "location": { "file": "string", "line": "number" },
+    "evidence": "string",
+    "confidence": "high|medium|low",
+    "remediationHint": "string",
+    "consultedDocs": ["string"]
+  }],
+  "consultation": { /* ConsultationTrace */ }
+}
+\`\`\`
+
+Saved to \`.gss/artifacts/audit/\``,
+    'gss-remediator': `\`\`\`json
+{
+  "remediationPlans": [{
+    "findingId": "string",
+    "targetFiles": ["string"],
+    "changes": [{
+      "file": "string",
+      "description": "string",
+      "type": "config|code|dependency"
+    }],
+    "sideEffects": ["string"],
+    "verificationSteps": ["string"],
+    "userApproval": "pending|approved|rejected",
+    "consultedDocs": ["string"]
+  }],
+  "consultation": { /* ConsultationTrace */ }
+}
+\`\`\`
+
+Saved to \`.gss/artifacts/plan-remediation/\``,
+    'gss-verifier': `\`\`\`json
+{
+  "verifications": [{
+    "findingId": "string",
+    "status": "verified|partial|failed",
+    "evidence": "string",
+    "regressions": ["string"],
+    "confidence": "high|medium|low",
+    "testResults": ["string"],
+    "consultedDocs": ["string"]
+  }],
+  "consultation": { /* ConsultationTrace */ }
+}
+\`\`\`
+
+Saved to \`.gss/artifacts/verify/\``,
+    'gss-reporter': `Comprehensive security report containing:
+- Executive summary with key findings and risk overview
+- Technical findings with evidence and OWASP mappings
+- Remediation status and verification results
+- Prioritized action items with ownership
+- Consultation coverage summary across all workflows
+- Gaps where coverage was incomplete
+
+Saved to \`.gss/artifacts/report/\``,
+  };
+
+  return schemas[agentId] || 'Structured output following GSS artifact conventions.';
+}
+
+/**
+ * Get refusal and escalation conditions for a role agent.
+ * Merges previous escalation rules with explicit refusal conditions.
+ */
+function getRoleRefusalConditions(agentId: string): string {
+  const conditions: Record<string, string> = {
+    'gss-mapper': `This role MUST stop and escalate when:
+- The codebase is too large to analyze in one session
+- Critical dependencies cannot be resolved or accessed
+- The project structure is ambiguous and cannot be reliably catalogued`,
+    'gss-threat-modeler': `This role MUST stop and escalate when:
+- Critical threats are identified that require immediate attention
+- Insufficient information exists to assess a component's threat surface
+- The threat landscape exceeds the scope of available security documents`,
+    'gss-auditor': `This role MUST stop and escalate when:
+- Critical vulnerabilities are found that pose immediate exploit risk
+- The scope of the audit exceeds the available consultation coverage
+- Evidence is insufficient to confirm or deny a suspected vulnerability
+- Confidence in any critical finding is below acceptable thresholds`,
+    'gss-remediator': `This role MUST refuse to proceed when:
+- User has NOT given explicit approval for code changes
+- The remediation requires architectural changes beyond the finding scope
+- Side effects cannot be adequately assessed
+- The fix would introduce new vulnerabilities or break existing functionality
+This role MUST stop and escalate when:
+- Remediation requires architectural changes
+- Multiple findings interact in ways that complicate isolation`,
+    'gss-verifier': `This role MUST stop and escalate when:
+- Verification fails or reveals new issues not in the original findings
+- The remediation cannot be verified against the original security documents
+- Test infrastructure is unavailable or broken
+- Regressions are found that cannot be attributed to the remediation`,
+    'gss-reporter': `This role MUST stop and escalate when:
+- Critical findings remain unaddressed in prior workflow artifacts
+- Required workflow artifacts are missing
+- Consultation coverage across the pipeline shows systematic gaps`,
+  };
+
+  return conditions[agentId] || '- Stop and escalate if uncertain or blocked';
+}
+
+/**
+ * Get handoff expectations for a role agent.
+ * Replaces the old delegation rules with workflow handoff descriptions.
+ */
+function getRoleHandoffs(agentId: string): string {
+  const handoffs: Record<string, string> = {
+    'gss-mapper': `**Passes to downstream workflows:**
+- Codebase inventory → threat-model workflow
+- Trust boundary map → audit workflow
+- Dependency map → all downstream workflows
+- Detected stack signals → all downstream workflows
+
+**Artifact location:** \`.gss/artifacts/map-codebase/\``,
+    'gss-threat-modeler': `**Passes to downstream workflows:**
+- Threat register → audit workflow
+- Risk assessment with scores → plan-remediation workflow
+- Mitigation requirements → plan-remediation workflow
+
+**Artifact location:** \`.gss/artifacts/threat-model/\``,
+    'gss-auditor': `**Passes to downstream workflows:**
+- Findings report with OWASP mapping → validate-findings workflow
+- Remediation priorities → plan-remediation workflow
+- Consultation trace → all downstream workflows
+
+**Uses MCP for:** All security knowledge. No specialist delegation.
+
+**Artifact location:** \`.gss/artifacts/audit/\``,
+    'gss-remediator': `**Passes to downstream workflows:**
+- Patch plan with specific changes → execute-remediation workflow
+- Test specifications → verify workflow
+- Consultation trace → all downstream workflows
+
+**Uses MCP for:** Remediation guidance and coverage validation.
+
+**Artifact location:** \`.gss/artifacts/plan-remediation/\``,
+    'gss-verifier': `**Passes to downstream workflows:**
+- Verification report → report workflow
+- Regression analysis → report workflow
+- Test coverage summary → report workflow
+- Consultation trace → report workflow
+
+**Validates:** MCP coverage from prior workflows.
+
+**Artifact location:** \`.gss/artifacts/verify/\``,
+    'gss-reporter': `**Consumes all prior artifacts:**
+- map-codebase inventory
+- threat-model register
+- audit findings
+- validate-findings results
+- plan-remediation patch plans
+- execute-remediation applied changes
+- verify verification reports
+
+**Aggregates:** Consultation traces from all workflows into final report.
+
+**Artifact location:** \`.gss/artifacts/report/\``,
+  };
+
+  return handoffs[agentId] || '- Pass outputs to the next workflow in sequence';
 }
 
 /**
@@ -1062,38 +1328,6 @@ function getWritePermissions(agentId: string): string {
 }
 
 /**
- * Get delegation rules for an agent.
- */
-function getDelegationRules(agentId: string): string {
-  const rules: Record<string, string> = {
-    'gss-mapper': '- No delegation — you are the entry point agent',
-    'gss-threat-modeler': '- Consult MCP security docs if code patterns suggest specific vulnerabilities',
-    'gss-auditor': '- Use MCP consultation tools for domain-specific security guidance',
-    'gss-remediator': '- Consult MCP security docs for remediation best practices',
-    'gss-verifier': '- No delegation — you are the final check',
-    'gss-reporter': '- No delegation — you aggregate completed work',
-  };
-
-  return rules[agentId] || '- May delegate to specialists as needed';
-}
-
-/**
- * Get escalation rules for an agent.
- */
-function getEscalationRules(agentId: string): string {
-  const rules: Record<string, string> = {
-    'gss-mapper': '- Escalate if codebase is too large to analyze in one session',
-    'gss-threat-modeler': '- Escalate if critical threats are identified',
-    'gss-auditor': '- Escalate immediately if critical vulnerabilities are found',
-    'gss-remediator': '- Escalate if remediation requires architectural changes',
-    'gss-verifier': '- Escalate if verification fails or reveals new issues',
-    'gss-reporter': '- Escalate if critical findings remain unaddressed',
-  };
-
-  return rules[agentId] || '- Escalate if uncertain or blocked';
-}
-
-/**
  * Get completion criteria for an agent.
  */
 function getDoneCriteria(agentId: string): string {
@@ -1152,56 +1386,117 @@ function getDoneCriteria(agentId: string): string {
 }
 
 /**
+ * Render a role agent file for Claude.
+ *
+ * Phase 7 template: 8-section MCP-aware role agent.
+ * Sections: Mission, Context Inputs, MCP Consultation Rules, Reasoning Guardrails,
+ * Output Schema, Refusal/Escalation Conditions, Handoff Expectations, Done Criteria.
+ */
+export function renderRoleAgent(agent: {
+  id: string;
+  title: string;
+  description: string;
+}): string {
+  const primaryWorkflow = getPrimaryWorkflowForRole(agent.id);
+  const mcpConfig = getRoleMcpConfig(agent.id);
+
+  return `# ${agent.title}
+
+**Agent ID:** \`${agent.id}\`
+**Primary Workflow:** \`${primaryWorkflow}\`
+**Access Level:** ${getAccessLevelText(agent.id)}
+
+## Mission
+
+${getRoleMission(agent.id)}
+
+## Required Context Inputs
+
+${getRoleContextInputs(agent.id)}
+
+## MCP Consultation Rules
+
+This role uses the GSS MCP server for security knowledge at the **${mcpConfig.level}** level.
+
+${getRoleMcpRules(agent.id)}
+
+## Reasoning Guardrails
+
+${getRoleReasoningGuardrails(agent.id)}
+
+## Output Schema
+
+${getRoleOutputSchema(agent.id)}
+
+## Refusal and Escalation Conditions
+
+${getRoleRefusalConditions(agent.id)}
+
+## Handoff Expectations
+
+${getRoleHandoffs(agent.id)}
+
+## Permissions
+
+**May read:**
+${getReadPermissions(agent.id)}
+
+**May write to:**
+${getWritePermissions(agent.id)}
+
+## "Done" Means
+
+This workflow is **complete** when:
+${getDoneCriteria(agent.id)}
+`;
+
+}
+
+/**
  * Render a Codex role skill file.
+ *
+ * Semantically aligned with the Claude role agent template but formatted
+ * for the Codex skill structure. Same mission, same MCP rules, same guardrails.
  */
 export function renderCodexRoleSkill(agent: {
   id: string;
   title: string;
   description: string;
 }): string {
+  const primaryWorkflow = getPrimaryWorkflowForRole(agent.id);
+  const mcpConfig = getRoleMcpConfig(agent.id);
+
   return `# ${agent.title}
 
 **Skill ID:** \`${agent.id}\`
+**Primary Workflow:** \`${primaryWorkflow}\`
+**Access Level:** ${getCodexAccessLevelText(agent.id)}
 
-## Description
+## Mission
 
-${agent.description}
+${getRoleMission(agent.id)}
 
-## Role and Responsibilities
+## MCP Security Consultation
 
-This is a **role-based skill** within the get-shit-secured framework.
+This role uses the GSS MCP server for security knowledge at the **${mcpConfig.level}** level.
 
-${getCodexRoleInstructions(agent.id)}
+${getRoleMcpRules(agent.id)}
 
-## Access Level
+## Output Requirements
 
-${getCodexAccessLevelText(agent.id)}
+${getRoleOutputSchema(agent.id)}
 
-## Output Format
+## Constraints
 
-All outputs must follow the structured format specified in the execution procedure.
+${getRoleReasoningGuardrails(agent.id)}
 
-## "Done" Means
+${getRoleRefusalConditions(agent.id)}
+
+## Completion Criteria
 
 This skill is **complete** when:
-${getCodexDoneCriteria(agent.id)}
+${getDoneCriteria(agent.id)}
 `;
-}
-
-/**
- * Get Codex-specific role instructions.
- */
-function getCodexRoleInstructions(agentId: string): string {
-  const instructions: Record<string, string> = {
-    'gss-mapper': '- Analyze codebase structure\n- Map dependencies and boundaries\n- Document data flows\n- Output to `.gss/artifacts/map-codebase/`',
-    'gss-threat-modeler': '- Identify threat surfaces\n- Assess threat impact\n- Prioritize threats\n- Output to `.gss/artifacts/threat-model/`',
-    'gss-auditor': '- Scan for vulnerabilities\n- Assess severity with evidence\n- Map to OWASP standards\n- Output to `.gss/artifacts/audit/`',
-    'gss-remediator': '- Plan minimal safe changes\n- Preserve user changes\n- Document with rationale\n- Output to `.gss/artifacts/plan-remediation/`',
-    'gss-verifier': '- Verify remediations\n- Run tests\n- Check for regressions\n- Output to `.gss/artifacts/verify/`',
-    'gss-reporter': '- Aggregate artifacts\n- Create summaries\n- Provide action items\n- Output to `.gss/artifacts/report/`',
-  };
-
-  return instructions[agentId] || '- Execute specialized security tasks\n- Document all outputs\n';
 }
 
 /**
@@ -1213,27 +1508,11 @@ function getCodexAccessLevelText(agentId: string): string {
     'gss-threat-modeler': 'Read-only analysis. Do not modify code.',
     'gss-auditor': 'Read-only analysis. Do not modify code.',
     'gss-remediator': 'Write-capable. Plan changes but do NOT apply without user approval.',
-    'gss-verifier': 'Verification-focused. Run tests and verify fixes.',
+    'gss-verifier': 'Verification-only. Run tests and verify fixes.',
     'gss-reporter': 'Read-only. Aggregate and format existing artifacts.',
   };
 
   return levels[agentId] || 'Full permissions with user approval required for writes.';
-}
-
-/**
- * Get Codex completion criteria.
- */
-function getCodexDoneCriteria(agentId: string): string {
-  const criteria: Record<string, string> = {
-    'gss-mapper': '1. All major components are identified\n2. Dependencies are catalogued\n3. Artifacts exist in `.gss/artifacts/map-codebase/`',
-    'gss-threat-modeler': '1. Threat surfaces are identified\n2. Threats are prioritized\n3. Artifacts exist in `.gss/artifacts/threat-model/`',
-    'gss-auditor': '1. All findings include file path, line, severity, evidence\n2. Mapped to OWASP categories\n3. Artifacts exist in `.gss/artifacts/audit/`',
-    'gss-remediator': '1. All findings have remediation plans\n2. User approval obtained before changes\n3. Artifacts exist in `.gss/artifacts/plan-remediation/`',
-    'gss-verifier': '1. All remediations are verified\n2. Test results documented\n3. Artifacts exist in `.gss/artifacts/verify/`',
-    'gss-reporter': '1. Executive summary included\n2. Action items prioritized\n3. Final report in `.gss/artifacts/report/`',
-  };
-
-  return criteria[agentId] || '1. Outputs are complete\n2. Artifacts saved\n3. Success criteria met';
 }
 
 // =============================================================================

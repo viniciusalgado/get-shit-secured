@@ -128,7 +128,7 @@ export function computeConsultationPlan(input: ConsultationPlanInput): Consultat
     required,
     optional,
     followup,
-    blocked: blocked.length > 0 ? blocked : undefined,
+    ...(blocked.length > 0 ? { blocked } : {}),
     constraints,
     corpusVersion: input.corpusVersion,
   };
