@@ -112,7 +112,7 @@ describe('doctor — Phase 10 diagnostic metadata', () => {
     }
   });
 
-  it('doctor output includes hybrid mode when legacyMode is false', async () => {
+  it('doctor output includes mcp-only mode when legacyMode is false (Phase 11)', async () => {
     const tempDir = await createTempDir();
     try {
       setupHealthyInstallWithPhase10(tempDir, {
@@ -126,8 +126,9 @@ describe('doctor — Phase 10 diagnostic metadata', () => {
         doctor(tempDir, { runtimes: ['claude'] })
       );
       const output = logs.join('\n');
-      assert.ok(output.includes('hybrid'),
-        `Should show hybrid mode. Got: ${output}`);
+      // Phase 11: legacyMode false → mcp-only (Release B)
+      assert.ok(output.includes('mcp-only'),
+        `Should show mcp-only mode. Got: ${output}`);
     } finally {
       cleanupTempDir(tempDir);
     }

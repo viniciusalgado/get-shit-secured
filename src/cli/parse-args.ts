@@ -24,6 +24,7 @@ export function parseArgs(argv: string[]): CliArgs & { showHelp: boolean; showVe
     showHelp: false,
     showVersion: false,
     legacySpecialists: false,
+    hybridShadow: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -69,6 +70,9 @@ export function parseArgs(argv: string[]): CliArgs & { showHelp: boolean; showVe
       case '--legacy-specialists':
         result.legacySpecialists = true;
         break;
+      case '--hybrid-shadow':
+        result.hybridShadow = true;
+        break;
       case '--verify-only':
         result.verifyOnly = true;
         break;
@@ -108,6 +112,7 @@ OPTIONS:
   --uninstall, -u       Uninstall previously installed GSS files
   --verify-only         Verify installation without installing
   --legacy-specialists  Use legacy specialist generation (fetch + generate at install time)
+  --hybrid-shadow       Enable hybrid shadow mode (MCP + legacy side-by-side for comparison)
   --help, -h            Show this help message
   --version, -v         Show version
 
@@ -154,6 +159,11 @@ export function validateArgs(args: CliArgs): string[] {
 
   // For uninstall, we'll infer runtime from manifest if not specified
   // This allows `gss --uninstall` to work without specifying --claude/--codex
+
+  // --hybrid-shadow and --legacy-specialists are mutually exclusive
+  if (args.legacySpecialists && args.hybridShadow) {
+    errors.push('Cannot use --hybrid-shadow and --legacy-specialists together. Choose one rollout mode.');
+  }
 
   return errors;
 }

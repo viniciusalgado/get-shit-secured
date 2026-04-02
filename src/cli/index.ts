@@ -19,6 +19,10 @@ import { ClaudeAdapter } from '../runtimes/claude/adapter.js';
 import { CodexAdapter } from '../runtimes/codex/adapter.js';
 import { corpusInspect, corpusValidate, corpusRefresh } from './corpus-commands.js';
 import { doctor } from './doctor.js';
+import { compareRuns } from './compare-runs.js';
+import { migrateInstall } from './migrate-install.js';
+import { readiness } from './readiness.js';
+import type { RolloutMode } from '../core/types.js';
 import { resolveInstallPlan, detectTargets, resolveCorpus, DEFAULT_WORKFLOWS, type CorpusResolution } from '../core/install-stages.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,6 +30,19 @@ const __dirname = dirname(__filename);
 
 /** Package version */
 const VERSION = '0.1.0';
+
+/**
+ * Parse target rollout mode from migrate arguments.
+ */
+function parseTargetMode(args: string[]): RolloutMode | null {
+  const toIdx = args.indexOf('--to');
+  if (toIdx === -1 || toIdx + 1 >= args.length) return null;
+  const target = args[toIdx + 1];
+  if (['legacy', 'hybrid-shadow', 'mcp-only'].includes(target)) {
+    return target as RolloutMode;
+  }
+  return null;
+}
 
 /**
  * Main CLI entry point.
@@ -63,6 +80,36 @@ async function main(): Promise<number> {
         console.error('Usage: gss corpus <inspect|validate|refresh>');
         return 1;
     }
+  }
+
+  // Handle compare-runs subcommand (Phase 11)
+  if (firstArg === 'compare-runs') {
+    return await compareRuns(process.argv.slice(3));
+  }
+
+  // Handle migrate subcommand (Phase 11)
+  if (firstArg === 'migrate') {
+    const migrateArgs = process.argv.slice(3);
+    const targetMode = parseTargetMode(migrateArgs);
+    const dryRun = migrateArgs.includes('--dry-run');
+    if (!targetMode) {
+      console.error('Usage: gss migrate --to <legacy|hybrid-shadow|mcp-only> [--dry-run]');
+      return 1;
+    }
+    const result = await migrateInstall(process.cwd(), { targetMode, dryRun });
+    for (const change of result.changes) {
+      console.log(`  ${change}`);
+    }
+    for (const error of result.errors) {
+      console.error(`  Error: ${error}`);
+    }
+    console.log(result.migrated ? '\nMigration complete.' : '\nNo migration performed.');
+    return result.errors.length > 0 ? 1 : 0;
+  }
+
+  // Handle readiness subcommand (Phase 11)
+  if (firstArg === 'readiness') {
+    return await readiness(process.argv.slice(3));
   }
 
   // Handle doctor subcommand
@@ -177,6 +224,7 @@ async function main(): Promise<number> {
   // Run installation
   const result = await install(adapters, args.scope, cwd, args.dryRun, {
     legacySpecialists: args.legacySpecialists ?? false,
+    hybridShadow: args.hybridShadow ?? false,
   });
 
   if (args.dryRun) {

@@ -69,9 +69,10 @@ export async function install(
   scope: InstallScope,
   cwd: string,
   dryRun: boolean = false,
-  options?: { legacySpecialists?: boolean }
+  options?: { legacySpecialists?: boolean; hybridShadow?: boolean }
 ): Promise<InstallResult> {
   const legacySpecialists = options?.legacySpecialists ?? false;
+  const hybridShadow = options?.hybridShadow ?? false;
 
   // Stage 0: Detect targets
   const targets = detectTargets(adapters, scope, cwd);
@@ -104,7 +105,7 @@ export async function install(
     targets,
     adapters,
     corpus,
-    { dryRun, legacySpecialists, specialists }
+    { dryRun, legacySpecialists, hybridShadow, specialists }
   );
 
   // Stage 3: MCP registration (extracted to stage module)
