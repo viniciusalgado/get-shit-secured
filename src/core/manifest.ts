@@ -27,7 +27,8 @@ export function createManifestV2(
   managedConfigs?: Partial<Record<RuntimeTarget, ManagedConfigRecord[]>>,
   hooks?: Partial<Record<RuntimeTarget, string[]>>,
   runtimeManifests?: Partial<Record<RuntimeTarget, string>>,
-  corpusVersion?: string
+  corpusVersion?: string,
+  mcpPaths?: { serverPaths?: Partial<Record<RuntimeTarget, string>>; configPaths?: Partial<Record<RuntimeTarget, string>> }
 ): InstallManifestV2 {
   const now = new Date().toISOString();
   return {
@@ -44,6 +45,8 @@ export function createManifestV2(
     managedConfigs: managedConfigs ?? {},
     hooks: hooks ?? {},
     runtimeManifests: runtimeManifests ?? {},
+    mcpServerPaths: mcpPaths?.serverPaths ?? {},
+    mcpConfigPaths: mcpPaths?.configPaths ?? {},
   };
 }
 
@@ -158,7 +161,8 @@ export function mergeManifest(
   newRoots: Partial<Record<RuntimeTarget, string>>,
   newManagedConfigs?: Partial<Record<RuntimeTarget, ManagedConfigRecord[]>>,
   newHooks?: Partial<Record<RuntimeTarget, string[]>>,
-  newRuntimeManifests?: Partial<Record<RuntimeTarget, string>>
+  newRuntimeManifests?: Partial<Record<RuntimeTarget, string>>,
+  mcpPaths?: { serverPaths?: Partial<Record<RuntimeTarget, string>>; configPaths?: Partial<Record<RuntimeTarget, string>> }
 ): InstallManifest | InstallManifestV2 {
   // Check if existing is v2
   if ('manifestVersion' in existing && existing.manifestVersion === 2) {
@@ -170,7 +174,8 @@ export function mergeManifest(
       newRoots,
       newManagedConfigs,
       newHooks,
-      newRuntimeManifests
+      newRuntimeManifests,
+      mcpPaths
     );
   }
 
@@ -189,7 +194,8 @@ function mergeManifestV2(
   newRoots: Partial<Record<RuntimeTarget, string>>,
   newManagedConfigs?: Partial<Record<RuntimeTarget, ManagedConfigRecord[]>>,
   newHooks?: Partial<Record<RuntimeTarget, string[]>>,
-  newRuntimeManifests?: Partial<Record<RuntimeTarget, string>>
+  newRuntimeManifests?: Partial<Record<RuntimeTarget, string>>,
+  mcpPaths?: { serverPaths?: Partial<Record<RuntimeTarget, string>>; configPaths?: Partial<Record<RuntimeTarget, string>> }
 ): InstallManifestV2 {
   const mergedRuntimes = [...new Set([...existing.runtimes, ...newRuntimes])];
   const mergedWorkflows = [...new Set([...existing.workflowIds, ...newWorkflows])];
@@ -229,6 +235,20 @@ function mergeManifestV2(
     Object.assign(mergedRuntimeManifests, newRuntimeManifests);
   }
 
+  // Merge MCP path fields
+  const mergedMcpServerPaths: Partial<Record<RuntimeTarget, string>> = {
+    ...existing.mcpServerPaths,
+  };
+  const mergedMcpConfigPaths: Partial<Record<RuntimeTarget, string>> = {
+    ...existing.mcpConfigPaths,
+  };
+  if (mcpPaths?.serverPaths) {
+    Object.assign(mergedMcpServerPaths, mcpPaths.serverPaths);
+  }
+  if (mcpPaths?.configPaths) {
+    Object.assign(mergedMcpConfigPaths, mcpPaths.configPaths);
+  }
+
   return {
     ...existing,
     runtimes: mergedRuntimes,
@@ -238,6 +258,8 @@ function mergeManifestV2(
     managedConfigs: mergedManagedConfigs,
     hooks: mergedHooks,
     runtimeManifests: mergedRuntimeManifests,
+    mcpServerPaths: mergedMcpServerPaths,
+    mcpConfigPaths: mergedMcpConfigPaths,
     updatedAt: new Date().toISOString(),
   };
 }

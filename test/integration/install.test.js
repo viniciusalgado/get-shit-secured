@@ -328,7 +328,7 @@ describe('install', () => {
     }
   });
 
-  it('should install specialist agents for Claude', async () => {
+  it('should include MCP consultation in workflow agents for Claude', async () => {
     const tempDir = await createTempDir();
     try {
       const adapters = [new ClaudeAdapter()];
@@ -336,28 +336,20 @@ describe('install', () => {
 
       const agentsDir = join(tempDir, '.claude/agents');
 
-      // Check that specialist files exist (not just workflow agents)
-      // We should see gss-specialist-* files alongside gss-* workflow agents
-      const agentFiles = await readdir(agentsDir);
-      const specialistFiles = agentFiles.filter(f => f.startsWith('gss-specialist-'));
+      // Phase 5+: MCP consultation replaced specialist agent files.
+      // Workflow agents should include MCP consultation sections.
+      const auditAgent = join(agentsDir, 'gss-audit.md');
+      assert.ok(existsSync(auditAgent), 'Audit agent should exist');
 
-      assert.ok(specialistFiles.length > 0, 'Should install specialist agent files');
-
-      // Check a specific specialist exists
-      const passwordStorageSpecialist = join(agentsDir, 'gss-specialist-password-storage.md');
-      assert.ok(existsSync(passwordStorageSpecialist), 'Password storage specialist should exist');
-
-      // Verify specialist has proper structure
-      const specialistContent = await readFile(passwordStorageSpecialist, 'utf-8');
-      assert.ok(specialistContent.includes('## Description'), 'Should have description section');
-      assert.ok(specialistContent.includes('## Activation Triggers'), 'Should have activation triggers');
-      assert.ok(specialistContent.includes('cheatsheetseries.owasp.org'), 'Should link to OWASP cheat sheet');
+      const auditContent = await readFile(auditAgent, 'utf-8');
+      assert.ok(auditContent.includes('MCP Security Consultation'), 'Should include MCP consultation section');
+      assert.ok(auditContent.includes('get_workflow_consultation_plan'), 'Should reference consultation tool');
     } finally {
       await cleanupTempDir(tempDir);
     }
   });
 
-  it('should install specialist skills for Codex', async () => {
+  it('should include MCP consultation in workflow skills for Codex', async () => {
     const tempDir = await createTempDir();
     try {
       const adapters = [new CodexAdapter()];
@@ -365,26 +357,19 @@ describe('install', () => {
 
       const skillsDir = join(tempDir, '.codex/skills');
 
-      // Check that specialist directories exist
-      const skillDirs = await readdir(skillsDir);
-      const specialistDirs = skillDirs.filter(d => d.startsWith('gss-specialist-'));
+      // Phase 5+: MCP consultation replaces specialist skill files.
+      // Workflow skills should include MCP consultation sections.
+      const auditSkill = join(skillsDir, 'gss-audit', 'SKILL.md');
+      assert.ok(existsSync(auditSkill), 'Audit skill should exist');
 
-      assert.ok(specialistDirs.length > 0, 'Should install specialist skill directories');
-
-      // Check a specific specialist exists
-      const sqlInjectionSpecialist = join(skillsDir, 'gss-specialist-sql-injection-prevention', 'SKILL.md');
-      assert.ok(existsSync(sqlInjectionSpecialist), 'SQL injection prevention specialist should exist');
-
-      // Verify specialist has proper structure
-      const specialistContent = await readFile(sqlInjectionSpecialist, 'utf-8');
-      assert.ok(specialistContent.includes('## Description'), 'Should have description section');
-      assert.ok(specialistContent.includes('## Activation Triggers'), 'Should have activation triggers');
+      const auditContent = await readFile(auditSkill, 'utf-8');
+      assert.ok(auditContent.includes('MCP Security Consultation'), 'Should include MCP consultation section');
     } finally {
       await cleanupTempDir(tempDir);
     }
   });
 
-  it('should include specialists in manifest', async () => {
+  it('should include GSS settings in manifest', async () => {
     const tempDir = await createTempDir();
     try {
       const adapters = [new ClaudeAdapter()];
@@ -394,16 +379,16 @@ describe('install', () => {
       const settingsContent = await readFile(settingsFile, 'utf-8');
       const settings = JSON.parse(settingsContent);
 
-      // Settings should include list of installed specialists
+      // Phase 5+: Settings include GSS config with MCP-based architecture
       assert.ok(settings.gss, 'Should have GSS settings');
-      assert.ok(Array.isArray(settings.gss.specialists), 'Should have specialists array');
-      assert.ok(settings.gss.specialists.length > 0, 'Should have at least one specialist');
+      assert.ok(settings.gss.version, 'Should have version');
+      assert.ok(settings.gss.enabled, 'Should be enabled');
     } finally {
       await cleanupTempDir(tempDir);
     }
   });
 
-  it('should install audit workflow specialists', async () => {
+  it('should install role agents for security workflows', async () => {
     const tempDir = await createTempDir();
     try {
       const adapters = [new ClaudeAdapter()];
@@ -411,39 +396,43 @@ describe('install', () => {
 
       const agentsDir = join(tempDir, '.claude/agents');
 
-      // Key audit specialists should be installed
-      const auditSpecialists = [
-        'gss-specialist-secure-code-review.md',
-        'gss-specialist-input-validation.md',
-        'gss-specialist-sql-injection-prevention.md',
-        'gss-specialist-cross-site-scripting-prevention.md',
-        'gss-specialist-authentication.md',
-        'gss-specialist-authorization.md',
-        'gss-specialist-password-storage.md',
+      // Phase 7: Role agents replace specialists for each workflow
+      const roleAgents = [
+        'gss-mapper.md',
+        'gss-threat-modeler.md',
+        'gss-auditor.md',
+        'gss-remediator.md',
+        'gss-verifier.md',
+        'gss-reporter.md',
       ];
 
-      for (const specialist of auditSpecialists) {
-        const specialistPath = join(agentsDir, specialist);
-        assert.ok(existsSync(specialistPath), `Audit specialist ${specialist} should exist`);
+      for (const agent of roleAgents) {
+        const agentPath = join(agentsDir, agent);
+        assert.ok(existsSync(agentPath), `Role agent ${agent} should exist`);
+
+        // Verify role agent has Phase 7 MCP-aware template sections
+        const content = await readFile(agentPath, 'utf-8');
+        assert.ok(content.includes('## Mission'), `${agent} should have mission section`);
+        assert.ok(content.includes('## MCP Consultation Rules'), `${agent} should have MCP rules`);
       }
     } finally {
       await cleanupTempDir(tempDir);
     }
   });
 
-  it('should verify specialist README is created', async () => {
+  it('should verify agents README is created', async () => {
     const tempDir = await createTempDir();
     try {
       const adapters = [new ClaudeAdapter()];
       await install(adapters, 'local', tempDir, false);
 
-      const specialistsReadme = join(tempDir, '.claude/agents/gss-specialists-README.md');
-      assert.ok(existsSync(specialistsReadme), 'Specialists README should exist');
+      const agentsReadme = join(tempDir, '.claude/agents/gss-README.md');
+      assert.ok(existsSync(agentsReadme), 'Agents README should exist');
 
-      const content = await readFile(specialistsReadme, 'utf-8');
-      assert.ok(content.includes('get-shit-secured Specialists'), 'Should have title');
-      assert.ok(content.includes('gss-specialist-'), 'Should list specialist files');
-      assert.ok(content.includes('Delegation'), 'Should mention delegation');
+      const content = await readFile(agentsReadme, 'utf-8');
+      assert.ok(content.includes('get-shit-secured Agents'), 'Should have title');
+      assert.ok(content.includes('gss-'), 'Should list agent files');
+      assert.ok(content.includes('Workflow'), 'Should mention workflows');
     } finally {
       await cleanupTempDir(tempDir);
     }
@@ -463,11 +452,11 @@ describe('install', () => {
           const agentFile = join(agentsDir, `${agentId}.md`);
           assert.ok(existsSync(agentFile), `Role agent ${agentId} should exist`);
 
-          // Verify content has key elements
+          // Verify content has key elements (Phase 7 MCP-aware role template)
           const agentContent = await readFile(agentFile, 'utf-8');
           assert.ok(agentContent.includes('# '), 'Should have title heading');
-          assert.ok(agentContent.includes('## Role and Responsibilities'), 'Should have responsibilities section');
-          assert.ok(agentContent.includes('## Access Level'), 'Should have access level section');
+          assert.ok(agentContent.includes('## Mission'), 'Should have mission section');
+          assert.ok(agentContent.includes('**Access Level:**'), 'Should have access level info');
         }
       } finally {
         await cleanupTempDir(tempDir);
@@ -487,11 +476,11 @@ describe('install', () => {
           const skillFile = join(skillsDir, skillId, 'SKILL.md');
           assert.ok(existsSync(skillFile), `Role skill ${skillId} should exist`);
 
-          // Verify content has key elements
+          // Verify content has key elements (Phase 7 MCP-aware role template)
           const skillContent = await readFile(skillFile, 'utf-8');
           assert.ok(skillContent.includes('# '), 'Should have title heading');
-          assert.ok(skillContent.includes('## Role and Responsibilities'), 'Should have responsibilities section');
-          assert.ok(skillContent.includes('## "Done" Means'), 'Should have completion criteria');
+          assert.ok(skillContent.includes('## Mission'), 'Should have mission section');
+          assert.ok(skillContent.includes('## Completion Criteria'), 'Should have completion criteria');
         }
       } finally {
         await cleanupTempDir(tempDir);

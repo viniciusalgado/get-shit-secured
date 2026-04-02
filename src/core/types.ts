@@ -246,6 +246,10 @@ export interface InstallManifestV2 {
   hooks: Partial<Record<RuntimeTarget, string[]>>;
   /** Runtime-specific manifest paths */
   runtimeManifests: Partial<Record<RuntimeTarget, string>>;
+  /** MCP server binary paths per runtime (for uninstall) */
+  mcpServerPaths?: Partial<Record<RuntimeTarget, string>>;
+  /** MCP config file paths per runtime (for uninstall revert) */
+  mcpConfigPaths?: Partial<Record<RuntimeTarget, string>>;
 }
 
 /**
@@ -260,6 +264,93 @@ export interface ManagedConfigRecord {
   type: 'json' | 'text-block';
   /** Key path for JSON configs */
   keyPath?: string;
+}
+
+// =============================================================================
+// Phase 9 — Installer Adaptation Types
+// =============================================================================
+
+/**
+ * MCP registration result per runtime.
+ * Returned by the registerMcpServers() stage module.
+ */
+export interface McpRegistrationResult {
+  /** Per-runtime config paths that were modified */
+  configPaths: Partial<Record<RuntimeTarget, string>>;
+  /** Per-runtime server binary paths that were copied */
+  serverBinaryPaths: Partial<Record<RuntimeTarget, string>>;
+  /** Errors encountered during registration (non-fatal) */
+  errors: string[];
+}
+
+/**
+ * Install plan — describes all file and config operations before execution.
+ * Produced by resolveInstallPlan() for inspection (dry-run) or execution.
+ * Does NOT perform any I/O — purely a computation result.
+ */
+export interface InstallPlan {
+  /** Scope of the install */
+  scope: InstallScope;
+  /** Runtime targets */
+  runtimes: RuntimeTarget[];
+  /** Corpus operations */
+  corpus: {
+    version: string;
+    sourcePath: string;
+    destinations: Array<{ runtime: RuntimeTarget; path: string }>;
+  } | null;
+  /** File operations per runtime */
+  fileOps: Array<{
+    runtime: RuntimeTarget;
+    rootPath: string;
+    supportSubtreePath: string;
+    entrypointFiles: string[];
+    supportFiles: string[];
+    hooks: string[];
+  }>;
+  /** Config operations per runtime */
+  configOps: Array<{
+    runtime: RuntimeTarget;
+    jsonPatches: ManagedJsonPatch[];
+    textBlocks: ManagedTextBlock[];
+    mcpServerCopy: { src: string; dest: string } | null;
+    mcpConfigPatch: ManagedJsonPatch | null;
+  }>;
+  /** Legacy cleanup operations */
+  cleanupOps: Array<{
+    runtime: RuntimeTarget;
+    files: string[];
+    description: string;
+  }>;
+  /** Whether this is a dry run */
+  dryRun: boolean;
+}
+
+/**
+ * Legacy specialist artifact set.
+ * Describes pre-migration specialist files found in the installed runtime.
+ */
+export interface LegacyArtifactSet {
+  /** Specialist prompt files found */
+  specialistFiles: string[];
+  /** Specialist skill directories found (Codex) */
+  specialistDirs: string[];
+  /** Whether legacy specialists were detected */
+  hasLegacyArtifacts: boolean;
+  /** Total count */
+  totalCount: number;
+}
+
+/**
+ * Result of legacy specialist cleanup.
+ */
+export interface LegacyCleanupResult {
+  /** Files successfully removed */
+  removed: string[];
+  /** Files skipped (not matching pattern, outside bounds, etc.) */
+  skipped: string[];
+  /** Errors during cleanup */
+  errors: string[];
 }
 
 /**
@@ -304,6 +395,8 @@ export interface CliArgs {
   showVersion?: boolean;
   /** Use legacy specialist generation (fetch + generate at install time) */
   legacySpecialists?: boolean;
+  /** Verify installation without installing */
+  verifyOnly?: boolean;
 }
 
 /**

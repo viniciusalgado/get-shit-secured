@@ -2,15 +2,24 @@
 /**
  * get-shit-secured CLI entry point.
  * Run with: npx get-shit-secured [OPTIONS]
+ *
+ * Subcommands:
+ *   gss doctor           Run health check on existing installation
+ *   gss doctor --claude  Check only Claude runtime
+ *   gss corpus inspect   Inspect corpus snapshot
+ *   gss corpus validate  Validate corpus snapshot
+ *   gss corpus refresh   Refresh corpus from OWASP sources
  */
 
 import { fileURLToPath } from 'node:url';
-import { dirname } from 'node:path';
+import { dirname, resolve, relative } from 'node:path';
 import { parseArgs, getHelpText, validateArgs } from './parse-args.js';
 import { install, uninstall } from '../core/installer.js';
 import { ClaudeAdapter } from '../runtimes/claude/adapter.js';
 import { CodexAdapter } from '../runtimes/codex/adapter.js';
 import { corpusInspect, corpusValidate, corpusRefresh } from './corpus-commands.js';
+import { doctor } from './doctor.js';
+import { resolveInstallPlan, detectTargets, resolveCorpus, DEFAULT_WORKFLOWS, type CorpusResolution } from '../core/install-stages.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -37,8 +46,10 @@ async function main(): Promise<number> {
     return 0;
   }
 
-  // Handle corpus subcommand
+  // Get first positional argument for subcommand routing
   const firstArg = process.argv[2];
+
+  // Handle corpus subcommand
   if (firstArg === 'corpus') {
     const subcommand = process.argv[3];
     switch (subcommand) {
@@ -52,6 +63,27 @@ async function main(): Promise<number> {
         console.error('Usage: gss corpus <inspect|validate|refresh>');
         return 1;
     }
+  }
+
+  // Handle doctor subcommand
+  if (firstArg === 'doctor') {
+    // Parse runtime filter from subsequent args
+    const doctorRuntimes: Array<'claude' | 'codex'> = [];
+    const restArgs = process.argv.slice(3);
+    for (const arg of restArgs) {
+      if (arg === '--claude' || arg === '-c') doctorRuntimes.push('claude');
+      if (arg === '--codex' || arg === '-x') doctorRuntimes.push('codex');
+    }
+    return await doctor(process.cwd(), {
+      runtimes: doctorRuntimes.length > 0 ? doctorRuntimes : undefined,
+    });
+  }
+
+  // Handle --verify-only flag (runs doctor without installing)
+  if (args.verifyOnly) {
+    return await doctor(process.cwd(), {
+      runtimes: args.runtimes.length > 0 ? args.runtimes as Array<'claude' | 'codex'> : undefined,
+    });
   }
 
   // Validate arguments
@@ -98,7 +130,7 @@ async function main(): Promise<number> {
   }
 
   // Build runtime adapters
-  const adapters: ReturnType<typeof instantiateAdapter>[] = [];
+  const adapters: RuntimeAdapter[] = [];
 
   if (args.runtimes.includes('claude')) {
     adapters.push(new ClaudeAdapter());
@@ -117,6 +149,29 @@ async function main(): Promise<number> {
 
   if (args.dryRun) {
     console.log('[Dry run mode - no files will be written]\n');
+
+    // Enriched dry-run: resolve and display the install plan
+    try {
+      const targets = detectTargets(adapters, args.scope, cwd);
+      const pkgRoot = resolve(__dirname, '..');
+      let corpus: CorpusResolution | null = null;
+      try {
+        corpus = await resolveCorpus(targets, pkgRoot);
+      } catch {
+        // Corpus may not be available in dev — that's OK for dry-run
+      }
+
+      const plan = resolveInstallPlan(targets, adapters, corpus, {
+        dryRun: true,
+        legacySpecialists: args.legacySpecialists ?? false,
+        pkgRoot,
+      });
+
+      printEnrichedDryRun(plan, cwd);
+    } catch (error) {
+      // Fall back to simple dry-run output if plan resolution fails
+      console.log(`[Dry run] Plan resolution error: ${error instanceof Error ? error.message : String(error)}\n`);
+    }
   }
 
   // Run installation
@@ -146,6 +201,7 @@ async function main(): Promise<number> {
     console.log('\nInstallation complete!');
     console.log('\nNext steps:');
     console.log('  - Use /gss-help in Claude to see available commands');
+    console.log('  - Run "gss doctor" to verify installation health');
     console.log('  - Run "gss --help" for CLI options');
   }
 
@@ -161,12 +217,69 @@ async function main(): Promise<number> {
   return 0;
 }
 
-// Type helper for adapter instantiation
-type AdapterInstance = InstanceType<typeof ClaudeAdapter | typeof CodexAdapter>;
+/**
+ * Print enriched dry-run output using the install plan.
+ * Shows corpus version, MCP config entries, cleanup actions, and file type labels.
+ */
+function printEnrichedDryRun(
+  plan: import('../core/types.js').InstallPlan,
+  cwd: string
+): void {
+  // Corpus info
+  if (plan.corpus) {
+    console.log(`Corpus:   v${plan.corpus.version} (${plan.corpus.destinations.length} destination(s))`);
+    console.log(`Source:   ${relative(cwd, plan.corpus.sourcePath)}`);
+  }
 
-function instantiateAdapter(adapter: AdapterInstance): AdapterInstance {
-  return adapter;
+  // Files per runtime
+  for (const op of plan.fileOps) {
+    const allFiles = [
+      ...op.entrypointFiles.map(f => ({ path: f, type: 'entrypoint' })),
+      ...op.supportFiles.map(f => ({ path: f, type: 'support' })),
+      ...op.hooks.map(f => ({ path: f, type: 'hook' })),
+    ];
+
+    console.log(`\nFiles to create (${op.runtime}):`);
+    for (const file of allFiles) {
+      const relPath = relative(cwd, file.path);
+      console.log(`  ${relPath.padEnd(50)} [${file.type}]`);
+    }
+    console.log(`  Total: ${allFiles.length} files`);
+  }
+
+  // Config patches
+  for (const op of plan.configOps) {
+    if (op.mcpServerCopy) {
+      console.log(`\nMCP server (${op.runtime}):`);
+      console.log(`  Copy: ${relative(cwd, op.mcpServerCopy.src)} -> ${relative(cwd, op.mcpServerCopy.dest)}`);
+    }
+    if (op.mcpConfigPatch) {
+      console.log(`Config patches (${op.runtime}):`);
+      console.log(`  ${op.mcpConfigPatch.path} (${op.mcpConfigPatch.keyPath ?? op.mcpConfigPatch.owner})`);
+    }
+  }
+
+  // Legacy cleanup
+  if (plan.cleanupOps.length > 0) {
+    console.log('\nLegacy cleanup:');
+    for (const op of plan.cleanupOps) {
+      console.log(`  ${op.runtime}: ${op.description}`);
+      for (const file of op.files.slice(0, 5)) {
+        console.log(`    - ${relative(cwd, file)}`);
+      }
+      if (op.files.length > 5) {
+        console.log(`    ... and ${op.files.length - 5} more`);
+      }
+    }
+  } else {
+    console.log('\nLegacy cleanup: none');
+  }
+
+  console.log(`\nManifest: .gss/install-manifest.json\n`);
 }
+
+// Type helper for adapter instantiation
+type RuntimeAdapter = InstanceType<typeof ClaudeAdapter | typeof CodexAdapter>;
 
 // Run and handle errors
 main()

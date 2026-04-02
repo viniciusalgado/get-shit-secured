@@ -463,12 +463,13 @@ describe('Phase 3 Integration — Installer refactor', () => {
 // ---------------------------------------------------------------------------
 
 describe('Phase 3 Integration — Backward compatibility', () => {
-  it('7.1 legacy specialist install produces specialist files', async () => {
+  it('7.1 legacy specialist option is accepted (specialist generation deprecated)', async () => {
     const tempDir = await createTempDir();
     try {
       // legacySpecialists triggers fetchAllCheatSheets which requires network.
-      // We test that the option is accepted; actual specialist generation
-      // may fail without network. This test validates the code path exists.
+      // Since Phase 5, specialist generation is deprecated in favor of MCP
+      // consultation. The adapters no longer implement specialist file generation.
+      // This test verifies the option is accepted without crashing.
       const result = await install(
         [new ClaudeAdapter()],
         'local',
@@ -477,14 +478,16 @@ describe('Phase 3 Integration — Backward compatibility', () => {
         { legacySpecialists: true }
       );
 
-      // If network is available, specialists should be generated.
-      // If not, the test verifies the code path is exercised.
+      // The install should succeed for standard artifacts even in legacy mode.
+      // Specialist files are NOT generated because adapters removed specialist
+      // support in Phase 5 (replaced by MCP consultation).
       if (result.success) {
         const agentsDir = join(tempDir, '.claude', 'agents');
         if (existsSync(agentsDir)) {
+          // Verify standard workflow agents and role agents are installed
           const agentFiles = await readdir(agentsDir);
-          const specialistFiles = agentFiles.filter(f => f.startsWith('gss-specialist-'));
-          assert.ok(specialistFiles.length > 0, 'Legacy mode should produce specialist files');
+          const workflowAgents = agentFiles.filter(f => f.startsWith('gss-') && !f.startsWith('gss-specialist-'));
+          assert.ok(workflowAgents.length > 0, 'Legacy mode should still produce workflow agents');
         }
       }
       // If result is not successful due to network, that's acceptable

@@ -44,6 +44,8 @@ import {
 } from './install-stages.js';
 import { fetchAllCheatSheets } from './owasp-ingestion.js';
 import { generateAllSpecialists } from './specialist-generator.js';
+import { registerMcpServers } from '../install/mcp-config.js';
+import { discoverLegacyArtifacts, cleanupLegacyArtifacts } from '../install/legacy-cleanup.js';
 
 /**
  * Main installer function with staged pipeline.
@@ -52,7 +54,8 @@ import { generateAllSpecialists } from './specialist-generator.js';
  *   Stage 0: Target detection
  *   Stage 1: Packaged corpus resolution
  *   Stage 2: Runtime artifact install
- *   Stage 3: MCP registration (stub — no-op in Phase 3)
+ *   Stage 3: MCP registration
+ *   Stage 3.5: Legacy specialist cleanup (non-legacy installs only)
  *   Stage 4: Manifest and verification
  *
  * @param adapters - Runtime adapters to install
@@ -77,7 +80,6 @@ export async function install(
   let corpus: CorpusResolution | null = null;
   if (!legacySpecialists) {
     try {
-      // Determine package root relative to this file
       const pkgRoot = resolve(dirname(import.meta.url ?? __dirname), '..');
       corpus = await resolveCorpus(targets, pkgRoot);
     } catch (error) {
@@ -105,69 +107,26 @@ export async function install(
     { dryRun, legacySpecialists, specialists }
   );
 
-  // Stage 3: MCP registration
-  const mcpRegistrations: Partial<Record<RuntimeTarget, string>> = {};
-  if (!dryRun && corpus) {
-    for (const adapter of adapters) {
-      const adapterWithMcp = adapter as unknown as {
-        getMcpRegistration?: (serverPath: string, corpusPath: string) => ManagedJsonPatch;
-      };
-      if (typeof adapterWithMcp.getMcpRegistration === 'function') {
-        const runtime = adapter.runtime;
-        const supportSubtree = targets.supportSubtrees[runtime]!;
-        const mcpDir = join(supportSubtree, 'mcp');
-
-        // Copy compiled MCP server to support subtree
-        const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-        const srcServerPath = resolve(pkgRoot, 'dist', 'mcp', 'server.js');
-        const destServerPath = join(mcpDir, 'server.js');
-
-        try {
-          await mkdir(mcpDir, { recursive: true });
-          await copyFile(srcServerPath, destServerPath);
-        } catch (error) {
-          // MCP server copy is non-fatal — warn but continue
-          process.stderr.write(
-            `[GSS] Warning: Failed to copy MCP server for ${runtime}: ${error instanceof Error ? error.message : String(error)}\n`
-          );
-          continue;
-        }
-
-        // Get corpus destination path for this runtime
-        const corpusDestPath = corpus.destinationPaths[runtime]!;
-        const registration = adapterWithMcp.getMcpRegistration(destServerPath, corpusDestPath);
-
-        // Merge MCP registration into runtime config
-        try {
-          const rootPath = targets.roots[runtime]!;
-          const settingsPath = join(rootPath, registration.path);
-          await mkdir(dirname(settingsPath), { recursive: true });
-
-          let existing: Record<string, unknown> = {};
-          if (existsSync(settingsPath)) {
-            const content = await readFile(settingsPath, 'utf-8');
-            existing = content.trim() ? JSON.parse(content) : {};
-          }
-
-          // Deep merge the MCP registration into the config
-          const keys = registration.keyPath ? registration.keyPath.split('.') : [];
-          let target = existing;
-          for (const key of keys.slice(0, -1)) {
-            if (!(key in target)) target[key] = {};
-            target = target[key] as Record<string, unknown>;
-          }
-          const finalKey = keys[keys.length - 1] ?? registration.owner;
-          target[finalKey] = registration.content;
-
-          await writeFile(settingsPath, JSON.stringify(existing, null, 2), 'utf-8');
-          mcpRegistrations[runtime] = settingsPath;
-        } catch (error) {
-          process.stderr.write(
-            `[GSS] Warning: Failed to register MCP server for ${runtime}: ${error instanceof Error ? error.message : String(error)}\n`
-          );
-        }
+  // Stage 3: MCP registration (extracted to stage module)
+  let mcpResult = null;
+  if (!legacySpecialists) {
+    const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+    mcpResult = await registerMcpServers(adapters, targets, corpus, {
+      dryRun,
+      pkgRoot,
+    });
+    // MCP errors are non-fatal — add them to the errors list
+    if (mcpResult.errors.length > 0) {
+      for (const err of mcpResult.errors) {
+        process.stderr.write(`[GSS] Warning: ${err}\n`);
       }
     }
+  }
+
+  // Stage 3.5: Legacy specialist cleanup (non-legacy installs only)
+  let cleanupResult = null;
+  if (!legacySpecialists && !dryRun) {
+    cleanupResult = await performLegacyCleanup(adapters, targets, { dryRun });
   }
 
   // Stage 4: Manifests and verification
@@ -176,6 +135,12 @@ export async function install(
   if (!dryRun) {
     const existing = await readManifest(cwd);
     const runtimeTargets = adapters.map(a => a.runtime);
+
+    // Build MCP paths for manifest tracking
+    const mcpPaths = mcpResult ? {
+      serverPaths: mcpResult.serverBinaryPaths,
+      configPaths: mcpResult.configPaths,
+    } : undefined;
 
     if (existing) {
       manifest = mergeManifest(
@@ -186,7 +151,8 @@ export async function install(
         artifacts.rootsByRuntime,
         artifacts.managedConfigsByRuntime,
         artifacts.hooksByRuntime,
-        artifacts.runtimeManifestPaths
+        artifacts.runtimeManifestPaths,
+        mcpPaths
       );
       // Add corpus version to merged manifest
       if ('manifestVersion' in manifest && manifest.manifestVersion === 2 && corpus) {
@@ -201,12 +167,10 @@ export async function install(
         artifacts.filesByRuntime,
         artifacts.managedConfigsByRuntime,
         artifacts.hooksByRuntime,
-        artifacts.runtimeManifestPaths
+        artifacts.runtimeManifestPaths,
+        corpus?.corpusVersion,
+        mcpPaths
       );
-      // Add corpus version
-      if (corpus) {
-        manifest.corpusVersion = corpus.corpusVersion;
-      }
     }
 
     await writeManifest(cwd, manifest);
@@ -219,26 +183,71 @@ export async function install(
       artifacts.filesByRuntime,
       artifacts.managedConfigsByRuntime,
       artifacts.hooksByRuntime,
-      artifacts.runtimeManifestPaths
+      artifacts.runtimeManifestPaths,
+      corpus?.corpusVersion,
+      mcpResult ? {
+        serverPaths: mcpResult.serverBinaryPaths,
+        configPaths: mcpResult.configPaths,
+      } : undefined
     );
-    if (corpus) {
-      manifest.corpusVersion = corpus.corpusVersion;
-    }
   }
 
-  const verification = await verifyInstall(targets, corpus, { dryRun });
+  const verification = await verifyInstall(targets, corpus, mcpResult, { dryRun });
+
+  // Combine all errors
+  const allErrors = [
+    ...artifacts.errors,
+    ...(mcpResult?.errors ?? []),
+    ...verification.errors,
+  ];
 
   return {
     success: artifacts.errors.length === 0 && verification.healthy,
     manifest,
     filesCreated: artifacts.totalFilesCreated,
-    errors: [...artifacts.errors, ...verification.errors],
+    errors: allErrors,
   };
+}
+
+/**
+ * Perform legacy specialist cleanup during install.
+ * Discovers old specialist files and removes them safely.
+ */
+async function performLegacyCleanup(
+  adapters: RuntimeAdapter[],
+  targets: TargetDetection,
+  options: { dryRun: boolean }
+): Promise<{ removed: string[]; errors: string[] }> {
+  const allRemoved: string[] = [];
+  const allErrors: string[] = [];
+
+  for (const adapter of adapters) {
+    const runtime = adapter.runtime;
+    const rootPath = targets.roots[runtime];
+    const supportSubtree = targets.supportSubtrees[runtime];
+
+    if (!rootPath || !supportSubtree) continue;
+
+    const artifacts = discoverLegacyArtifacts(runtime, rootPath, supportSubtree);
+
+    if (artifacts.hasLegacyArtifacts) {
+      const result = await cleanupLegacyArtifacts(artifacts, options);
+      allRemoved.push(...result.removed);
+      allErrors.push(...result.errors);
+
+      if (result.removed.length > 0 && !options.dryRun) {
+        console.log(`[GSS] Cleaned up ${result.removed.length} legacy specialist artifacts for ${runtime}`);
+      }
+    }
+  }
+
+  return { removed: allRemoved, errors: allErrors };
 }
 
 /**
  * Uninstall all installed files based on manifest.
  * Supports both v1 and v2 manifests with proper cleanup.
+ * Phase 9: Also cleans up MCP config entries and server binaries.
  */
 export async function uninstall(
   cwd: string,
@@ -287,6 +296,39 @@ export async function uninstall(
         }
       }
 
+      // Phase 9: Revert MCP config entries
+      const mcpConfigPath = v2Manifest.mcpConfigPaths?.[runtime];
+      if (mcpConfigPath && !dryRun) {
+        try {
+          await revertMcpConfig(mcpConfigPath);
+        } catch (error) {
+          errors.push(`[mcp] ${runtime}: Failed to revert MCP config: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+
+      // Phase 9: Remove MCP server binary
+      const mcpServerPath = v2Manifest.mcpServerPaths?.[runtime];
+      if (mcpServerPath && !dryRun) {
+        try {
+          const validatedPath = validateManifestPath(mcpServerPath, cwd);
+          if (existsSync(validatedPath)) {
+            await unlink(validatedPath);
+            filesRemoved++;
+          }
+          // Try to remove the mcp/ directory if empty
+          const mcpDir = dirname(validatedPath);
+          if (existsSync(mcpDir)) {
+            const entries = readdirSync(mcpDir);
+            if (entries.length === 0) {
+              await rm(mcpDir, { recursive: true, force: true });
+              dirsRemoved++;
+            }
+          }
+        } catch (error) {
+          errors.push(`[mcp] ${runtime}: Failed to remove MCP server binary: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+
       const managedConfigs = v2Manifest.managedConfigs?.[runtime] ?? [];
       for (const config of managedConfigs) {
         if (config.type === 'text-block') {
@@ -325,6 +367,40 @@ export async function uninstall(
           }
         } catch (error) {
           errors.push(`Failed to remove runtime manifest: ${error}`);
+        }
+      }
+
+      // Phase 9: Defensively clean up any remaining specialist files not in manifest
+      const rootPath = v2Manifest.roots[runtime];
+      if (rootPath && !dryRun) {
+        try {
+          const supportSubtree = resolve(rootPath, 'gss');
+          const { discoverLegacyArtifacts: discover } = await import('../install/legacy-cleanup.js');
+          const legacyArtifacts = discover(runtime, rootPath, supportSubtree);
+          if (legacyArtifacts.hasLegacyArtifacts) {
+            for (const file of legacyArtifacts.specialistFiles) {
+              try {
+                if (existsSync(file)) {
+                  await unlink(file);
+                  filesRemoved++;
+                }
+              } catch {
+                // Best-effort cleanup
+              }
+            }
+            for (const dir of legacyArtifacts.specialistDirs) {
+              try {
+                if (existsSync(dir)) {
+                  await rm(dir, { recursive: true, force: true });
+                  dirsRemoved++;
+                }
+              } catch {
+                // Best-effort cleanup
+              }
+            }
+          }
+        } catch {
+          // Ignore discovery errors during uninstall
         }
       }
     }
@@ -391,6 +467,39 @@ export async function uninstall(
     filesCreated: filesRemoved + dirsRemoved,
     errors,
   };
+}
+
+/**
+ * Revert MCP config entry from a settings.json file.
+ * Removes the gss-security-docs entry from mcpServers.
+ */
+async function revertMcpConfig(configPath: string): Promise<void> {
+  if (!existsSync(configPath)) return;
+
+  try {
+    const content = await readFile(configPath, 'utf-8');
+    const config = content.trim() ? JSON.parse(content) : {};
+
+    // Remove gss-security-docs from mcpServers
+    if (
+      typeof config === 'object' &&
+      config !== null &&
+      'mcpServers' in config &&
+      typeof config.mcpServers === 'object' &&
+      config.mcpServers !== null
+    ) {
+      delete (config.mcpServers as Record<string, unknown>)['gss-security-docs'];
+
+      // If mcpServers is now empty, remove it
+      if (Object.keys(config.mcpServers).length === 0) {
+        delete config.mcpServers;
+      }
+
+      await writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+    }
+  } catch (error) {
+    throw new Error(`Failed to revert MCP config at ${configPath}: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 async function removeManagedTextBlock(filePath: string, owner: string): Promise<void> {

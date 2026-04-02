@@ -9,8 +9,8 @@
  *   Stage 4: Manifest and verification
  */
 
-import { mkdir, writeFile, copyFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { mkdir, writeFile, copyFile, readFile } from 'node:fs/promises';
+import { existsSync, readdirSync, lstatSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import type {
   InstallScope,
@@ -25,6 +25,7 @@ import type {
   RuntimeHook,
   FileWriteResult,
   InstallFile,
+  InstallPlan,
 } from './types.js';
 import { loadCorpusSnapshot, type LoadedSnapshot } from '../corpus/snapshot-loader.js';
 import { isCorpusSnapshot } from '../corpus/schema.js';
@@ -374,24 +375,292 @@ export async function installRuntimeArtifacts(
 }
 
 /**
- * Stage 4: Verify the installation.
+ * Resolve the complete install plan without executing.
+ * Used for dry-run reporting and plan inspection.
+ * Does NOT perform any I/O — purely a computation.
+ */
+export function resolveInstallPlan(
+  targets: TargetDetection,
+  adapters: RuntimeAdapter[],
+  corpus: CorpusResolution | null,
+  options: { dryRun: boolean; legacySpecialists: boolean; pkgRoot: string }
+): InstallPlan {
+  const fileOps: InstallPlan['fileOps'] = [];
+  const configOps: InstallPlan['configOps'] = [];
+  const cleanupOps: InstallPlan['cleanupOps'] = [];
+
+  for (const adapter of adapters) {
+    const runtime = adapter.runtime;
+    const rootPath = targets.roots[runtime]!;
+    const supportSubtreePath = targets.supportSubtrees[runtime]!;
+
+    // Collect file lists from adapter
+    const entrypointFiles: string[] = [];
+    const supportFiles: string[] = [];
+    const hooks: string[] = [];
+
+    const placeholders = adapter.getPlaceholderFiles();
+    for (const file of placeholders) {
+      if (file.category === 'support') {
+        supportFiles.push(join(supportSubtreePath, file.relativePath));
+      } else {
+        entrypointFiles.push(join(rootPath, file.relativePath));
+      }
+    }
+
+    for (const workflow of DEFAULT_WORKFLOWS) {
+      const workflowFiles = adapter.getFilesForWorkflow(workflow);
+      for (const file of workflowFiles) {
+        if (file.category === 'support') {
+          supportFiles.push(join(supportSubtreePath, file.relativePath));
+        } else {
+          entrypointFiles.push(join(rootPath, file.relativePath));
+        }
+      }
+    }
+
+    for (const file of adapter.getSupportFiles()) {
+      supportFiles.push(join(supportSubtreePath, file.relativePath));
+    }
+
+    // Role agent files
+    const adapterWithRoles = adapter as unknown as {
+      getRoleAgentFiles?: () => RuntimeFile[];
+      getRoleSkillFiles?: () => RuntimeFile[];
+    };
+    if (typeof adapterWithRoles.getRoleAgentFiles === 'function') {
+      for (const file of adapterWithRoles.getRoleAgentFiles() ?? []) {
+        entrypointFiles.push(join(rootPath, file.relativePath));
+      }
+    }
+    if (typeof adapterWithRoles.getRoleSkillFiles === 'function') {
+      for (const file of adapterWithRoles.getRoleSkillFiles() ?? []) {
+        entrypointFiles.push(join(rootPath, file.relativePath));
+      }
+    }
+
+    // Hooks
+    const adapterHooks = adapter.getHooks();
+    for (const hook of adapterHooks) {
+      hooks.push(join(supportSubtreePath, 'hooks', `${hook.id}.js`));
+    }
+
+    fileOps.push({
+      runtime,
+      rootPath,
+      supportSubtreePath,
+      entrypointFiles,
+      supportFiles,
+      hooks,
+    });
+
+    // Config operations
+    const jsonPatches = adapter.getManagedJsonPatches();
+    const textBlocks = adapter.getManagedTextBlocks();
+
+    // MCP operations
+    let mcpServerCopy: { src: string; dest: string } | null = null;
+    let mcpConfigPatch: ManagedJsonPatch | null = null;
+
+    const adapterWithMcp = adapter as unknown as {
+      getMcpRegistration?: (serverPath: string, corpusPath: string) => ManagedJsonPatch;
+    };
+    if (typeof adapterWithMcp.getMcpRegistration === 'function' && corpus) {
+      const destServerPath = join(supportSubtreePath, 'mcp', 'server.js');
+      const srcServerPath = resolve(options.pkgRoot, 'dist', 'mcp', 'server.js');
+      mcpServerCopy = { src: srcServerPath, dest: destServerPath };
+
+      const corpusDestPath = corpus.destinationPaths[runtime]!;
+      mcpConfigPatch = adapterWithMcp.getMcpRegistration(destServerPath, corpusDestPath);
+    }
+
+    configOps.push({
+      runtime,
+      jsonPatches,
+      textBlocks,
+      mcpServerCopy,
+      mcpConfigPatch,
+    });
+
+    // Legacy cleanup
+    if (!options.legacySpecialists) {
+      const adapterWithExtras = adapter as unknown as {
+        getSpecialistFiles?: () => InstallFile[];
+      };
+      if (typeof adapterWithExtras.getSpecialistFiles === 'function') {
+        const specialistFiles = adapterWithExtras.getSpecialistFiles() ?? [];
+        if (specialistFiles.length > 0) {
+          cleanupOps.push({
+            runtime,
+            files: specialistFiles.map(f => join(rootPath, f.relativePath)),
+            description: `${specialistFiles.length} legacy specialist files`,
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    scope: targets.scope,
+    runtimes: targets.runtimes,
+    corpus: corpus ? {
+      version: corpus.corpusVersion,
+      sourcePath: corpus.sourcePath,
+      destinations: Object.entries(corpus.destinationPaths)
+        .filter(([, path]) => path)
+        .map(([runtime, path]) => ({ runtime: runtime as RuntimeTarget, path: path! })),
+    } : null,
+    fileOps,
+    configOps,
+    cleanupOps,
+    dryRun: options.dryRun,
+  };
+}
+
+/**
+ * Stage 4: Verify the installation with comprehensive health checks.
+ *
+ * Checks:
+ * 1. Corpus snapshot — exists at each destination path, valid JSON, has corpusVersion
+ * 2. MCP server binary — exists at expected path in support subtree
+ * 3. MCP config — settings.json contains mcpServers.gss-security-docs
+ * 4. Runtime manifest — exists in support subtree, has expected fields
+ * 5. Hooks — each expected hook has a corresponding .js file
+ * 6. Artifact directories — .gss/artifacts/ and .gss/reports/ exist
+ * 7. Manifest consistency — install-manifest.json and runtime-manifest.json agree on corpus version
  */
 export async function verifyInstall(
   targets: TargetDetection,
   corpus: CorpusResolution | null,
-  options: { dryRun: boolean }
+  mcpResult?: { configPaths?: Partial<Record<string, string>>; serverBinaryPaths?: Partial<Record<string, string>>; errors?: string[] } | null,
+  options?: { dryRun: boolean }
 ): Promise<VerificationResult> {
-  if (options.dryRun) {
+  const dryRun = options?.dryRun ?? false;
+  if (dryRun) {
     return { healthy: true, errors: [] };
   }
 
   const errors: string[] = [];
+  const { readFile: readFileFn } = await import('node:fs/promises');
 
-  // Check corpus snapshot exists at destinations
-  if (corpus) {
-    for (const [runtime, destPath] of Object.entries(corpus.destinationPaths)) {
-      if (!existsSync(destPath)) {
-        errors.push(`${runtime}: Corpus snapshot not found at ${destPath}`);
+  for (const runtime of targets.runtimes) {
+    const supportSubtree = targets.supportSubtrees[runtime];
+    if (!supportSubtree) continue;
+
+    // Check 1: Corpus snapshot exists and is valid
+    if (corpus) {
+      const destPath = corpus.destinationPaths[runtime];
+      if (destPath) {
+        if (!existsSync(destPath)) {
+          errors.push(`[verify] ${runtime}: corpus snapshot not found at ${destPath}`);
+        } else {
+          try {
+            const content = await readFileFn(destPath, 'utf-8');
+            const parsed = JSON.parse(content);
+            if (!parsed.corpusVersion) {
+              errors.push(`[verify] ${runtime}: corpus snapshot at ${destPath} missing corpusVersion`);
+            }
+          } catch {
+            errors.push(`[verify] ${runtime}: corpus snapshot at ${destPath} is not valid JSON`);
+          }
+        }
+      }
+    }
+
+    // Check 2: MCP server binary
+    const expectedServerPath = join(supportSubtree, 'mcp', 'server.js');
+    if (mcpResult?.serverBinaryPaths?.[runtime]) {
+      const serverPath = mcpResult.serverBinaryPaths[runtime]!;
+      if (!existsSync(serverPath)) {
+        errors.push(`[verify] ${runtime}: MCP server binary not found at ${serverPath}`);
+      }
+    } else if (existsSync(dirname(expectedServerPath))) {
+      // If the mcp directory exists, the server should be there
+      if (!existsSync(expectedServerPath)) {
+        errors.push(`[verify] ${runtime}: MCP server binary not found at ${expectedServerPath}`);
+      }
+    }
+
+    // Check 3: MCP config registration
+    if (mcpResult?.configPaths?.[runtime]) {
+      const configPath = mcpResult.configPaths[runtime]!;
+      if (!existsSync(configPath)) {
+        errors.push(`[verify] ${runtime}: MCP config not found at ${configPath}`);
+      } else {
+        try {
+          const content = await readFileFn(configPath, 'utf-8');
+          const config = JSON.parse(content);
+          const mcpServers = config?.mcpServers as Record<string, unknown> | undefined;
+          if (!mcpServers || !('gss-security-docs' in mcpServers)) {
+            errors.push(`[verify] ${runtime}: MCP not registered in ${configPath} (missing mcpServers.gss-security-docs)`);
+          }
+        } catch {
+          errors.push(`[verify] ${runtime}: MCP config at ${configPath} is not valid JSON`);
+        }
+      }
+    }
+
+    // Check 4: Runtime manifest exists and has expected fields
+    const runtimeManifestPath = join(supportSubtree, 'runtime-manifest.json');
+    if (!existsSync(runtimeManifestPath)) {
+      errors.push(`[verify] ${runtime}: runtime manifest not found at ${runtimeManifestPath}`);
+    } else {
+      try {
+        const content = await readFileFn(runtimeManifestPath, 'utf-8');
+        const manifest = JSON.parse(content);
+        if (!manifest.version || !manifest.runtime || !manifest.gssVersion) {
+          errors.push(`[verify] ${runtime}: runtime manifest at ${runtimeManifestPath} missing required fields`);
+        }
+      } catch {
+        errors.push(`[verify] ${runtime}: runtime manifest at ${runtimeManifestPath} is not valid JSON`);
+      }
+    }
+
+    // Check 5: Hooks
+    const hooksDir = join(supportSubtree, 'hooks');
+    const expectedHookIds = ['session-start', 'pre-tool-write', 'pre-tool-edit', 'post-tool-write'];
+    if (existsSync(hooksDir)) {
+      try {
+        const hookFiles = readdirSync(hooksDir).filter(f => f.endsWith('.js'));
+        const foundHookIds = hookFiles.map(f => f.replace(/\.js$/, ''));
+        const missingHooks = expectedHookIds.filter(h => !foundHookIds.includes(h));
+        if (missingHooks.length > 0) {
+          errors.push(`[verify] ${runtime}: hooks missing: ${missingHooks.join(', ')} (${foundHookIds.length}/${expectedHookIds.length} present)`);
+        }
+      } catch {
+        errors.push(`[verify] ${runtime}: cannot read hooks directory at ${hooksDir}`);
+      }
+    } else {
+      errors.push(`[verify] ${runtime}: hooks directory not found at ${hooksDir}`);
+    }
+
+    // Check 6: Artifact directories
+    const artifactsDir = join(targets.cwd, '.gss', 'artifacts');
+    const reportsDir = join(targets.cwd, '.gss', 'reports');
+    if (!existsSync(artifactsDir)) {
+      errors.push(`[verify] ${runtime}: artifact directory not found at ${artifactsDir}`);
+    }
+    if (!existsSync(reportsDir)) {
+      errors.push(`[verify] ${runtime}: reports directory not found at ${reportsDir}`);
+    }
+
+    // Check 7: Manifest consistency
+    if (corpus && existsSync(runtimeManifestPath)) {
+      try {
+        const rmContent = await readFileFn(runtimeManifestPath, 'utf-8');
+        const rmParsed = JSON.parse(rmContent);
+        const installManifestPath = join(targets.cwd, '.gss', 'install-manifest.json');
+        if (existsSync(installManifestPath)) {
+          const imContent = await readFileFn(installManifestPath, 'utf-8');
+          const imParsed = JSON.parse(imContent);
+          if (imParsed.corpusVersion && rmParsed.corpusVersion && imParsed.corpusVersion !== rmParsed.corpusVersion) {
+            errors.push(
+              `[verify] ${runtime}: corpus version mismatch — install manifest: ${imParsed.corpusVersion}, runtime manifest: ${rmParsed.corpusVersion}`
+            );
+          }
+        }
+      } catch {
+        // Non-fatal — version consistency is best-effort
       }
     }
   }

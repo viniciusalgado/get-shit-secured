@@ -1,5 +1,8 @@
 /**
- * Integration tests for delegation plan rendering in workflow outputs.
+ * Integration tests for MCP consultation rendering in workflow outputs.
+ *
+ * Phase 6 replaced delegation plans with MCP consultation sections.
+ * These tests verify the new MCP-based consultation rendering.
  */
 
 import { describe, it } from 'node:test';
@@ -8,75 +11,75 @@ import assert from 'node:assert/strict';
 import {
   renderClaudeAgent,
   renderCodexSkill,
-  renderClaudeDelegationPlanSection,
-  renderCodexDelegationPlanSection,
+  renderMcpConsultationSection,
 } from '../../dist/core/renderer.js';
 import { getWorkflow } from '../../dist/catalog/workflows/registry.js';
 
-describe('Delegation Renderer - Claude Agent', () => {
-  it('should include delegation plan section for workflows with delegation policy', () => {
+describe('MCP Consultation Renderer - Claude Agent', () => {
+  it('should include MCP consultation section for workflows with signal derivation', () => {
     const workflow = getWorkflow('audit');
     const output = renderClaudeAgent(workflow);
 
-    assert.ok(output.includes('Delegation Plan'), 'Should include Delegation Plan heading');
-    assert.ok(output.includes('deterministic delegation planning'), 'Should mention deterministic planning');
+    assert.ok(output.includes('MCP Security Consultation'), 'Should include MCP Security Consultation heading');
+    assert.ok(output.includes('get_workflow_consultation_plan'), 'Should mention consultation plan tool');
   });
 
-  it('should include consultation constraints in Claude agent output', () => {
+  it('should include MCP consultation section for verify workflow', () => {
     const workflow = getWorkflow('verify');
     const output = renderClaudeAgent(workflow);
 
-    assert.ok(output.includes('Delegation Plan'), 'Verify should include delegation plan');
+    assert.ok(output.includes('MCP Security Consultation'), 'Verify should include MCP consultation section');
   });
 
-  it('should NOT include delegation plan section for workflows without delegation policy', () => {
+  it('should include MCP consultation section for report workflow (even with none derivation)', () => {
     const workflow = getWorkflow('report');
     const output = renderClaudeAgent(workflow);
 
-    // Report has mode 'none' so delegation plan section should be empty or absent
-    // The section should either not appear or be empty
-    const hasDelegationPlan = output.includes('## Delegation Plan');
-    // Since report has delegationPolicy with mode 'none', it should still render but show none mode
-    // Actually with mode 'none', the function returns empty string
-    assert.ok(!hasDelegationPlan, 'Report should not include delegation plan section');
+    // Report has signalDerivation with all "none" values but still gets MCP section
+    assert.ok(output.includes('MCP Security Consultation'), 'Report should include MCP consultation section');
   });
 });
 
-describe('Delegation Renderer - Codex Skill', () => {
-  it('should include delegation plan section for workflows with delegation policy', () => {
+describe('MCP Consultation Renderer - Codex Skill', () => {
+  it('should include MCP consultation section for workflows with signal derivation', () => {
     const workflow = getWorkflow('plan-remediation');
     const output = renderCodexSkill(workflow);
 
-    assert.ok(output.includes('Delegation Plan'), 'Should include Delegation Plan heading');
+    assert.ok(output.includes('MCP Security Consultation'), 'Should include MCP Security Consultation heading');
   });
 
-  it('should include constraint details in Codex output', () => {
+  it('should include consultation tool details in Codex output', () => {
     const workflow = getWorkflow('execute-remediation');
     const output = renderCodexSkill(workflow);
 
-    assert.ok(output.includes('Constraints') || output.includes('constraint'), 'Should include constraint details');
+    assert.ok(output.includes('get_workflow_consultation_plan'), 'Should include consultation plan tool');
+    assert.ok(output.includes('validate_security_consultation'), 'Should include validation tool');
   });
 });
 
-describe('Delegation Renderer - renderClaudeDelegationPlanSection', () => {
-  it('should return empty string for workflow without delegation policy', () => {
-    const workflow = getWorkflow('report');
-    const result = renderClaudeDelegationPlanSection(workflow);
+describe('MCP Consultation Renderer - renderMcpConsultationSection', () => {
+  it('should return empty string for workflow without signal derivation', () => {
+    // Create a minimal workflow object without signalDerivation
+    const workflowWithoutSig = {
+      ...getWorkflow('audit'),
+      signalDerivation: undefined,
+    };
+    const result = renderMcpConsultationSection(workflowWithoutSig);
     assert.equal(result, '');
   });
 
-  it('should return non-empty string for workflow with delegation policy', () => {
+  it('should return non-empty string for workflow with signal derivation', () => {
     const workflow = getWorkflow('audit');
-    const result = renderClaudeDelegationPlanSection(workflow);
+    const result = renderMcpConsultationSection(workflow);
     assert.ok(result.length > 0);
-    assert.ok(result.includes('Delegation Plan'));
-    assert.ok(result.includes('specialist-results.json'));
-    assert.ok(result.includes('delegation-plan.json'));
-    assert.ok(result.includes('delegation-compliance.json'));
+    assert.ok(result.includes('MCP Security Consultation'));
+    assert.ok(result.includes('get_workflow_consultation_plan'));
+    assert.ok(result.includes('validate_security_consultation'));
+    assert.ok(result.includes('consultation'));
   });
 });
 
-describe('Delegation Renderer - Regression', () => {
+describe('MCP Consultation Renderer - Regression', () => {
   it('should render orchestration section for security-review workflow', () => {
     const workflow = getWorkflow('security-review');
     const claudeOutput = renderClaudeAgent(workflow);

@@ -69,6 +69,9 @@ export function parseArgs(argv: string[]): CliArgs & { showHelp: boolean; showVe
       case '--legacy-specialists':
         result.legacySpecialists = true;
         break;
+      case '--verify-only':
+        result.verifyOnly = true;
+        break;
       default:
         // Ignore unknown args for now
         break;
@@ -103,6 +106,7 @@ OPTIONS:
   --global, -g      Install to user home directory
   --dry-run, -d         Show what would be done without writing files
   --uninstall, -u       Uninstall previously installed GSS files
+  --verify-only         Verify installation without installing
   --legacy-specialists  Use legacy specialist generation (fetch + generate at install time)
   --help, -h            Show this help message
   --version, -v         Show version
