@@ -492,7 +492,22 @@ When complete, tell the user to run \`/gss-verify\` to verify the applied fixes.
 
 Do NOT refactor beyond what's specified. Do NOT add unrelated changes.
 
-Use MCP consultation tools if unexpected security issues arise during patch application.`,
+Use MCP consultation tools if unexpected security issues arise during patch application.
+
+## Artifact Output Contract
+
+Every JSON artifact must include envelope fields at the top level:
+{
+  "schemaVersion": 1,
+  "workflowId": "execute-remediation",
+  "gssVersion": "<from session>",
+  "corpusVersion": "<from MCP>",
+  "generatedAt": "<ISO 8601>",
+  "consultationMode": "optional",
+  "consultation": { ... if MCP was consulted ... },
+  ... payload ...
+}
+If MCP was not consulted, omit the "consultation" field.`,
     codex: `Apply security patches from the approved remediation plan:
 
 1. Validate all required artifacts exist
@@ -505,11 +520,16 @@ Use MCP consultation tools if unexpected security issues arise during patch appl
 
 Only apply changes specified in the approved patch plan.
 
-Use MCP consultation tools for domain-specific guidance when unexpected issues arise.`,
+Use MCP consultation tools for domain-specific guidance when unexpected issues arise.
+
+## Artifact Output Contract
+
+Every JSON artifact must include envelope fields: schemaVersion: 1, workflowId: "execute-remediation", gssVersion, corpusVersion, generatedAt, consultationMode: "optional". Include "consultation" only if MCP was consulted during execution.`,
   },
   signalDerivation: {
     stacks: 'from-prior-artifact',
     issueTags: 'from-findings',
     changedFiles: 'from-prior-artifact',
   },
+  consultationMode: 'optional',
 };

@@ -357,12 +357,33 @@ Output reports to .gss/report/ directory:
 3. owasp-compliance.md - For auditors/compliance
 4. remediation-roadmap.md - For project planning
 
+## Artifact Output Contract
+
+Every JSON artifact must include these envelope fields at the top level:
+{
+  "schemaVersion": 1,
+  "workflowId": "report",
+  "gssVersion": "<from session>",
+  "corpusVersion": "<from MCP or runtime manifest>",
+  "generatedAt": "<ISO 8601 timestamp>",
+  "consultationMode": "not-applicable"
+}
+Note: The report workflow does not consult MCP directly. It aggregates traces from other workflows.
+
 ## Consultation Trace Aggregation
 
-Aggregate consultation traces from all prior workflow artifacts into the final report. Include:
-- Total documents consulted across all workflows
-- Coverage status per workflow (pass/warn/fail)
-- Any gaps where MCP was unavailable`,
+1. Read all available JSON artifacts from .gss/artifacts/*/
+2. For each artifact that has a "consultation" section, extract:
+   - workflowId
+   - coverageStatus
+   - requiredMissing
+   - stats (from validation)
+3. Produce an aggregate coverage summary:
+   - Total workflows with traces
+   - Workflows passing / warning / failing
+   - Total unique docs consulted across all workflows
+   - Any gaps where consultation was required but trace is missing
+4. Include this summary in executive-summary.md and technical-findings.md`,
     codex: `Generate comprehensive security reports:
 
 1. Aggregate all workflow artifacts
@@ -372,11 +393,23 @@ Aggregate consultation traces from all prior workflow artifacts into the final r
 5. Create prioritized remediation roadmap
 6. Aggregate consultation traces from prior workflows
 
-Tailor each report to its audience with appropriate level of detail.`,
+Tailor each report to its audience with appropriate level of detail.
+
+## Artifact Output Contract
+
+Every JSON artifact must include envelope fields: schemaVersion: 1, workflowId: "report", gssVersion, corpusVersion, generatedAt, consultationMode: "not-applicable". No "consultation" section needed — this workflow aggregates traces from other workflows.
+
+## Consultation Trace Aggregation
+
+1. Read all JSON artifacts from .gss/artifacts/*/
+2. Extract consultation section from each artifact that has one
+3. Aggregate: total workflows with traces, pass/warn/fail counts, unique docs consulted, coverage gaps
+4. Include aggregate summary in executive-summary.md and technical-findings.md`,
   },
   signalDerivation: {
     stacks: 'none',
     issueTags: 'none',
     changedFiles: 'none',
   },
+  consultationMode: 'not-applicable',
 };

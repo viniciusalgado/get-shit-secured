@@ -221,7 +221,22 @@ This will inform threat modeling and audit prioritization.`,
 - Document assumptions and uncertainties
 - Prefer analysis over recommendations in this phase
 
-Output artifacts to .gss/artifacts/map-codebase/ for use by subsequent workflows.`,
+Output artifacts to .gss/artifacts/map-codebase/ for use by subsequent workflows.
+
+## Artifact Output Contract
+
+Every JSON artifact must include these envelope fields at the top level:
+{
+  "schemaVersion": 1,
+  "workflowId": "map-codebase",
+  "gssVersion": "<from session or package.json>",
+  "corpusVersion": "<from MCP or runtime manifest>",
+  "generatedAt": "<ISO 8601 timestamp>",
+  "consultationMode": "optional",
+  "consultation": { ... if MCP was consulted ... },
+  ... workflow-specific payload ...
+}
+If MCP was not consulted, omit the "consultation" field.`,
     codex: `Analyze the codebase structure systematically:
 
 1. Scan for common patterns in the codebase
@@ -229,11 +244,16 @@ Output artifacts to .gss/artifacts/map-codebase/ for use by subsequent workflows
 3. Identify trust boundaries and security zones
 4. Document findings as structured artifacts
 
-Focus on understanding before evaluating.`,
+Focus on understanding before evaluating.
+
+## Artifact Output Contract
+
+Every JSON artifact must include envelope fields: schemaVersion, workflowId, "map-codebase", gssVersion, corpusVersion, generatedAt, consultationMode: "optional". Include "consultation" only if MCP was consulted.`,
   },
   signalDerivation: {
     stacks: 'from-codebase',
     issueTags: 'none',
     changedFiles: 'none',
   },
+  consultationMode: 'optional',
 };

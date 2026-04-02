@@ -390,7 +390,27 @@ This feeds into the final report for stakeholders.`,
 3. **Run tests** - Execute test specifications
 4. **Aggregate results** - Combine MCP guidance with test results
 
-Output artifacts to .gss/artifacts/verify/ for use by the report workflow.`,
+Output artifacts to .gss/artifacts/verify/ for use by the report workflow.
+
+## Artifact Output Contract
+
+Every JSON artifact must include envelope fields at the top level:
+{
+  "schemaVersion": 1,
+  "workflowId": "verify",
+  "gssVersion": "<from session>",
+  "corpusVersion": "<from MCP>",
+  "generatedAt": "<ISO 8601>",
+  "consultationMode": "required",
+  "consultation": {
+    "plan": { ... },
+    "consultedDocs": [...],
+    "coverageStatus": "pass|warn|fail",
+    "requiredMissing": [],
+    "notes": []
+  },
+  ... payload ...
+}`,
     codex: `Verify security remediations:
 
 1. Review implemented patches
@@ -404,11 +424,16 @@ Output artifacts to .gss/artifacts/verify/ for use by the report workflow.`,
 
 Use MCP consultation tools to get domain-specific verification guidance for each remediation domain.
 
-Focus on evidence-based verification.`,
+Focus on evidence-based verification.
+
+## Artifact Output Contract
+
+Every JSON artifact must include envelope fields: schemaVersion: 1, workflowId: "verify", gssVersion, corpusVersion, generatedAt, consultationMode: "required", and "consultation" section with plan, consultedDocs, coverageStatus, requiredMissing, and notes.`,
   },
   signalDerivation: {
     stacks: 'from-prior-artifact',
     issueTags: 'from-findings',
     changedFiles: 'from-prior-artifact',
   },
+  consultationMode: 'required',
 };

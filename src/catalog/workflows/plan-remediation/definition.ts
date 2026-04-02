@@ -309,7 +309,27 @@ Output artifacts to .gss/artifacts/plan-remediation/:
 - rollback-plan.md
 
 **Next Steps:**
-After completing this workflow, tell the user to review the remediation plan and then run \`/gss-execute-remediation\` to apply the approved changes.`,
+After completing this workflow, tell the user to review the remediation plan and then run \`/gss-execute-remediation\` to apply the approved changes.
+
+## Artifact Output Contract
+
+Every JSON artifact must include envelope fields at the top level:
+{
+  "schemaVersion": 1,
+  "workflowId": "plan-remediation",
+  "gssVersion": "<from session>",
+  "corpusVersion": "<from MCP>",
+  "generatedAt": "<ISO 8601>",
+  "consultationMode": "required",
+  "consultation": {
+    "plan": { ... },
+    "consultedDocs": [...],
+    "coverageStatus": "pass|warn|fail",
+    "requiredMissing": [],
+    "notes": []
+  },
+  ... payload ...
+}`,
     codex: `Generate security remediation PLANS:
 
 1. Review prioritized findings
@@ -322,11 +342,16 @@ After completing this workflow, tell the user to review the remediation plan and
 
 Focus on secure coding practices and defense in depth.
 
-Use MCP consultation tools for domain-specific remediation guidance.`,
+Use MCP consultation tools for domain-specific remediation guidance.
+
+## Artifact Output Contract
+
+Every JSON artifact must include envelope fields: schemaVersion: 1, workflowId: "plan-remediation", gssVersion, corpusVersion, generatedAt, consultationMode: "required", and "consultation" section with plan, consultedDocs, coverageStatus, requiredMissing, and notes.`,
   },
   signalDerivation: {
     stacks: 'from-prior-artifact',
     issueTags: 'from-findings',
     changedFiles: 'from-prior-artifact',
   },
+  consultationMode: 'required',
 };

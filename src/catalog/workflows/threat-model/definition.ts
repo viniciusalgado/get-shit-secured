@@ -268,7 +268,27 @@ These abuse cases will guide the audit workflow's testing approach.`,
 
 Output artifacts to .gss/artifacts/threat-model/ for use by audit and plan-remediation workflows.
 
-Use MCP consultation tools for domain-specific threat analysis guidance.`,
+Use MCP consultation tools for domain-specific threat analysis guidance.
+
+## Artifact Output Contract
+
+Every JSON artifact must include these envelope fields at the top level:
+{
+  "schemaVersion": 1,
+  "workflowId": "threat-model",
+  "gssVersion": "<from session or package.json>",
+  "corpusVersion": "<from MCP or runtime manifest>",
+  "generatedAt": "<ISO 8601 timestamp>",
+  "consultationMode": "required",
+  "consultation": {
+    "plan": { "workflowId": "threat-model", "generatedAt": "...", "corpusVersion": "...", "requiredCount": 0, "optionalCount": 0, "followupCount": 0 },
+    "consultedDocs": [{ "id": "...", "title": "...", "sourceUrl": "..." }],
+    "coverageStatus": "pass|warn|fail",
+    "requiredMissing": [],
+    "notes": []
+  },
+  ... workflow-specific payload ...
+}`,
     codex: `Build a comprehensive threat model:
 
 1. Read the codebase mapping artifacts
@@ -277,11 +297,16 @@ Use MCP consultation tools for domain-specific threat analysis guidance.`,
 4. Recommend prioritized mitigations
 5. Document abuse scenarios
 
-Ground all analysis in OWASP threat modeling practices. Use MCP consultation for domain-specific guidance.`,
+Ground all analysis in OWASP threat modeling practices. Use MCP consultation for domain-specific guidance.
+
+## Artifact Output Contract
+
+Every JSON artifact must include envelope fields: schemaVersion: 1, workflowId: "threat-model", gssVersion, corpusVersion, generatedAt, consultationMode: "required", and "consultation" section with plan, consultedDocs, coverageStatus, requiredMissing, and notes.`,
   },
   signalDerivation: {
     stacks: 'from-prior-artifact',
     issueTags: 'none',
     changedFiles: 'none',
   },
+  consultationMode: 'required',
 };

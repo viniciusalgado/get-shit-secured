@@ -173,7 +173,27 @@ Ensure each finding includes file path, line, snippet, OWASP reference, severity
 - Produce TDD remediation specs, not implementation patches.
 - Include consultation trace in all artifacts.
 
-Persist all artifacts under .gss/artifacts/security-review/.`,
+Persist all artifacts under .gss/artifacts/security-review/.
+
+## Artifact Output Contract
+
+Every JSON artifact must include these envelope fields at the top level:
+{
+  "schemaVersion": 1,
+  "workflowId": "security-review",
+  "gssVersion": "<from session or package.json>",
+  "corpusVersion": "<from MCP or runtime manifest>",
+  "generatedAt": "<ISO 8601 timestamp>",
+  "consultationMode": "required",
+  "consultation": {
+    "plan": { "workflowId": "security-review", "generatedAt": "...", "corpusVersion": "...", "requiredCount": 0, "optionalCount": 0, "followupCount": 0 },
+    "consultedDocs": [{ "id": "...", "title": "...", "sourceUrl": "..." }],
+    "coverageStatus": "pass|warn|fail",
+    "requiredMissing": [],
+    "notes": []
+  },
+  ... workflow-specific payload ...
+}`,
     codex: `Run an ordered, change-scoped security review.
 
 1. Collect the diff scope (uncommitted set by default, or commit-ref vs parent).
@@ -183,7 +203,27 @@ Persist all artifacts under .gss/artifacts/security-review/.`,
 5. Validate findings without mutating tracked files.
 6. Emit remediation-oriented TDD test specs and structured artifacts.
 
-Keep execution deterministic and evidence-first.`,
+Keep execution deterministic and evidence-first.
+
+## Artifact Output Contract
+
+Every JSON artifact must include these envelope fields at the top level:
+{
+  "schemaVersion": 1,
+  "workflowId": "security-review",
+  "gssVersion": "<from session>",
+  "corpusVersion": "<from MCP>",
+  "generatedAt": "<ISO 8601>",
+  "consultationMode": "required",
+  "consultation": {
+    "plan": { ... },
+    "consultedDocs": [...],
+    "coverageStatus": "pass|warn|fail",
+    "requiredMissing": [],
+    "notes": []
+  },
+  ... payload ...
+}`,
   },
   orchestration: {
     coordinator: 'workflow-agent',
@@ -258,4 +298,5 @@ Keep execution deterministic and evidence-first.`,
     issueTags: 'from-diff-heuristics',
     changedFiles: 'from-diff',
   },
+  consultationMode: 'required',
 };

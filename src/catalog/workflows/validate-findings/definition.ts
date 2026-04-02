@@ -440,7 +440,22 @@ For re-evaluation, consult MCP tools for the vulnerability category:
 
 **Output:**
 Persist all artifacts under .gss/artifacts/validate-findings/.
-The validated-findings.json and tdd-test-document.json feed into plan-remediation.`,
+The validated-findings.json and tdd-test-document.json feed into plan-remediation.
+
+## Artifact Output Contract
+
+Every JSON artifact must include envelope fields at the top level:
+{
+  "schemaVersion": 1,
+  "workflowId": "validate-findings",
+  "gssVersion": "<from session>",
+  "corpusVersion": "<from MCP>",
+  "generatedAt": "<ISO 8601>",
+  "consultationMode": "optional",
+  "consultation": { ... if MCP was consulted ... },
+  ... payload ...
+}
+If MCP was not consulted, omit the "consultation" field.`,
     codex: `Validate security findings from the audit:
 
 1. Ingest findings and triage by severity
@@ -452,11 +467,16 @@ The validated-findings.json and tdd-test-document.json feed into plan-remediatio
 
 Only confirmed and unconfirmed findings proceed to remediation.
 
-Output artifacts to .gss/artifacts/validate-findings/.`,
+Output artifacts to .gss/artifacts/validate-findings/.
+
+## Artifact Output Contract
+
+Every JSON artifact must include envelope fields: schemaVersion: 1, workflowId: "validate-findings", gssVersion, corpusVersion, generatedAt, consultationMode: "optional". Include "consultation" only if MCP was consulted.`,
   },
   signalDerivation: {
     stacks: 'from-prior-artifact',
     issueTags: 'from-findings',
     changedFiles: 'none',
   },
+  consultationMode: 'optional',
 };

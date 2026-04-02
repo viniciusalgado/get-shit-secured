@@ -414,7 +414,27 @@ After MCP consultation:
 3. Prioritize by severity and confidence
 4. Generate a consolidated findings report with consultation trace
 
-Output artifacts to .gss/artifacts/audit/ for use by plan-remediation and report workflows.`,
+Output artifacts to .gss/artifacts/audit/ for use by plan-remediation and report workflows.
+
+## Artifact Output Contract
+
+Every JSON artifact must include these envelope fields at the top level:
+{
+  "schemaVersion": 1,
+  "workflowId": "audit",
+  "gssVersion": "<from session or package.json>",
+  "corpusVersion": "<from MCP or runtime manifest>",
+  "generatedAt": "<ISO 8601 timestamp>",
+  "consultationMode": "required",
+  "consultation": {
+    "plan": { "workflowId": "audit", "generatedAt": "...", "corpusVersion": "...", "requiredCount": 0, "optionalCount": 0, "followupCount": 0 },
+    "consultedDocs": [{ "id": "...", "title": "...", "sourceUrl": "..." }],
+    "coverageStatus": "pass|warn|fail",
+    "requiredMissing": [],
+    "notes": []
+  },
+  ... workflow-specific payload ...
+}`,
     codex: `Conduct a comprehensive security audit:
 
 1. Review codebase mapping artifacts
@@ -427,11 +447,16 @@ Output artifacts to .gss/artifacts/audit/ for use by plan-remediation and report
 
 Use MCP consultation tools for domain-specific security guidance. When you detect specific vulnerability types, consult the MCP for detailed guidance on that vulnerability class.
 
-Ground all findings in OWASP standards and include consultation traces.`,
+Ground all findings in OWASP standards and include consultation traces.
+
+## Artifact Output Contract
+
+Every JSON artifact must include envelope fields: schemaVersion: 1, workflowId: "audit", gssVersion, corpusVersion, generatedAt, consultationMode: "required", and "consultation" section with plan, consultedDocs, coverageStatus, requiredMissing, and notes.`,
   },
   signalDerivation: {
     stacks: 'from-prior-artifact',
     issueTags: 'from-findings',
     changedFiles: 'none',
   },
+  consultationMode: 'required',
 };
