@@ -1,4 +1,9 @@
 /**
+ * DEPRECATED: This module is part of the legacy specialist pipeline.
+ * Superseded by src/core/consultation-planner.ts (Phase 4).
+ * Retained for --legacy-specialists backward compatibility only.
+ * Removal target: Release C (see migration-plan/retirement-checklist.md).
+ *
  * Delegation Planner Engine
  *
  * Computes deterministic delegation plans for workflow runs.
@@ -28,7 +33,9 @@ import type { NormalizedStack } from './stack-normalizer.js';
 import { classifyFindings, type IssueTag } from './issue-taxonomy.js';
 
 /**
- * Input signals for plan computation.
+ * @deprecated Legacy delegation plan input. Superseded by ConsultationSignals.
+ * Retained only for --legacy-specialists mode. Remove in Release C.
+ * Replacement: ConsultationSignals in consultation-signals.ts
  */
 export interface DelegationPlanInput {
   /** Workflow ID to plan for */
@@ -81,6 +88,10 @@ const SCORE_WEIGHTS = {
 } as const;
 
 /**
+ * @deprecated Legacy delegation planner. Superseded by consultation-planner.ts.
+ * Retained only for --legacy-specialists mode. Remove in Release C.
+ * Replacement: computeConsultationPlan() in consultation-planner.ts
+ *
  * Compute a deterministic delegation plan from input signals.
  *
  * The pipeline:

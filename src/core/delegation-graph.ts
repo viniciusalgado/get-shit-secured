@@ -1,4 +1,9 @@
 /**
+ * DEPRECATED: This module is part of the legacy specialist pipeline.
+ * Superseded by corpus SecurityDoc.relatedDocIds (Phase 2).
+ * Retained for --legacy-specialists backward compatibility only.
+ * Removal target: Release C (see migration-plan/retirement-checklist.md).
+ *
  * Delegation Graph Builder Module
  *
  * Builds and manages the delegation graph between specialists.
@@ -13,6 +18,10 @@ import type {
 } from './types.js';
 
 /**
+ * @deprecated Legacy delegation graph. Superseded by corpus SecurityDoc.relatedDocIds.
+ * Retained only for --legacy-specialists mode. Remove in Release C.
+ * Replacement: SecurityDoc.relatedDocIds and consultation-planner.ts
+ *
  * The complete delegation graph.
  * Maps parent specialist IDs to their delegation rules.
  */
@@ -26,6 +35,8 @@ export interface DelegationGraph {
 }
 
 /**
+ * @deprecated Legacy delegation graph builder. Remove in Release C.
+ *
  * Build a delegation graph from specialist definitions.
  * @param specialists - Array of specialist definitions
  * @returns A delegation graph
@@ -107,6 +118,8 @@ function generateDelegationTriggers(
 }
 
 /**
+ * @deprecated Legacy delegation target lookup. Remove in Release C.
+ *
  * Get delegation targets for a specialist.
  * @param specialistId - The specialist ID
  * @param graph - The delegation graph

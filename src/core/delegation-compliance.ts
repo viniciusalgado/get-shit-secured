@@ -1,4 +1,9 @@
 /**
+ * DEPRECATED: This module is part of the legacy specialist pipeline.
+ * Superseded by src/core/consultation-compliance.ts (Phase 4).
+ * Retained for --legacy-specialists backward compatibility only.
+ * Removal target: Release C (see migration-plan/retirement-checklist.md).
+ *
  * Delegation Compliance Validator
  *
  * Validates workflow execution against the computed delegation plan.
@@ -16,6 +21,10 @@ import type {
 import { DELEGATION_COMPLIANCE_SCHEMA_VERSION } from './types.js';
 
 /**
+ * @deprecated Legacy delegation compliance. Superseded by consultation-compliance.ts.
+ * Retained only for --legacy-specialists mode. Remove in Release C.
+ * Replacement: validateConsultationCoverage() in consultation-compliance.ts
+ *
  * Validate execution records against a delegation plan.
  *
  * @param plan - The delegation plan that was computed

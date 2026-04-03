@@ -1,5 +1,12 @@
 /**
- * OWASP Corpus Tests
+ * OWASP Corpus Tests (Legacy)
+ *
+ * TODO(remove-in-release-c): These tests cover the old OwaspCorpusEntry
+ * based corpus operations. Remove alongside src/core/owasp-ingestion.ts
+ * legacy paths when Release C ships.
+ *
+ * Active replacement tests: test/unit/corpus/*.test.js
+ *
  *
  * Tests for corpus ingestion, specialist generation, and delegation graph.
  */

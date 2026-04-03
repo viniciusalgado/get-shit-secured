@@ -1,5 +1,11 @@
 /**
- * Unit tests for the delegation planner engine.
+ * Tests for the legacy delegation planner engine.
+ *
+ * TODO(remove-in-release-c): These tests cover the deprecated
+ * delegation planner pipeline. Remove alongside
+ * src/core/delegation-planner.ts when Release C ships.
+ *
+ * Active replacement tests: test/unit/consultation-planner.test.js
  */
 
 import { describe, it } from 'node:test';

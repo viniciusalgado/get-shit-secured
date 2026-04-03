@@ -1,8 +1,20 @@
 /**
  * OWASP Corpus Ingestion Module
  *
- * Fetches and normalizes OWASP Cheat Sheet Series content.
- * Extracts structured data for use as specialist knowledge.
+ * DUAL-USE: This module serves both the corpus build pipeline and
+ * (during --legacy-specialists mode) the install-time fetch path.
+ *
+ * Build-time use (active):
+ *   - snapshot-builder.ts imports fetchCheatSheet(), parseCheatSheetHtml(),
+ *     urlToId(), urlToTitle() for corpus construction
+ *   - normalize.ts imports urlToId() and OWASP_CANONICAL_URLS
+ *
+ * Install-time use (legacy only):
+ *   - installer.ts imports fetchAllCheatSheets() only when
+ *     --legacy-specialists flag is set
+ *
+ * After Release C: fetchAllCheatSheets() and install-time imports
+ * can be removed. Build-time imports remain.
  */
 
 import type { OwaspCorpusEntry, WorkflowId } from './types.js';

@@ -1,14 +1,27 @@
 /**
  * Workflow-to-Specialist Mapping Registry
  *
- * Defines which specialists are used by which workflows.
- * Specialists can be bound to multiple workflows and can be
- * conditionally activated based on stack detection.
+ * BUILD-TIME ONLY: This module is consumed exclusively by the corpus
+ * build pipeline (src/corpus/catalog.ts -> overrides).
+ *
+ * It is NOT imported at runtime. Runtime consultation planning uses
+ * the corpus snapshot (data/owasp-corpus.snapshot.json) loaded via
+ * src/corpus/snapshot-loader.ts.
+ *
+ * Curated overrides here are compiled into the snapshot at build time
+ * and applied via src/corpus/bindings.ts.
+ *
+ * After Release C: Runtime-facing exports can be removed.
+ * The curated data remains as build-time input.
  */
 
 import type { WorkflowId } from '../../core/types.js';
 
 /**
+ * @deprecated Runtime consumption of mapping.ts is deprecated.
+ * Use corpus snapshot overrides instead. This export is retained
+ * for build-time use only. Remove in Release C.
+ *
  * Per-specialist binding detail for a workflow binding.
  * Used for scoring and matching during delegation planning.
  */
@@ -32,6 +45,10 @@ export interface SpecialistBindingDetail {
 }
 
 /**
+ * @deprecated Runtime consumption of mapping.ts is deprecated.
+ * Use corpus snapshot overrides instead. This export is retained
+ * for build-time use only. Remove in Release C.
+ *
  * Workflow-to-specialist binding configuration.
  */
 export interface WorkflowSpecialistBinding {

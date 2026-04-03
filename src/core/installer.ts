@@ -43,7 +43,7 @@ import {
   type CorpusResolution,
 } from './install-stages.js';
 import { fetchAllCheatSheets } from './owasp-ingestion.js';
-import { generateAllSpecialists } from './specialist-generator.js';
+import { generateAllSpecialists } from '../compatibility/legacy-specialist-pipeline.js';
 import { registerMcpServers } from '../install/mcp-config.js';
 import { discoverLegacyArtifacts, cleanupLegacyArtifacts } from '../install/legacy-cleanup.js';
 

@@ -1,4 +1,9 @@
 /**
+ * DEPRECATED: This module is part of the legacy specialist pipeline.
+ * Superseded by the MCP consultation pipeline (Phases 5-6).
+ * Retained for --legacy-specialists backward compatibility only.
+ * Removal target: Release C (see migration-plan/retirement-checklist.md).
+ *
  * Specialist Generator Module
  *
  * Converts OWASP corpus entries into specialist definitions.
@@ -14,6 +19,10 @@ import type {
 } from './types.js';
 
 /**
+ * @deprecated Legacy specialist generator. Superseded by MCP consultation pipeline.
+ * Retained only for --legacy-specialists mode. Remove in Release C.
+ * Replacement: MCP tools (get_workflow_consultation_plan, read_security_doc)
+ *
  * Generate a specialist definition from an OWASP corpus entry.
  * @param entry - The OWASP corpus entry
  * @returns A specialist definition
@@ -342,6 +351,9 @@ Return findings with:
 }
 
 /**
+ * @deprecated Legacy specialist batch generator. Remove in Release C.
+ * Replacement: MCP consultation pipeline
+ *
  * Generate all specialists from a corpus.
  * @param corpus - Array of OWASP corpus entries
  * @returns Array of specialist definitions
@@ -351,6 +363,9 @@ export function generateAllSpecialists(corpus: OwaspCorpusEntry[]): SpecialistDe
 }
 
 /**
+ * @deprecated Legacy specialist lookup. Remove in Release C.
+ * Replacement: snapshot-loader.ts loadCorpusSnapshot() + SecurityDoc lookup
+ *
  * Get a specialist by ID.
  * @param id - Specialist ID
  * @param specialists - Array of specialist definitions
@@ -364,6 +379,9 @@ export function getSpecialistById(
 }
 
 /**
+ * @deprecated Legacy workflow-specialist lookup. Remove in Release C.
+ * Replacement: MCP get_workflow_consultation_plan tool
+ *
  * Get specialists by workflow.
  * @param workflowId - Workflow ID
  * @param specialists - Array of specialist definitions
@@ -377,6 +395,9 @@ export function getSpecialistsByWorkflow(
 }
 
 /**
+ * @deprecated Legacy stack-specialist lookup. Remove in Release C.
+ * Replacement: MCP get_workflow_consultation_plan with stack signals
+ *
  * Get specialists by stack.
  * @param stack - Stack identifier (e.g., "django", "docker")
  * @param specialists - Array of specialist definitions

@@ -1,5 +1,11 @@
 /**
- * Unit tests for delegation compliance validator.
+ * Tests for the legacy delegation compliance validator.
+ *
+ * TODO(remove-in-release-c): These tests cover the deprecated
+ * delegation compliance pipeline. Remove alongside
+ * src/core/delegation-compliance.ts when Release C ships.
+ *
+ * Active replacement tests: test/unit/consultation-compliance.test.js
  */
 
 import { describe, it } from 'node:test';
