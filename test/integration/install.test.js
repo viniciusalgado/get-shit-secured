@@ -118,6 +118,13 @@ describe('install', () => {
       // Check both directories exist
       assert.ok(existsSync(join(tempDir, '.claude')));
       assert.ok(existsSync(join(tempDir, '.codex')));
+
+      const claudeMcp = JSON.parse(await readFile(join(tempDir, '.mcp.json'), 'utf-8'));
+      assert.ok(claudeMcp.mcpServers?.['gss-security-docs']);
+
+      const codexConfig = await readFile(join(tempDir, '.codex', 'config.toml'), 'utf-8');
+      assert.ok(codexConfig.includes('[mcp_servers.gss-security-docs]'));
+      assert.ok(!existsSync(join(tempDir, '.claude', 'config.toml')));
     } finally {
       await cleanupTempDir(tempDir);
     }

@@ -543,7 +543,7 @@ export function resolveInstallPlan(
  * Checks:
  * 1. Corpus snapshot — exists at each destination path, valid JSON, has corpusVersion
  * 2. MCP server binary — exists at expected path in support subtree
- * 3. MCP config — settings.json contains mcpServers.gss-security-docs
+ * 3. MCP config — runtime config contains the GSS MCP registration
  * 4. Runtime manifest — exists in support subtree, has expected fields
  * 5. Hooks — each expected hook has a corresponding .js file
  * 6. Artifact directories — .gss/artifacts/ and .gss/reports/ exist
@@ -609,13 +609,21 @@ export async function verifyInstall(
       } else {
         try {
           const content = await readFileFn(configPath, 'utf-8');
-          const config = JSON.parse(content);
-          const mcpServers = config?.mcpServers as Record<string, unknown> | undefined;
-          if (!mcpServers || !('gss-security-docs' in mcpServers)) {
-            errors.push(`[verify] ${runtime}: MCP not registered in ${configPath} (missing mcpServers.gss-security-docs)`);
+          if (configPath.endsWith('.toml')) {
+            if (!content.includes('[mcp_servers.gss-security-docs]')) {
+              errors.push(`[verify] ${runtime}: MCP not registered in ${configPath} (missing mcp_servers.gss-security-docs)`);
+            }
+          } else {
+            const config = JSON.parse(content);
+            const mcpServers = config?.mcpServers as Record<string, unknown> | undefined;
+            if (!mcpServers || !('gss-security-docs' in mcpServers)) {
+              errors.push(`[verify] ${runtime}: MCP not registered in ${configPath} (missing mcpServers.gss-security-docs)`);
+            }
           }
         } catch {
-          errors.push(`[verify] ${runtime}: MCP config at ${configPath} is not valid JSON`);
+          errors.push(
+            `[verify] ${runtime}: MCP config at ${configPath} is not valid ${configPath.endsWith('.toml') ? 'TOML' : 'JSON'}`,
+          );
         }
       }
     }

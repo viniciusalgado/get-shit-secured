@@ -144,27 +144,20 @@ describeOrSkip('Phase 10 — Both runtimes integration', () => {
       const codexAdapter = new CodexAdapter();
       await install([claudeAdapter, codexAdapter], 'local', tempDir, false, { legacySpecialists: false });
 
-      // Check Claude settings — MCP config may or may not be present depending on
-      // whether MCP server binary copy succeeded (test env limitation with no real binary)
-      const claudeSettingsPath = join(claudeRoot, 'settings.json');
-      if (existsSync(claudeSettingsPath)) {
-        const settings = JSON.parse(readFileSync(claudeSettingsPath, 'utf-8'));
-        // If settings exist, verify the structure is valid even if MCP not fully registered
-        assert.ok(typeof settings === 'object', 'Claude settings should be valid JSON object');
-      }
+      const claudeMcpPath = join(tempDir, '.mcp.json');
+      assert.ok(existsSync(claudeMcpPath), 'Claude MCP config should exist');
+      const claudeMcp = JSON.parse(readFileSync(claudeMcpPath, 'utf-8'));
+      assert.ok(claudeMcp.mcpServers?.['gss-security-docs'], 'Claude MCP entry should be registered');
 
-      // Check Codex settings
-      const codexSettingsPath = join(codexRoot, 'settings.json');
-      if (existsSync(codexSettingsPath)) {
-        const settings = JSON.parse(readFileSync(codexSettingsPath, 'utf-8'));
-        assert.ok(typeof settings === 'object', 'Codex settings should be valid JSON object');
-      }
+      const codexConfigPath = join(codexRoot, 'config.toml');
+      assert.ok(existsSync(codexConfigPath), 'Codex MCP config should exist');
+      const codexConfig = readFileSync(codexConfigPath, 'utf-8');
+      assert.ok(codexConfig.includes('[mcp_servers.gss-security-docs]'), 'Codex MCP entry should be registered');
+      assert.ok(!existsSync(join(claudeRoot, 'config.toml')), 'Codex MCP config must not be written into Claude root');
 
       // Both adapters should produce the same MCP registration shape
-      const claudeReg = claudeAdapter.getMcpRegistration('/server', '/corpus');
+      const claudeReg = claudeAdapter.getMcpRegistration('/server', '/corpus', { scope: 'local', cwd: tempDir });
       const codexReg = codexAdapter.getMcpRegistration('/server', '/corpus');
-      assert.equal(claudeReg.keyPath, codexReg.keyPath,
-        'Both adapters should use same MCP key path');
       assert.equal(claudeReg.content.command, codexReg.content.command,
         'Both adapters should use same MCP command');
     } finally {

@@ -302,7 +302,7 @@ Files in this directory are managed by GSS. Modifications may be overwritten dur
  * 1. Runtime manifest exists and is valid
  * 2. Corpus snapshot exists and is valid JSON
  * 3. MCP server binary exists
- * 4. MCP config registered in settings.json
+ * 4. MCP config registered in Claude MCP config
  * 5. Version consistency between manifests
  * 6. Artifact directories exist
  * 7. Install staleness check

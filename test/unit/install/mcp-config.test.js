@@ -421,8 +421,62 @@ describe('registerMcpServers — Multiple runtimes', () => {
 
       assert.ok(result.configPaths.claude);
       assert.ok(result.configPaths.codex);
+      assert.equal(result.configPaths.claude, join(tempDir, '.mcp.json'));
+      assert.equal(result.configPaths.codex, join(codexRoot, 'config.toml'));
       assert.ok(result.serverBinaryPaths.claude);
       assert.ok(result.serverBinaryPaths.codex);
+
+      const codexConfig = readFileSync(result.configPaths.codex, 'utf-8');
+      assert.ok(codexConfig.includes('[mcp_servers.gss-security-docs]'));
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('resolves each runtime-root config against its own runtime root', async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), 'gss-p9-'));
+    try {
+      const claudeRoot = join(tempDir, '.claude');
+      const codexRoot = join(tempDir, '.codex');
+      mkdirSync(join(claudeRoot, 'gss'), { recursive: true });
+      mkdirSync(join(codexRoot, 'gss'), { recursive: true });
+
+      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
+      mkdirSync(srcDir, { recursive: true });
+      writeFileSync(join(srcDir, 'server.bundle.js'), '// test');
+
+      const claudeAdapter = createMockAdapterWithMcp({
+        runtime: 'claude', rootPath: claudeRoot, supportSubtree: join(claudeRoot, 'gss'),
+      });
+      const codexAdapter = createMockAdapterWithMcp({
+        runtime: 'codex', rootPath: codexRoot, supportSubtree: join(codexRoot, 'gss'),
+      });
+
+      const targets = {
+        runtimes: ['claude', 'codex'],
+        scope: 'local',
+        cwd: tempDir,
+        roots: { claude: claudeRoot, codex: codexRoot },
+        supportSubtrees: { claude: join(claudeRoot, 'gss'), codex: join(codexRoot, 'gss') },
+      };
+      const corpus = {
+        snapshot: { corpusVersion: '1.0.0', documents: [] },
+        corpusVersion: '1.0.0',
+        sourcePath: '/mock/source.json',
+        destinationPaths: {
+          claude: join(claudeRoot, 'gss', 'corpus', 'owasp-corpus.json'),
+          codex: join(codexRoot, 'gss', 'corpus', 'owasp-corpus.json'),
+        },
+      };
+
+      const result = await registerMcpServers([claudeAdapter, codexAdapter], targets, corpus, {
+        dryRun: false,
+        pkgRoot: join(tempDir, 'pkg'),
+      });
+
+      assert.equal(result.configPaths.claude, join(tempDir, '.mcp.json'));
+      assert.equal(result.configPaths.codex, join(codexRoot, 'config.toml'));
+      assert.ok(!existsSync(join(claudeRoot, 'config.toml')), 'Codex MCP config must not leak into Claude root');
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }

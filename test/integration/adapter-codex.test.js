@@ -131,7 +131,8 @@ describeOrSkip('Phase 10 — Codex adapter integration', () => {
   it('Codex MCP registration matches Claude pattern', () => {
     const adapter = new CodexAdapter();
     const reg = adapter.getMcpRegistration('/path/to/server.js', '/path/to/corpus.json');
-    assert.equal(reg.keyPath, 'mcpServers.gss-security-docs');
+    assert.equal(reg.path, 'config.toml');
+    assert.equal(reg.keyPath, 'mcp_servers.gss-security-docs');
     assert.equal(reg.content.command, 'node');
     assert.deepEqual(reg.content.args, ['/path/to/server.js', '--corpus-path', '/path/to/corpus.json']);
   });

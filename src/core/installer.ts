@@ -470,15 +470,32 @@ export async function uninstall(
   };
 }
 
+function removeTomlManagedBlock(content: string): string {
+  const startMarker = '# GSS: BEGIN mcp_servers.gss-security-docs';
+  const endMarker = '# GSS: END mcp_servers.gss-security-docs';
+  const blockRegex = new RegExp(
+    `\\n?${startMarker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?${endMarker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n?`,
+    'g',
+  );
+  return content.replace(blockRegex, '\n').replace(/\n{3,}/g, '\n\n').trimEnd();
+}
+
 /**
- * Revert MCP config entry from a settings.json file.
- * Removes the gss-security-docs entry from mcpServers.
+ * Revert MCP config entry from a managed MCP config file.
+ * Removes the GSS MCP registration from JSON or TOML config.
  */
 async function revertMcpConfig(configPath: string): Promise<void> {
   if (!existsSync(configPath)) return;
 
   try {
     const content = await readFile(configPath, 'utf-8');
+
+    if (configPath.endsWith('.toml')) {
+      const nextContent = removeTomlManagedBlock(content);
+      await writeFile(configPath, nextContent ? `${nextContent}\n` : '', 'utf-8');
+      return;
+    }
+
     const config = content.trim() ? JSON.parse(content) : {};
 
     // Remove gss-security-docs from mcpServers

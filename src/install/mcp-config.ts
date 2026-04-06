@@ -72,6 +72,7 @@ function escapeRegex(str: string): string {
 function resolveMcpConfigBase(
   registration: ManagedJsonPatch,
   targets: TargetDetection,
+  runtime: RuntimeTarget,
 ): string {
   const resolveFrom = registration.resolveFrom ?? 'runtime-root';
 
@@ -82,7 +83,6 @@ function resolveMcpConfigBase(
       return join(getHomeDir(), registration.path);
     case 'runtime-root':
     default: {
-      const runtime = targets.runtimes[0] ?? 'claude';
       const rootPath = targets.roots[runtime];
       return join(rootPath ?? targets.cwd, registration.path);
     }
@@ -119,7 +119,7 @@ export async function registerMcpServers(
               corpus.destinationPaths[runtime] ?? '',
               { scope: targets.scope, cwd: targets.cwd },
             );
-            configPaths[runtime] = resolveMcpConfigBase(registration, targets);
+            configPaths[runtime] = resolveMcpConfigBase(registration, targets, runtime);
           }
         }
       }
@@ -171,7 +171,7 @@ export async function registerMcpServers(
     );
 
     try {
-      const configFilePath = resolveMcpConfigBase(registration, targets);
+      const configFilePath = resolveMcpConfigBase(registration, targets, runtime);
 
       if (isTomlPath(registration)) {
         await mergeTomlMcpConfig(configFilePath, registration);

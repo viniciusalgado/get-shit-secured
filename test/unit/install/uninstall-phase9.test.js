@@ -156,6 +156,73 @@ describe('Uninstall — MCP config revert', () => {
       cleanupTempDir(tempDir);
     }
   });
+
+  it('removes GSS-managed Codex MCP block from config.toml', async () => {
+    const tempDir = await createTempDir();
+    try {
+      const codexRoot = join(tempDir, '.codex');
+      const supportDir = join(codexRoot, 'gss');
+      const mcpDir = join(supportDir, 'mcp');
+      const corpusDir = join(supportDir, 'corpus');
+      mkdirSync(mcpDir, { recursive: true });
+      mkdirSync(corpusDir, { recursive: true });
+      mkdirSync(join(tempDir, '.gss', 'artifacts'), { recursive: true });
+      mkdirSync(join(tempDir, '.gss', 'reports'), { recursive: true });
+
+      const mcpServerPath = join(mcpDir, 'server.js');
+      writeFileSync(mcpServerPath, '// MCP server');
+
+      const configTomlPath = join(codexRoot, 'config.toml');
+      writeFileSync(configTomlPath, [
+        '[sandbox]',
+        'mode = "workspace-write"',
+        '',
+        '# GSS: BEGIN mcp_servers.gss-security-docs',
+        '[mcp_servers.gss-security-docs]',
+        'command = "node"',
+        `args = ["${mcpServerPath}", "--corpus-path", "${join(corpusDir, 'owasp-corpus.json')}"]`,
+        '# GSS: END mcp_servers.gss-security-docs',
+        '',
+        '[mcp_servers.other]',
+        'command = "other"',
+        '',
+      ].join('\n'));
+
+      const runtimeManifestPath = join(supportDir, 'runtime-manifest.json');
+      writeFileSync(runtimeManifestPath, JSON.stringify({
+        runtime: 'codex', scope: 'local', installedAt: new Date().toISOString(),
+        version: '0.1.0', corpusVersion: '1.0.0', hooks: [], managedConfigs: [],
+        corpusPath: join(corpusDir, 'owasp-corpus.json'), mcpServerPath, mcpConfigPath: configTomlPath,
+        gssVersion: '0.1.0',
+      }, null, 2));
+
+      writeFileSync(join(tempDir, '.gss', 'install-manifest.json'), JSON.stringify({
+        manifestVersion: 2,
+        packageVersion: '0.1.0',
+        corpusVersion: '1.0.0',
+        installedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        scope: 'local',
+        runtimes: ['codex'],
+        workflowIds: [],
+        roots: { codex: codexRoot },
+        files: { codex: [] },
+        managedConfigs: {},
+        hooks: { codex: [] },
+        runtimeManifests: { codex: runtimeManifestPath },
+        mcpServerPaths: { codex: mcpServerPath },
+        mcpConfigPaths: { codex: configTomlPath },
+      }, null, 2));
+
+      await uninstall(tempDir, false);
+
+      const configToml = readFileSync(configTomlPath, 'utf-8');
+      assert.ok(!configToml.includes('[mcp_servers.gss-security-docs]'));
+      assert.ok(configToml.includes('[mcp_servers.other]'));
+    } finally {
+      cleanupTempDir(tempDir);
+    }
+  });
 });
 
 describe('Uninstall — MCP server binary removal', () => {

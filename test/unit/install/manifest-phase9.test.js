@@ -106,13 +106,13 @@ describe('Manifest v2 — MCP path fields', () => {
       undefined, undefined, undefined,
       {
         serverPaths: { codex: '/codex/server.js' },
-        configPaths: { codex: '/codex/settings.json' },
+        configPaths: { codex: '/codex/config.toml' },
       }
     );
     assert.equal(merged.mcpServerPaths?.claude, '/claude/server.js');
     assert.equal(merged.mcpConfigPaths?.claude, '/claude/settings.json');
     assert.equal(merged.mcpServerPaths?.codex, '/codex/server.js');
-    assert.equal(merged.mcpConfigPaths?.codex, '/codex/settings.json');
+    assert.equal(merged.mcpConfigPaths?.codex, '/codex/config.toml');
   });
 
   it('readManifest returns MCP paths from disk', async () => {

@@ -233,6 +233,45 @@ describe('verifyInstall — Check 3: MCP config registration', () => {
       cleanupTempDir(tempDir);
     }
   });
+
+  it('Codex TOML config has gss-security-docs entry', async () => {
+    const tempDir = await createTempDir();
+    try {
+      const paths = setupHealthyInstall(tempDir, { runtime: 'codex' });
+      const targets = {
+        runtimes: ['codex'], scope: 'local', cwd: tempDir,
+        roots: { codex: paths.rootPath },
+        supportSubtrees: { codex: paths.supportDir },
+      };
+      const result = await verifyInstall(targets, null, {
+        configPaths: { codex: paths.mcpConfigPath },
+      }, { dryRun: false });
+      assert.ok(!result.errors.some(e => e.includes('gss-security-docs')));
+    } finally {
+      cleanupTempDir(tempDir);
+    }
+  });
+
+  it('Codex TOML config missing gss-security-docs entry', async () => {
+    const tempDir = await createTempDir();
+    try {
+      const paths = setupHealthyInstall(tempDir, {
+        runtime: 'codex',
+        mcpConfigData: '[mcp_servers.other]\ncommand = "node"\n',
+      });
+      const targets = {
+        runtimes: ['codex'], scope: 'local', cwd: tempDir,
+        roots: { codex: paths.rootPath },
+        supportSubtrees: { codex: paths.supportDir },
+      };
+      const result = await verifyInstall(targets, null, {
+        configPaths: { codex: paths.mcpConfigPath },
+      }, { dryRun: false });
+      assert.ok(result.errors.some(e => e.includes('missing mcp_servers.gss-security-docs')));
+    } finally {
+      cleanupTempDir(tempDir);
+    }
+  });
 });
 
 describe('verifyInstall — Check 4: Runtime manifest', () => {

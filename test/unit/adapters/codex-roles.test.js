@@ -139,7 +139,8 @@ describeOrSkip('Codex adapter — Role file rendering', () => {
   it('Codex MCP registration uses correct key path', () => {
     const adapter = new CodexAdapter();
     const reg = adapter.getMcpRegistration('/server', '/corpus');
-    assert.equal(reg.keyPath, 'mcpServers.gss-security-docs');
+    assert.equal(reg.path, 'config.toml');
+    assert.equal(reg.keyPath, 'mcp_servers.gss-security-docs');
   });
 
   it('Codex MCP registration uses node command', () => {

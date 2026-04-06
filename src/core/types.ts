@@ -1210,7 +1210,7 @@ export interface RuntimeManifest {
   corpusPath: string | null;
   /** Absolute path to the MCP server binary */
   mcpServerPath: string | null;
-  /** Absolute path to the runtime settings.json (for MCP registration check) */
+  /** Absolute path to the runtime MCP config file (JSON or TOML, depending on runtime) */
   mcpConfigPath: string;
   /** GSS package version */
   gssVersion: string;

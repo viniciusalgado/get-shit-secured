@@ -124,14 +124,14 @@ export class CodexAdapter implements RuntimeAdapter {
    */
   getMcpRegistration(serverPath: string, corpusPath: string): ManagedJsonPatch {
     return {
-      path: 'settings.json',
-      owner: 'gss',
+      path: 'config.toml',
+      owner: 'gss-security-docs',
       content: {
         command: 'node',
         args: [serverPath, '--corpus-path', corpusPath],
       },
       mergeStrategy: 'deep',
-      keyPath: 'mcpServers.gss-security-docs',
+      keyPath: 'mcp_servers.gss-security-docs',
     };
   }
 

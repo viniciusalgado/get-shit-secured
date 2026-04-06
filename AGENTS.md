@@ -2,6 +2,9 @@
 
 This document contains durable project rules that govern all agent behavior within the get-shit-secured framework.
 
+## Testing
+Before removing, modifying or overwritting tests, make sure that they are completely worng or deprecated and aren't properly covering a mandatory feature or working principle of the workflow.
+
 ## Core Principles
 
 1. **Preserve User Changes**: Never modify user code or configuration without explicit approval. When suggesting changes, clearly indicate what will change and why.
