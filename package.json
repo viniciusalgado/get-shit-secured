@@ -1,6 +1,6 @@
 {
   "name": "get-shit-secured",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "description": "Security workflow installer for AI coding runtimes (Claude, Codex, and more)",
   "homepage": "https://github.com/viniciusalgado/get-shit-secured#readme",
   "bugs": {
@@ -41,7 +41,7 @@
   },
   "files": [
     "dist",
-    "data",
+    "data",npm run 
     "README.md",
     "LICENSE"
   ],

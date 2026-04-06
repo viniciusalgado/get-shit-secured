@@ -84,6 +84,17 @@ describe('Runtime Manifest — Phase 11 rollout mode fields', () => {
     }
   });
 
+  it('omitting pkgRoot leaves mcpServerPath null instead of failing manifest creation', async () => {
+    const tempDir = await createTempDir();
+    try {
+      const manifest = await runInstallAndReadManifest(tempDir);
+      assert.ok(manifest, 'Runtime manifest should be created');
+      assert.equal(manifest.mcpServerPath, null);
+    } finally {
+      cleanupTempDir(tempDir);
+    }
+  });
+
   it('hybridShadow: true sets rolloutMode: hybrid-shadow', async () => {
     const tempDir = await createTempDir();
     try {

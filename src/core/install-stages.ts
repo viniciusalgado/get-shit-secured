@@ -194,7 +194,7 @@ export async function installRuntimeArtifacts(
   targets: TargetDetection,
   adapters: RuntimeAdapter[],
   corpus: CorpusResolution | null,
-  options: { dryRun: boolean; hybridShadow?: boolean; pkgRoot: string }
+  options: { dryRun: boolean; hybridShadow?: boolean; pkgRoot?: string }
 ): Promise<InstalledArtifacts> {
   const { dryRun } = options;
   const errors: string[] = [];
@@ -349,7 +349,9 @@ export async function installRuntimeArtifacts(
     if (!dryRun) {
       try {
         const rolloutMode = computeRolloutMode({ hybridShadow: options.hybridShadow });
-        const packagedMcpServerPath = resolvePackagedMcpServerPath(options.pkgRoot);
+        const packagedMcpServerPath = options.pkgRoot
+          ? resolvePackagedMcpServerPath(options.pkgRoot)
+          : null;
         const runtimeManifest = {
           runtime,
           scope: targets.scope,
