@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process';
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
 const STAGES = ['plan', 'implement', 'test-plan', 'validate'];
@@ -120,6 +120,7 @@ async function main() {
     model: options.model,
     effort: options.effort,
     maxParallel: options.maxParallel,
+    commitAfterPhase: options.commitAfterPhase,
     runSummary,
   });
 
@@ -144,6 +145,7 @@ function parseArgs(argv) {
     model: DEFAULT_MODEL,
     effort: DEFAULT_EFFORT,
     maxParallel: DEFAULT_MAX_PARALLEL,
+    commitAfterPhase: true,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -199,6 +201,11 @@ function parseArgs(argv) {
       continue;
     }
 
+    if (arg === '--no-commit-after-phase') {
+      options.commitAfterPhase = false;
+      continue;
+    }
+
     if (arg === '--help' || arg === '-h') {
       printHelp();
       process.exit(0);
@@ -223,6 +230,7 @@ Options:
   --model sonnet            Claude model alias (default: ${DEFAULT_MODEL}).
   --effort medium           Claude effort level (default: ${DEFAULT_EFFORT}).
   --max-parallel 3          Maximum concurrent Claude tasks (default: ${DEFAULT_MAX_PARALLEL}).
+  --no-commit-after-phase   Skip automatic git commits after each phase terminal stage.
   --help                    Show this help text.
 `);
 }
@@ -421,6 +429,7 @@ async function executeTaskGraph({
   model,
   effort,
   maxParallel,
+  commitAfterPhase,
   runSummary,
 }) {
   const taskState = new Map();
@@ -431,6 +440,7 @@ async function executeTaskGraph({
   }
   const running = new Map();
   const reusedTasks = getPrecompletedTasks(taskState);
+  const phaseCommitState = new Map();
 
   if (reusedTasks.length > 0) {
     console.log('Reusing existing stage outputs:');
@@ -468,6 +478,12 @@ async function executeTaskGraph({
       const nextTask = chooseNextTask(readyTasks, taskState);
       readyTasks.splice(readyTasks.findIndex((task) => task.id === nextTask.id), 1);
       taskState.get(nextTask.id).status = 'running';
+      if (!phaseCommitState.has(nextTask.phase)) {
+        phaseCommitState.set(nextTask.phase, {
+          baseline: await captureGitSnapshot(rootDir),
+          committed: false,
+        });
+      }
       console.log(`-> Phase ${nextTask.phase} ${nextTask.stage}: ${STAGE_CONFIG[nextTask.stage].description}`);
       const promise = runTask({
         task: nextTask,
@@ -515,6 +531,20 @@ async function executeTaskGraph({
     console.log(`   wrote ${path.relative(rootDir, statefulTask.outputPath)}`);
     if (settled.result.summary) {
       console.log(indentLines(trimTo(settled.result.summary, 600), '   summary: '));
+    }
+
+    if (
+      commitAfterPhase &&
+      isPhaseTerminalTask(statefulTask, taskState) &&
+      !phaseCommitState.get(statefulTask.phase)?.committed
+    ) {
+      await commitPhaseChanges({
+        phase: statefulTask.phase,
+        rootDir,
+        migrationDir,
+        baseline: phaseCommitState.get(statefulTask.phase)?.baseline,
+      });
+      phaseCommitState.get(statefulTask.phase).committed = true;
     }
   }
 }
@@ -610,6 +640,10 @@ async function runTask({ task, rootDir, migrationDir, model, effort }) {
   }
 
   await ensureInputsExist(task.stage, task.requiredInputPaths);
+  const availableDocuments = await collectPhaseDocumentContext({
+    migrationDir,
+    phase: task.phase,
+  });
 
   const prompt = buildPrompt({
     phase: task.phase,
@@ -619,6 +653,7 @@ async function runTask({ task, rootDir, migrationDir, model, effort }) {
     outputPath: task.outputPath,
     requiredInputPaths: task.requiredInputPaths,
     optionalInputPaths: existingOptionalInputPaths,
+    availableDocuments,
   });
   const result = await runClaudeStage({
     rootDir,
@@ -647,6 +682,7 @@ function buildPrompt({
   outputPath,
   requiredInputPaths,
   optionalInputPaths,
+  availableDocuments,
 }) {
   const relativeOutputPath = path.relative(rootDir, outputPath);
   const stageRules = {
@@ -688,6 +724,17 @@ function buildPrompt({
     ...(optionalInputPaths.length > 0
       ? ['', 'Also use these predecessor artifacts if they already exist:', ...optionalInputPaths.map((filePath) => `- ${filePath}`)]
       : []),
+    '',
+    'Available migration documents in this repo:',
+    ...renderAvailableDocsSection(availableDocuments.sharedDocs),
+    '',
+    `Available documents for current phase (${phase}):`,
+    ...renderAvailableDocsSection(availableDocuments.currentPhaseDocs),
+    ...(availableDocuments.previousPhaseDocs.length > 0
+      ? ['', `Available documents for previous phase (${phase - 1}):`, ...renderAvailableDocsSection(availableDocuments.previousPhaseDocs)]
+      : []),
+    '',
+    'Use the required documents first, then inspect any additional current-phase or previous-phase documents that materially inform this stage.',
     '',
     'Execution rules:',
     '- Respect existing repository instructions, including AGENTS.md and CLAUDE.md.',
@@ -737,6 +784,32 @@ async function runClaudeStage({ rootDir, prompt, stage, agent, model, effort }) 
     costUsd: parsed.total_cost_usd ?? null,
     summary: typeof parsed.result === 'string' ? parsed.result.trim() : '',
   };
+}
+
+async function collectPhaseDocumentContext({ migrationDir, phase }) {
+  const entries = (await readdir(migrationDir)).sort();
+
+  return {
+    sharedDocs: entries
+      .filter((entry) => !/^phase\d+-/.test(entry))
+      .map((entry) => path.join(migrationDir, entry)),
+    currentPhaseDocs: entries
+      .filter((entry) => entry.startsWith(`phase${phase}-`))
+      .map((entry) => path.join(migrationDir, entry)),
+    previousPhaseDocs:
+      phase > 1
+        ? entries
+            .filter((entry) => entry.startsWith(`phase${phase - 1}-`))
+            .map((entry) => path.join(migrationDir, entry))
+        : [],
+  };
+}
+
+function renderAvailableDocsSection(filePaths) {
+  if (filePaths.length === 0) {
+    return ['- none'];
+  }
+  return filePaths.map((filePath) => `- ${filePath}`);
 }
 
 async function ensureClaudeAvailable() {
@@ -924,6 +997,7 @@ async function printDryRunPlan(tasks, rootDir) {
   console.log('- The next phase `plan` may run while the current phase is being implemented.');
   console.log('- `validate` only runs after both `implement` and `test-plan` finish for that phase.');
   console.log('- Existing `phaseN-plan.md` files are reused by default and skip replanning.');
+  console.log('- After a phase reaches its terminal selected stage, the runner attempts a safe git commit for that phase.');
 }
 
 async function fileExists(filePath) {
@@ -956,6 +1030,89 @@ function singleLine(text) {
 
 async function runShellList(rootDir, command) {
   return spawnAndCollect('bash', ['-lc', command], { cwd: rootDir, stage: 'discovery' });
+}
+
+function isPhaseTerminalTask(task, taskState) {
+  const phaseTasks = [...taskState.values()].filter((item) => item.phase === task.phase);
+  const taskStageIndex = STAGES.indexOf(task.stage);
+  const highestStageIndex = Math.max(...phaseTasks.map((item) => STAGES.indexOf(item.stage)));
+
+  if (taskStageIndex !== highestStageIndex) {
+    return false;
+  }
+
+  return phaseTasks.every((item) => {
+    if (STAGES.indexOf(item.stage) > taskStageIndex) {
+      return true;
+    }
+    return item.status === 'completed';
+  });
+}
+
+async function captureGitSnapshot(rootDir) {
+  const output = await spawnAndCollect(
+    'git',
+    ['status', '--porcelain=v1', '--untracked-files=all'],
+    { cwd: rootDir, stage: 'git-snapshot' },
+  );
+  return parseGitStatus(output);
+}
+
+function parseGitStatus(output) {
+  const snapshot = new Map();
+
+  for (const line of output.split('\n')) {
+    if (!line.trim()) {
+      continue;
+    }
+
+    const status = line.slice(0, 2);
+    const rawPath = line.slice(3);
+    const filePath = rawPath.includes(' -> ') ? rawPath.split(' -> ').at(-1) : rawPath;
+    snapshot.set(filePath, status);
+  }
+
+  return snapshot;
+}
+
+async function commitPhaseChanges({ phase, rootDir, migrationDir, baseline }) {
+  const current = await captureGitSnapshot(rootDir);
+  const candidatePaths = [...current.keys()]
+    .filter((filePath) => current.get(filePath) !== baseline?.get(filePath))
+    .filter((filePath) => shouldCommitForPhase({ filePath, phase, migrationDir }));
+
+  if (candidatePaths.length === 0) {
+    console.log(`No committable changes detected for phase ${phase}; skipping commit.`);
+    return;
+  }
+
+  console.log(`Creating git commit for phase ${phase}:`);
+  for (const filePath of candidatePaths.sort()) {
+    console.log(`- ${filePath}`);
+  }
+
+  await spawnAndCollect('git', ['add', '--', ...candidatePaths], {
+    cwd: rootDir,
+    stage: `phase-${phase}-git-add`,
+  });
+  await spawnAndCollect('git', ['commit', '-m', `migration: complete phase ${phase}`, '--', ...candidatePaths], {
+    cwd: rootDir,
+    stage: `phase-${phase}-git-commit`,
+  });
+}
+
+function shouldCommitForPhase({ filePath, phase, migrationDir }) {
+  const normalizedPath = filePath.replace(/\\/g, '/');
+  const migrationDirName = path.basename(migrationDir);
+
+  if (
+    normalizedPath.startsWith(`${migrationDirName}/phase`) &&
+    !normalizedPath.startsWith(`${migrationDirName}/phase${phase}-`)
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 function shellEscape(value) {

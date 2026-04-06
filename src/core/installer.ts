@@ -42,8 +42,6 @@ import {
   type TargetDetection,
   type CorpusResolution,
 } from './install-stages.js';
-import { fetchAllCheatSheets } from './owasp-ingestion.js';
-import { generateAllSpecialists } from '../compatibility/legacy-specialist-pipeline.js';
 import { registerMcpServers } from '../install/mcp-config.js';
 import { discoverLegacyArtifacts, cleanupLegacyArtifacts } from '../install/legacy-cleanup.js';
 
@@ -62,42 +60,32 @@ import { discoverLegacyArtifacts, cleanupLegacyArtifacts } from '../install/lega
  * @param scope - Installation scope (local or global)
  * @param cwd - Current working directory
  * @param dryRun - If true, don't write files
- * @param options - Optional: legacySpecialists to use old fetch+generate path
+ * @param options - Optional rollout configuration
  */
 export async function install(
   adapters: RuntimeAdapter[],
   scope: InstallScope,
   cwd: string,
   dryRun: boolean = false,
-  options?: { legacySpecialists?: boolean; hybridShadow?: boolean }
+  options?: { hybridShadow?: boolean }
 ): Promise<InstallResult> {
-  const legacySpecialists = options?.legacySpecialists ?? false;
   const hybridShadow = options?.hybridShadow ?? false;
 
   // Stage 0: Detect targets
   const targets = detectTargets(adapters, scope, cwd);
 
-  // Stage 1: Resolve corpus (skip in legacy mode)
+  // Stage 1: Resolve corpus
   let corpus: CorpusResolution | null = null;
-  if (!legacySpecialists) {
-    try {
-      const pkgRoot = resolve(dirname(import.meta.url ?? __dirname), '..');
-      corpus = await resolveCorpus(targets, pkgRoot);
-    } catch (error) {
-      return {
-        success: false,
-        manifest: null,
-        filesCreated: 0,
-        errors: [`Corpus resolution failed: ${error instanceof Error ? error.message : String(error)}`],
-      };
-    }
-  }
-
-  // Prepare specialists for legacy mode
-  let specialists: unknown[] = [];
-  if (legacySpecialists) {
-    const corpusEntries = await fetchAllCheatSheets();
-    specialists = generateAllSpecialists(corpusEntries);
+  try {
+    const pkgRoot = resolve(dirname(import.meta.url ?? __dirname), '..');
+    corpus = await resolveCorpus(targets, pkgRoot);
+  } catch (error) {
+    return {
+      success: false,
+      manifest: null,
+      filesCreated: 0,
+      errors: [`Corpus resolution failed: ${error instanceof Error ? error.message : String(error)}`],
+    };
   }
 
   // Stage 2: Install runtime artifacts
@@ -105,28 +93,25 @@ export async function install(
     targets,
     adapters,
     corpus,
-    { dryRun, legacySpecialists, hybridShadow, specialists }
+    { dryRun, hybridShadow }
   );
 
   // Stage 3: MCP registration (extracted to stage module)
   let mcpResult = null;
-  if (!legacySpecialists) {
-    const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-    mcpResult = await registerMcpServers(adapters, targets, corpus, {
-      dryRun,
-      pkgRoot,
-    });
-    // MCP errors are non-fatal — add them to the errors list
-    if (mcpResult.errors.length > 0) {
-      for (const err of mcpResult.errors) {
-        process.stderr.write(`[GSS] Warning: ${err}\n`);
-      }
+  const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  mcpResult = await registerMcpServers(adapters, targets, corpus, {
+    dryRun,
+    pkgRoot,
+  });
+  if (mcpResult.errors.length > 0) {
+    for (const err of mcpResult.errors) {
+      process.stderr.write(`[GSS] Warning: ${err}\n`);
     }
   }
 
   // Stage 3.5: Legacy specialist cleanup (non-legacy installs only)
   let cleanupResult = null;
-  if (!legacySpecialists && !dryRun) {
+  if (!dryRun) {
     cleanupResult = await performLegacyCleanup(adapters, targets, { dryRun });
   }
 
@@ -402,6 +387,22 @@ export async function uninstall(
           }
         } catch {
           // Ignore discovery errors during uninstall
+        }
+      }
+    }
+
+    const gssArtifactsDir = join(cwd, '.gss', 'artifacts');
+    const gssReportsDir = join(cwd, '.gss', 'reports');
+    const gssDir = join(cwd, '.gss');
+    for (const dir of [gssArtifactsDir, gssReportsDir, gssDir]) {
+      if (existsSync(dir)) {
+        try {
+          if (readdirSync(dir).length === 0) {
+            await rm(dir, { recursive: true, force: true });
+            dirsRemoved++;
+          }
+        } catch (error) {
+          errors.push(`${dir}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
     }

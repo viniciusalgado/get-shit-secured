@@ -459,45 +459,11 @@ describe('Phase 3 Integration — Installer refactor', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Section 7 — Backward Compatibility
+// Section 7 — Release C specialist retirement
 // ---------------------------------------------------------------------------
 
-describe('Phase 3 Integration — Backward compatibility', () => {
-  it('7.1 legacy specialist option is accepted (specialist generation deprecated)', async () => {
-    const tempDir = await createTempDir();
-    try {
-      // legacySpecialists triggers fetchAllCheatSheets which requires network.
-      // Since Phase 5, specialist generation is deprecated in favor of MCP
-      // consultation. The adapters no longer implement specialist file generation.
-      // This test verifies the option is accepted without crashing.
-      const result = await install(
-        [new ClaudeAdapter()],
-        'local',
-        tempDir,
-        false,
-        { legacySpecialists: true }
-      );
-
-      // The install should succeed for standard artifacts even in legacy mode.
-      // Specialist files are NOT generated because adapters removed specialist
-      // support in Phase 5 (replaced by MCP consultation).
-      if (result.success) {
-        const agentsDir = join(tempDir, '.claude', 'agents');
-        if (existsSync(agentsDir)) {
-          // Verify standard workflow agents and role agents are installed
-          const agentFiles = await readdir(agentsDir);
-          const workflowAgents = agentFiles.filter(f => f.startsWith('gss-') && !f.startsWith('gss-specialist-'));
-          assert.ok(workflowAgents.length > 0, 'Legacy mode should still produce workflow agents');
-        }
-      }
-      // If result is not successful due to network, that's acceptable
-      // — the important thing is the code path exists and doesn't crash.
-    } finally {
-      await cleanupTempDir(tempDir);
-    }
-  });
-
-  it('7.2 non-legacy install does not generate specialist files', async () => {
+describe('Phase 3 Integration — Release C specialist retirement', () => {
+  it('7.1 install does not generate retired specialist files', async () => {
     const tempDir = await createTempDir();
     try {
       await install([new ClaudeAdapter()], 'local', tempDir, false);
@@ -509,7 +475,7 @@ describe('Phase 3 Integration — Backward compatibility', () => {
         assert.equal(
           specialistFiles.length,
           0,
-          'Default install should not produce specialist files'
+          'Release C install should not produce specialist files'
         );
       }
     } finally {

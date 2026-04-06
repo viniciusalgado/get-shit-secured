@@ -1,6 +1,6 @@
 /**
  * readiness CLI command — Checks whether the installation meets criteria
- * for advancing to the next release phase.
+ * for advancing within the Release C rollout.
  *
  * Phase 11 — Workstream D: Release communication and decision gates.
  *
@@ -37,8 +37,6 @@ export async function readiness(
   const jsonOutput = argv.includes('--json');
 
   const cwd = process.cwd();
-  const gssDir = join(cwd, '.gss');
-
   // Detect current mode from runtime manifest
   const currentMode = detectCurrentMode(cwd);
 
@@ -55,15 +53,8 @@ export async function readiness(
   } else if (currentMode === 'mcp-only') {
     result = checkGateBtoC(cwd);
   } else {
-    // Legacy mode — can always advance to hybrid-shadow or mcp-only
-    result = {
-      gate: 'Legacy → MCP-only',
-      checks: [
-        { name: 'Install health', status: 'pass', message: 'Legacy install detected, can upgrade at any time' },
-      ],
-      ready: true,
-      failingCount: 0,
-    };
+    console.error(`Error: Unsupported rollout mode "${currentMode}"`);
+    return 1;
   }
 
   // Output
@@ -90,7 +81,7 @@ function detectCurrentMode(cwd: string): string | null {
       try {
         const manifest = JSON.parse(readFileSync(path, 'utf-8'));
         if (manifest.rolloutMode) return manifest.rolloutMode;
-        return manifest.legacyMode ? 'legacy' : 'mcp-only';
+        return 'mcp-only';
       } catch {
         continue;
       }
@@ -175,37 +166,12 @@ function checkGateAtoB(cwd: string): ReadinessResult {
 }
 
 /**
- * Check readiness for Gate B → C (mcp-only → legacy retirement).
+ * Check Release C readiness for steady-state MCP operation.
  */
 function checkGateBtoC(cwd: string): ReadinessResult {
   const checks: GateCheck[] = [];
-  const gssDir = join(cwd, '.gss');
 
-  // Check 1: Legacy fallback unused (no legacyMode in recent manifests)
-  let legacyUnused = true;
-  const candidates = [
-    join(cwd, '.claude', 'gss', 'runtime-manifest.json'),
-    join(cwd, '.codex', 'gss', 'runtime-manifest.json'),
-  ];
-  for (const path of candidates) {
-    if (existsSync(path)) {
-      try {
-        const manifest = JSON.parse(readFileSync(path, 'utf-8'));
-        if (manifest.legacyMode || manifest.rolloutMode === 'legacy') {
-          legacyUnused = false;
-        }
-      } catch {
-        // Ignore parse errors
-      }
-    }
-  }
-  checks.push({
-    name: 'Legacy fallback unused',
-    status: legacyUnused ? 'pass' : 'fail',
-    message: legacyUnused ? 'No recent legacy mode usage' : 'Legacy mode still active',
-  });
-
-  // Check 2: MCP coverage stable
+  // Check 1: MCP coverage stable
   const mcpHealthy = checkMcpServer(cwd);
   checks.push({
     name: 'MCP coverage stable',
@@ -213,7 +179,7 @@ function checkGateBtoC(cwd: string): ReadinessResult {
     message: mcpHealthy ? 'MCP server healthy' : 'MCP server issues detected',
   });
 
-  // Check 3: Support docs exist
+  // Check 2: Support docs exist
   const docsExist = existsSync(join(cwd, 'docs', 'migration-guide.md'))
     && existsSync(join(cwd, 'docs', 'troubleshooting.md'));
   checks.push({
@@ -222,16 +188,18 @@ function checkGateBtoC(cwd: string): ReadinessResult {
     message: docsExist ? 'Migration guide and troubleshooting guide present' : 'Missing support documentation',
   });
 
-  // Check 4: Removal PR prepared (manual check — always flagged)
+  // Check 3: Artifact directories exist for a healthy install
+  const artifactsReady = existsSync(join(cwd, '.gss', 'artifacts'))
+    && existsSync(join(cwd, '.gss', 'reports'));
   checks.push({
-    name: 'Removal PR prepared',
-    status: 'fail',
-    message: 'Manual check: Prepare PR to remove legacy specialist generation code',
+    name: 'Artifact directories ready',
+    status: artifactsReady ? 'pass' : 'fail',
+    message: artifactsReady ? 'Install created .gss/artifacts and .gss/reports' : 'Artifact/report directories missing',
   });
 
   const failingCount = checks.filter(c => c.status === 'fail').length;
   return {
-    gate: 'Release B → Release C (mcp-only → legacy retirement)',
+    gate: 'Release C steady-state (mcp-only)',
     checks,
     ready: failingCount === 0,
     failingCount,

@@ -74,10 +74,10 @@ export const verifyDefinition: WorkflowDefinition = {
       path: '.gss/artifacts/verify/test-coverage.json',
     },
     {
-      name: 'residual-risks',
-      type: 'markdown',
+      name: 'residual-risk-assessment',
+      type: 'json',
       description: 'Any remaining risks or partial fixes',
-      path: '.gss/artifacts/verify/residual-risks.md',
+      path: '.gss/artifacts/verify/residual-risk-assessment.json',
     },
   ],
   dependencies: [
@@ -140,7 +140,7 @@ export const verifyDefinition: WorkflowDefinition = {
 
 4. **Document Blocked Items as Residual Risk (status: "blocked")**
    For each remediation with status "blocked":
-   - Document as residual risk in residual-risks.md
+   - Document as residual risk in residual-risk-assessment.json
    - Include the blocker from the application report
    - Assess severity of the unaddressed vulnerability
    - Recommend alternative approaches or next steps

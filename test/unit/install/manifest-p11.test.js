@@ -1,7 +1,7 @@
 /**
  * Unit tests for runtime manifest Phase 11 rollout mode fields.
  * Validates that installRuntimeArtifacts populates rolloutMode and
- * comparisonEnabled correctly for each mode.
+ * comparisonEnabled correctly for Release C modes.
  */
 
 import { describe, it, beforeEach, afterEach } from 'node:test';
@@ -20,24 +20,6 @@ function createTempDir() {
 
 function cleanupTempDir(dir) {
   rmSync(dir, { recursive: true, force: true });
-}
-
-/**
- * Set up a minimal corpus snapshot file for testing.
- */
-function setupCorpusSnapshot(tempDir) {
-  const dataDir = join(tempDir, 'pkg', 'data', 'corpus');
-  mkdirSync(dataDir, { recursive: true });
-
-  const snapshotPath = join(dataDir, 'owasp-corpus.snapshot.json');
-  const snapshot = {
-    corpusVersion: '1.0.0',
-    generatedAt: new Date().toISOString(),
-    documents: [],
-    stats: { totalDocs: 0 },
-  };
-  writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2), 'utf-8');
-  return snapshotPath;
 }
 
 /**
@@ -77,9 +59,7 @@ async function runInstallAndReadManifest(tempDir, options = {}) {
     null, // no corpus
     {
       dryRun: false,
-      legacySpecialists: options.legacySpecialists || false,
       hybridShadow: options.hybridShadow || false,
-      specialists: [],
     }
   );
 
@@ -99,18 +79,6 @@ describe('Runtime Manifest — Phase 11 rollout mode fields', () => {
       const manifest = await runInstallAndReadManifest(tempDir);
       assert.ok(manifest, 'Runtime manifest should be created');
       assert.equal(manifest.rolloutMode, 'mcp-only');
-    } finally {
-      cleanupTempDir(tempDir);
-    }
-  });
-
-  it('legacySpecialists: true sets rolloutMode: legacy', async () => {
-    const tempDir = await createTempDir();
-    try {
-      const manifest = await runInstallAndReadManifest(tempDir, { legacySpecialists: true });
-      assert.ok(manifest, 'Runtime manifest should be created');
-      assert.equal(manifest.rolloutMode, 'legacy');
-      assert.equal(manifest.legacyMode, true);
     } finally {
       cleanupTempDir(tempDir);
     }
@@ -149,28 +117,6 @@ describe('Runtime Manifest — Phase 11 rollout mode fields', () => {
     }
   });
 
-  it('legacyMode is derived from rolloutMode (legacy=true)', async () => {
-    const tempDir = await createTempDir();
-    try {
-      const manifest = await runInstallAndReadManifest(tempDir, { legacySpecialists: true });
-      assert.ok(manifest, 'Runtime manifest should be created');
-      assert.equal(manifest.legacyMode, true);
-    } finally {
-      cleanupTempDir(tempDir);
-    }
-  });
-
-  it('legacyMode is false for non-legacy modes', async () => {
-    const tempDir = await createTempDir();
-    try {
-      const manifest = await runInstallAndReadManifest(tempDir, { hybridShadow: true });
-      assert.ok(manifest, 'Runtime manifest should be created');
-      assert.equal(manifest.legacyMode, false);
-    } finally {
-      cleanupTempDir(tempDir);
-    }
-  });
-
   it('manifest round-trips through JSON serialization', async () => {
     const tempDir = await createTempDir();
     try {
@@ -183,7 +129,6 @@ describe('Runtime Manifest — Phase 11 rollout mode fields', () => {
 
       assert.equal(parsed.rolloutMode, 'hybrid-shadow');
       assert.equal(parsed.comparisonEnabled, true);
-      assert.equal(parsed.legacyMode, false);
     } finally {
       cleanupTempDir(tempDir);
     }
@@ -204,7 +149,6 @@ describe('Runtime Manifest — Phase 11 rollout mode fields', () => {
         hooks: ['session-start'],
         managedConfigs: [],
         gssVersion: '0.1.0',
-        legacyMode: false,
         // No rolloutMode field
       };
       const manifestPath = join(supportDir, 'runtime-manifest.json');
@@ -213,7 +157,6 @@ describe('Runtime Manifest — Phase 11 rollout mode fields', () => {
       // Parse it back
       const parsed = JSON.parse(readFileSync(manifestPath, 'utf-8'));
       assert.equal(parsed.rolloutMode, undefined, 'Should be undefined for old manifest');
-      assert.equal(parsed.legacyMode, false);
     } finally {
       cleanupTempDir(tempDir);
     }

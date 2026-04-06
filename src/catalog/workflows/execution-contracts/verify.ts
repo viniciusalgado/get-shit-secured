@@ -48,7 +48,7 @@ export const verifyContract: WorkflowExecutionContract = {
     { name: 'verification-report', path: '.gss/artifacts/verify/verification-report.json', requiresConsultationTrace: true, payloadSchema: 'verify:verification-report:v1' },
     { name: 'regression-analysis', path: '.gss/artifacts/verify/regression-analysis.json', requiresConsultationTrace: true, payloadSchema: 'verify:regression-analysis:v1' },
     { name: 'test-coverage-report', path: '.gss/artifacts/verify/test-coverage.json', requiresConsultationTrace: true, payloadSchema: 'verify:test-coverage:v1' },
-    { name: 'residual-risks', path: '.gss/artifacts/verify/residual-risk.json', requiresConsultationTrace: true, payloadSchema: 'verify:residual-risk:v1' },
+    { name: 'residual-risk-assessment', path: '.gss/artifacts/verify/residual-risk-assessment.json', requiresConsultationTrace: true, payloadSchema: 'verify:residual-risk:v1' },
   ],
 
   handoffs: [

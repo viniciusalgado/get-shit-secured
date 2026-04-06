@@ -6,7 +6,6 @@
  *
  * Supported migrations:
  *   v0.1.0 → mcp-only       (v1 manifest → v2 manifest with rolloutMode)
- *   legacy → mcp-only       (removes specialist files, updates mode)
  *   mcp-only → hybrid-shadow (enables comparison traces)
  *   hybrid-shadow → mcp-only (disables comparison traces)
  */
@@ -117,8 +116,7 @@ export async function migrateInstall(
       continue;
     }
 
-    const currentMode = runtimeManifest.rolloutMode
-      || (runtimeManifest.legacyMode ? 'legacy' : 'mcp-only');
+    const currentMode = runtimeManifest.rolloutMode || 'mcp-only';
 
     if (currentMode === targetMode) {
       changes.push(`${runtime}: Already at ${targetMode}, no change needed`);
@@ -132,7 +130,6 @@ export async function migrateInstall(
 
     // Apply mode change
     runtimeManifest.rolloutMode = targetMode;
-    runtimeManifest.legacyMode = targetMode === 'legacy';
     if (targetMode === 'hybrid-shadow') {
       runtimeManifest.comparisonEnabled = true;
     } else {

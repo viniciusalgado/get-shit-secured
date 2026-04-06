@@ -5,6 +5,16 @@
 export type RuntimeTarget = 'claude' | 'codex';
 
 /**
+ * Rollout mode governing MCP-backed runtime behavior.
+ * - hybrid-shadow: MCP-only runtime with comparison/reporting enabled
+ * - mcp-only: MCP-only runtime
+ */
+export type RolloutMode = 'hybrid-shadow' | 'mcp-only';
+
+/** Default rollout mode for new installs */
+export const DEFAULT_ROLLOUT_MODE: RolloutMode = 'mcp-only';
+
+/**
  * Installation scope determines where files are written.
  * - local: Project-specific installation (e.g., .claude/ in project root)
  * - global: User-level installation (e.g., ~/.claude/ or ~/$XDG_CONFIG_HOME)
@@ -208,6 +218,11 @@ export interface RuntimeAdapter {
    */
   getHooks(): RuntimeHook[];
   /**
+   * Get role agent/skill files for this runtime.
+   * Returns RuntimeFile[] for each installed role.
+   */
+  getRoleFiles(): RuntimeFile[];
+  /**
    * Optional: Runtime-specific settings to merge.
    * Returns path to settings file and partial content to merge.
    * @deprecated Use getManagedJsonPatches instead.
@@ -393,8 +408,8 @@ export interface CliArgs {
   showHelp?: boolean;
   /** Show version */
   showVersion?: boolean;
-  /** Use legacy specialist generation (fetch + generate at install time) */
-  legacySpecialists?: boolean;
+  /** Enable hybrid shadow mode (MCP-only comparison mode) */
+  hybridShadow?: boolean;
   /** Verify installation without installing */
   verifyOnly?: boolean;
 }
@@ -451,6 +466,7 @@ export interface StackDetection {
 /**
  * Normalized OWASP cheat sheet corpus entry.
  * Represents one canonical cheat sheet from the OWASP Cheat Sheet Series.
+ * TODO(remove-in-release-c): Superseded by SecurityDoc in corpus v2.
  */
 export interface OwaspCorpusEntry {
   /** Unique identifier derived from cheat sheet filename (e.g., "password-storage") */
@@ -746,337 +762,6 @@ export interface ConsultationValidation {
   };
 }
 
-/**
- * Specialist definition for OWASP-based security specialists.
- * Each specialist represents one OWASP cheat sheet as an installable agent/skill.
- */
-export interface SpecialistDefinition {
-  /** Unique identifier (same as OwaspCorpusEntry.id) */
-  id: string;
-  /** Human-readable title */
-  title: string;
-  /** Source cheat sheet URL */
-  sourceUrl: string;
-  /** One-sentence intent summary */
-  intentSummary: string;
-  /** Primary workflow IDs where this specialist applies */
-  primaryWorkflowIds: WorkflowId[];
-  /** Other specialist IDs this specialist delegates to */
-  delegatesTo: string[];
-  /** Rules that trigger this specialist's activation */
-  activationRules: ActivationRule[];
-  /** Expected inputs for this specialist */
-  inputs: SpecialistInput[];
-  /** Outputs produced by this specialist */
-  outputs: SpecialistOutput[];
-  /** Runtime-specific prompt templates */
-  runtimePrompts: RuntimePrompts;
-  /** Stack conditions for conditional activation */
-  stackBindings?: string[];
-}
-
-/**
- * Activation rule for specialist delegation.
- */
-export interface ActivationRule {
-  /** Rule type */
-  type: 'workflow-step' | 'issue-type' | 'checklist-trigger' | 'stack-condition' | 'delegation-edge';
-  /** Trigger phrases that match this rule */
-  triggerPhrases: string[];
-  /** Tags that trigger this rule */
-  triggerTags?: string[];
-  /** Workflow context where this applies */
-  workflowContext?: WorkflowId;
-  /** Confidence score for this trigger (0-1) */
-  confidence: number;
-}
-
-/**
- * Specialist input specification.
- */
-export interface SpecialistInput {
-  /** Input name */
-  name: string;
-  /** Input type */
-  type: string;
-  /** Description */
-  description: string;
-  /** Whether this input is required */
-  required: boolean;
-}
-
-/**
- * Specialist output specification.
- */
-export interface SpecialistOutput {
-  /** Output name */
-  name: string;
-  /** Output type (e.g., "verdict", "finding", "guidance") */
-  type: string;
-  /** Description */
-  description: string;
-}
-
-/**
- * Delegation rule between specialists.
- * Defines when one specialist should delegate to another.
- */
-export interface DelegationRule {
-  /** Parent specialist ID that delegates */
-  parentSpecialistId: string;
-  /** Child specialist ID to receive delegation */
-  childSpecialistId: string;
-  /** Reason for delegation */
-  reason: string;
-  /** Phrases that trigger this delegation */
-  triggerPhrases: string[];
-  /** Tags that trigger this delegation */
-  triggerTags?: string[];
-  /** Workflow context where delegation applies */
-  workflowContext?: WorkflowId;
-}
-
-// =============================================================================
-// Delegation Planning Types
-// =============================================================================
-
-/**
- * Requirement class for a specialist within a delegation plan.
- * Determines whether consultation is mandatory, optional, derived, or excluded.
- */
-export type DelegationRequirement = 'required' | 'optional' | 'derived-follow-up' | 'excluded';
-
-/**
- * Subject type that triggers delegation decisions.
- * Each workflow produces different subject types from its artifacts.
- */
-export type DelegationSubjectType =
-  | 'workflow'
-  | 'finding'
-  | 'patch'
-  | 'verification-target'
-  | 'report-section';
-
-/**
- * A delegation subject extracted from workflow artifacts.
- * Represents something that may require specialist consultation.
- */
-export interface DelegationSubject {
-  /** Unique identifier for this subject */
-  id: string;
-  /** What kind of subject this is */
-  type: DelegationSubjectType;
-  /** Human-readable description */
-  description: string;
-  /** Which artifact produced this subject */
-  sourceArtifact: string;
-  /** Raw signals used for matching (issue types, file paths, stack tags, etc.) */
-  sourceSignals: string[];
-}
-
-/**
- * Reason why a specialist was included in the delegation plan.
- * Provides auditability for every delegation decision.
- */
-export interface DelegationReason {
-  /** Signal type that triggered this reason */
-  signalType: 'workflow-binding' | 'issue-tag' | 'stack-condition' | 'file-path' | 'artifact-field' | 'delegation-edge' | 'trigger-phrase';
-  /** Raw signal value that matched */
-  signalValue: string;
-  /** Score contribution from this reason */
-  score: number;
-  /** Human-readable explanation */
-  description: string;
-}
-
-/**
- * A candidate specialist for delegation, with scoring and classification.
- */
-export interface DelegationCandidate {
-  /** Specialist definition ID */
-  specialistId: string;
-  /** Which subject this candidate addresses */
-  subjectId: string;
-  /** Composite score from all matching signals */
-  score: number;
-  /** Reasons contributing to the score */
-  reasons: DelegationReason[];
-  /** Current requirement classification */
-  requirement: DelegationRequirement;
-}
-
-/**
- * Constraints applied to delegation plan generation.
- * Controls fan-out, depth, and enforcement behavior.
- */
-export interface DelegationConstraints {
-  /** Maximum required specialists per subject (default: 3) */
-  maxRequiredPerSubject: number;
-  /** Maximum optional specialists per subject (default: 3) */
-  maxOptionalPerSubject: number;
-  /** Whether follow-up specialists are allowed (default: true) */
-  allowFollowUpSpecialists: boolean;
-  /** Maximum depth for follow-up delegation chains (default: 1) */
-  maxFollowUpDepth: number;
-  /** Whether to hard-fail on missing required consultations (default: true) */
-  failOnMissingRequired: boolean;
-  /** Whether out-of-plan consults are allowed (default: false) */
-  allowOutOfPlanConsults: boolean;
-}
-
-/** Default constraint values */
-export const DEFAULT_DELEGATION_CONSTRAINTS: DelegationConstraints = {
-  maxRequiredPerSubject: 3,
-  maxOptionalPerSubject: 3,
-  allowFollowUpSpecialists: true,
-  maxFollowUpDepth: 1,
-  failOnMissingRequired: true,
-  allowOutOfPlanConsults: false,
-};
-
-/**
- * Delegation mode for a workflow.
- * Controls when and how delegation planning is triggered.
- */
-export type DelegationMode = 'always' | 'on-detection' | 'artifact-driven' | 'none';
-
-/**
- * Delegation policy attached to a workflow definition.
- * Governs how the planner generates delegation plans for this workflow.
- */
-export interface DelegationPolicy {
-  /** When delegation planning is triggered */
-  mode: DelegationMode;
-  /** Description of what produces delegation subjects */
-  subjectSource: string;
-  /** Constraints for plan generation */
-  constraints: DelegationConstraints;
-}
-
-/** Default delegation policy for workflows without explicit policy */
-export const DEFAULT_DELEGATION_POLICY: DelegationPolicy = {
-  mode: 'none',
-  subjectSource: '',
-  constraints: DEFAULT_DELEGATION_CONSTRAINTS,
-};
-
-/**
- * Specialist entry within a delegation plan.
- * Associates a specialist with a subject and requirement class.
- */
-export interface DelegationPlanEntry {
-  /** Specialist definition ID */
-  specialistId: string;
-  /** Subject this entry addresses */
-  subjectId: string;
-  /** Requirement classification */
-  requirement: DelegationRequirement;
-  /** Composite score */
-  score: number;
-  /** Reasons for inclusion */
-  reasons: DelegationReason[];
-  /** Stable order index for deterministic ordering */
-  orderIndex: number;
-}
-
-/**
- * Schema version for delegation plan artifacts.
- */
-export const DELEGATION_PLAN_SCHEMA_VERSION = 1;
-
-/**
- * A deterministic delegation plan for a workflow run.
- * This is a first-class artifact that governs specialist spawning.
- */
-export interface DelegationPlan {
-  /** Schema version for artifact compatibility */
-  schemaVersion: typeof DELEGATION_PLAN_SCHEMA_VERSION;
-  /** Which workflow this plan is for */
-  workflowId: WorkflowId;
-  /** Timestamp of plan generation */
-  generatedAt: string;
-  /** Subjects extracted from workflow artifacts */
-  subjects: DelegationSubject[];
-  /** Specialist entries with requirement classifications */
-  entries: DelegationPlanEntry[];
-  /** Constraints applied during plan generation */
-  constraints: DelegationConstraints;
-  /** Artifact references used as input */
-  sourceArtifactRefs: string[];
-}
-
-/**
- * Record of a specialist consultation that occurred during workflow execution.
- */
-export interface SpecialistExecutionRecord {
-  /** Specialist definition ID */
-  specialistId: string;
-  /** Optional orchestration phase identifier where this specialist was executed */
-  phaseId?: string;
-  /** Subject this consultation addressed */
-  subjectId: string;
-  /** Requirement class at time of execution */
-  requirement: DelegationRequirement;
-  /** Verdict from the specialist */
-  verdict: 'pass' | 'fail' | 'needs-review';
-  /** Confidence score (0-1) */
-  confidence: number;
-  /** Evidence references */
-  evidenceRefs: string[];
-  /** Summary of the consultation */
-  summary: string;
-  /** Follow-up specialists recommended by this specialist */
-  followUpSpecialists: string[];
-  /** Timestamp of execution */
-  executedAt: string;
-}
-
-/**
- * Schema version for compliance artifacts.
- */
-export const DELEGATION_COMPLIANCE_SCHEMA_VERSION = 1;
-
-/**
- * A compliance issue found during validation.
- */
-export interface DelegationComplianceIssue {
-  /** Issue type */
-  type: 'missing-required' | 'malformed-verdict' | 'unauthorized-consult' | 'duplicate-consult' | 'unsupported-follow-up';
-  /** Specialist ID involved */
-  specialistId: string;
-  /** Subject involved */
-  subjectId: string;
-  /** Description of the issue */
-  description: string;
-}
-
-/**
- * Compliance report comparing plan against actual execution.
- * Determines whether the workflow delegation was performed correctly.
- */
-export interface DelegationComplianceReport {
-  /** Schema version */
-  schemaVersion: typeof DELEGATION_COMPLIANCE_SCHEMA_VERSION;
-  /** Which workflow this compliance report covers */
-  workflowId: WorkflowId;
-  /** Timestamp of compliance check */
-  checkedAt: string;
-  /** Overall pass/fail verdict */
-  status: 'pass' | 'fail';
-  /** Individual compliance issues */
-  issues: DelegationComplianceIssue[];
-  /** Number of required specialists consulted */
-  requiredConsulted: number;
-  /** Total required specialists in plan */
-  requiredTotal: number;
-  /** Number of optional specialists consulted */
-  optionalConsulted: number;
-  /** Number of follow-up specialists consulted */
-  followUpConsulted: number;
-  /** Number of unauthorized consults */
-  unauthorizedCount: number;
-}
-
 // =============================================================================
 // Phase 6 — MCP Consultation Types
 // =============================================================================
@@ -1123,48 +808,77 @@ export interface ConsultationTrace {
 }
 
 // =============================================================================
-// Extended Workflow Definition
+// Phase 12 — Artifact Envelope and Consultation Mode
 // =============================================================================
 
 /**
- * Extended workflow definition with specialist metadata.
- * Extends the base WorkflowDefinition with specialist-aware fields.
+ * Schema version for the artifact envelope.
  */
-export interface ExtendedWorkflowDefinition extends WorkflowDefinition {
-  /** Primary specialists for this workflow */
-  primarySpecialists?: string[];
-  /** Optional specialists that may be invoked */
-  optionalSpecialists?: string[];
-  /** Stack-conditioned specialists (activate when stack matches) */
-  stackConditionedSpecialists?: string[];
-  /** Default delegation behavior */
-  defaultDelegationBehavior?: 'always' | 'on-detection' | 'manual';
-}
+export const ARTIFACT_ENVELOPE_SCHEMA_VERSION = 1;
 
 /**
- * Structured output from a specialist.
+ * Consultation relevance for a workflow.
+ * - required: Workflow must include consultation trace (hook enforces)
+ * - optional: Workflow may include trace; missing is not an error
+ * - not-applicable: Workflow does not consult MCP (hook skips check)
  */
-export interface SpecialistVerdict {
-  /** Pass/fail/needs-review verdict */
-  verdict: 'pass' | 'fail' | 'needs-review';
-  /** Confidence score (0-1) */
-  confidence: number;
-  /** Evidence for the verdict */
-  evidence: string[];
-  /** Affected files (if applicable) */
-  affectedFiles: Array<{
-    path: string;
-    line?: number;
-    snippet?: string;
-  }>;
-  /** OWASP source that governed this verdict */
-  owaspSourceUrl: string;
-  /** Follow-up specialists to consult */
-  followUpSpecialists?: string[];
-  /** Remediation notes */
-  remediationNotes?: string;
-  /** Verification notes */
-  verificationNotes?: string;
+export type ConsultationMode = 'required' | 'optional' | 'not-applicable';
+
+/**
+ * Versioned artifact envelope.
+ * Every JSON artifact produced by a GSS workflow must include these fields
+ * at the top level, wrapping the workflow-specific payload.
+ */
+export interface ArtifactEnvelope {
+  /** Envelope schema version */
+  schemaVersion: typeof ARTIFACT_ENVELOPE_SCHEMA_VERSION;
+  /** Which workflow produced this artifact */
+  workflowId: WorkflowId;
+  /** GSS version at time of artifact generation */
+  gssVersion: string;
+  /** Corpus version used for consultation */
+  corpusVersion: string;
+  /** Timestamp of artifact generation */
+  generatedAt: string;
+  /** Consultation mode for this workflow */
+  consultationMode: ConsultationMode;
+  /** Consultation trace (present if consultationMode is required or optional) */
+  consultation?: ConsultationTrace;
+}
+
+// =============================================================================
+// Phase 11 — Rollout Comparison Types
+// =============================================================================
+
+/**
+ * Comparison between MCP and legacy consultation results.
+ * Produced when running in hybrid-shadow mode or when comparing two runs.
+ */
+export interface ConsultationComparison {
+  /** Schema version */
+  schemaVersion: 1;
+  /** Which workflow was compared */
+  workflowId: WorkflowId;
+  /** Timestamp of comparison */
+  comparedAt: string;
+  /** Documents consulted by MCP path */
+  mcpDocs: string[];
+  /** Documents consulted by legacy path */
+  legacyDocs: string[];
+  /** Documents in MCP but not legacy */
+  mcpOnly: string[];
+  /** Documents in legacy but not MCP */
+  legacyOnly: string[];
+  /** Documents in both paths */
+  common: string[];
+  /** Required docs covered by MCP (0-1 fraction) */
+  mcpRequiredCoverage: number;
+  /** Required docs covered by legacy (0-1 fraction) */
+  legacyRequiredCoverage: number;
+  /** Difference in coverage (positive = MCP superior) */
+  coverageDelta: number;
+  /** Assessment verdict */
+  assessment: 'mcp-superior' | 'equivalent' | 'mcp-inferior';
 }
 
 /**
@@ -1314,11 +1028,10 @@ export interface WorkflowDefinition {
   runtimePrompts: RuntimePrompts;
   /** Optional coordinator orchestration metadata */
   orchestration?: WorkflowOrchestration;
-  /** Delegation policy governing specialist spawning for this workflow
-   *  @deprecated Use signalDerivation instead. MCP handles consultation planning. */
-  delegationPolicy?: DelegationPolicy;
   /** Signal derivation strategy for MCP consultation */
   signalDerivation?: SignalDerivation;
+  /** Whether this workflow consults MCP and must produce a consultation trace */
+  consultationMode: ConsultationMode;
 }
 
 /**
@@ -1448,4 +1161,14 @@ export interface RuntimeManifest {
   mcpConfigPath: string;
   /** GSS package version */
   gssVersion: string;
+  /** List of installed workflow IDs */
+  installedWorkflows: WorkflowId[];
+  /** List of installed role IDs */
+  installedRoles: string[];
+  /** MCP server registration name */
+  mcpServerName: string;
+  /** Rollout mode governing consultation paths (Phase 11) */
+  rolloutMode: RolloutMode;
+  /** Whether comparison traces are expected (hybrid-shadow only, Phase 11) */
+  comparisonEnabled?: boolean;
 }

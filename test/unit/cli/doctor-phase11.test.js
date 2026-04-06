@@ -1,7 +1,7 @@
 /**
  * Unit tests for doctor — Phase 11 rollout mode display.
  * Validates that doctor output includes the rollout mode with
- * release labels, and handles backward compatibility.
+ * release labels for Release C modes.
  */
 
 import { describe, it } from 'node:test';
@@ -41,12 +41,11 @@ function setupInstallWithRolloutMode(tempDir, options = {}) {
 }
 
 describe('doctor — Phase 11 rollout mode display', () => {
-  it('shows rolloutMode: mcp-only with Release B label', async () => {
+  it('shows rolloutMode: mcp-only', async () => {
     const tempDir = await createTempDir();
     try {
       setupInstallWithRolloutMode(tempDir, {
         rolloutMode: 'mcp-only',
-        legacyMode: false,
       });
 
       const { logs, result } = await captureOutputAsync(() =>
@@ -66,7 +65,6 @@ describe('doctor — Phase 11 rollout mode display', () => {
     try {
       setupInstallWithRolloutMode(tempDir, {
         rolloutMode: 'hybrid-shadow',
-        legacyMode: false,
         comparisonEnabled: true,
       });
 
@@ -82,63 +80,18 @@ describe('doctor — Phase 11 rollout mode display', () => {
     }
   });
 
-  it('shows rolloutMode: legacy', async () => {
+  it('defaults to mcp-only when rolloutMode is absent', async () => {
     const tempDir = await createTempDir();
     try {
-      setupInstallWithRolloutMode(tempDir, {
-        rolloutMode: 'legacy',
-        legacyMode: true,
-      });
+      setupInstallWithRolloutMode(tempDir);
 
       const { logs } = await captureOutputAsync(() =>
         doctor(tempDir, { runtimes: ['claude'] })
       );
       const output = logs.join('\n');
 
-      assert.ok(output.includes('legacy'),
-        `Should show legacy mode. Got:\n${output}`);
-    } finally {
-      cleanupTempDir(tempDir);
-    }
-  });
-
-  it('backward compat: infers legacy from legacyMode:true when rolloutMode absent', async () => {
-    const tempDir = await createTempDir();
-    try {
-      setupInstallWithRolloutMode(tempDir, {
-        legacyMode: true,
-        // rolloutMode intentionally omitted
-      });
-
-      const { logs } = await captureOutputAsync(() =>
-        doctor(tempDir, { runtimes: ['claude'] })
-      );
-      const output = logs.join('\n');
-
-      // When rolloutMode is absent and legacyMode is true, should infer 'legacy'
-      assert.ok(output.includes('legacy'),
-        `Should infer legacy mode from legacyMode:true. Got:\n${output}`);
-    } finally {
-      cleanupTempDir(tempDir);
-    }
-  });
-
-  it('backward compat: infers mcp-only from legacyMode:false when rolloutMode absent', async () => {
-    const tempDir = await createTempDir();
-    try {
-      setupInstallWithRolloutMode(tempDir, {
-        legacyMode: false,
-        // rolloutMode intentionally omitted
-      });
-
-      const { logs } = await captureOutputAsync(() =>
-        doctor(tempDir, { runtimes: ['claude'] })
-      );
-      const output = logs.join('\n');
-
-      // When rolloutMode is absent and legacyMode is false, should infer 'mcp-only'
       assert.ok(output.includes('mcp-only'),
-        `Should infer mcp-only from legacyMode:false. Got:\n${output}`);
+        `Should default to mcp-only. Got:\n${output}`);
     } finally {
       cleanupTempDir(tempDir);
     }
@@ -149,7 +102,6 @@ describe('doctor — Phase 11 rollout mode display', () => {
     try {
       setupInstallWithRolloutMode(tempDir, {
         rolloutMode: 'mcp-only',
-        legacyMode: false,
       });
 
       const { result } = await captureOutputAsync(() =>

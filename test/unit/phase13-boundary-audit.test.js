@@ -4,7 +4,7 @@
  * Validates the import boundary audit script:
  * - Script runs and exits 0 (no violations)
  * - Reports expected file and import counts
- * - All boundary types are represented
+ * - Active boundary types are represented
  * - Output format is correct
  */
 
@@ -86,16 +86,6 @@ describe('Phase 13: Boundary classification (via MODULE_MAP.md)', () => {
     assert.ok(output.includes('Files checked:'), 'Audit should complete successfully');
   });
 
-  it('4.6 — Compatibility modules are classified as compatibility', () => {
-    // The facade file importing from C should not be a violation
-    // If audit passes with 0 violations, compatibility classification is correct
-    const output = runAudit();
-    assert.ok(
-      output.includes('Violations: 0'),
-      'Compatibility facade importing from C should not cause violations'
-    );
-  });
-
   it('4.10 — Installer importing Knowledge is acceptable', () => {
     // The audit should not flag installer.ts importing from Knowledge boundary
     const output = runAudit();
@@ -111,10 +101,9 @@ describe('Phase 13: Boundary classification (via MODULE_MAP.md)', () => {
     assert.ok(output.includes('Violations: 0'), 'Same-boundary imports should be acceptable');
   });
 
-  it('4.12 — Compatibility importing Knowledge is acceptable', () => {
-    // The facade re-exports legacy modules — this should not be flagged
+  it('4.12 — No retired compatibility facade is required for a clean audit', () => {
     const output = runAudit();
-    assert.ok(output.includes('Violations: 0'), 'Facade importing legacy should be acceptable');
+    assert.ok(output.includes('Violations: 0'), 'Retired compatibility code should not be required for a clean audit');
   });
 
 });

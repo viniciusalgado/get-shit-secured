@@ -3,7 +3,7 @@
  * Phase 11 — Workstream D: Release communication and decision gates.
  */
 
-import { describe, it, beforeEach, afterEach } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { mkdtemp } from 'node:fs/promises';
@@ -30,6 +30,7 @@ function setupInstall(tempDir, options = {}) {
   mkdirSync(join(claudeDir, 'mcp'), { recursive: true });
   mkdirSync(join(claudeDir, 'corpus'), { recursive: true });
   mkdirSync(join(gssDir, 'artifacts'), { recursive: true });
+  mkdirSync(join(gssDir, 'reports'), { recursive: true });
 
   // Write runtime manifest
   const runtimeManifest = {
@@ -46,7 +47,6 @@ function setupInstall(tempDir, options = {}) {
     gssVersion: '0.1.0',
     installedWorkflows: ['security-review', 'map-codebase', 'audit'],
     installedRoles: ['gss-mapper', 'gss-auditor', 'gss-verifier'],
-    legacyMode: mode === 'legacy',
     mcpServerName: 'gss-security-docs',
     rolloutMode: mode,
     ...(mode === 'hybrid-shadow' ? { comparisonEnabled: true } : {}),
@@ -99,7 +99,7 @@ describe('readiness command', () => {
     // In a real scenario, readiness would detect the current mode and run gate checks.
     // Here we verify the structure.
     const result = {
-      gate: 'Release A → Release B (hybrid-shadow → mcp-only)',
+      gate: 'Release C steady-state (mcp-only)',
       checks: [
         { name: 'Install health', status: 'pass', message: 'Install manifest present' },
         { name: 'Comparison data', status: 'fail', message: '3/5 required comparison reports' },
@@ -116,7 +116,7 @@ describe('readiness command', () => {
 
   it('reports READY when all checks pass', async () => {
     const result = {
-      gate: 'Release A → Release B (hybrid-shadow → mcp-only)',
+      gate: 'Release C steady-state (mcp-only)',
       checks: [
         { name: 'Install health', status: 'pass', message: 'Install manifest present' },
         { name: 'Comparison data', status: 'pass', message: '7/5 required comparison reports' },
@@ -141,7 +141,6 @@ describe('readiness command', () => {
       );
       assert.equal(manifest.rolloutMode, 'hybrid-shadow');
       assert.equal(manifest.comparisonEnabled, true);
-      assert.equal(manifest.legacyMode, false);
     } finally {
       cleanupTempDir(tempDir);
     }
@@ -156,26 +155,22 @@ describe('readiness command', () => {
       );
       assert.equal(manifest.rolloutMode, 'mcp-only');
       assert.equal(manifest.comparisonEnabled, undefined);
-      assert.equal(manifest.legacyMode, false);
     } finally {
       cleanupTempDir(tempDir);
     }
   });
 
-  it('backward compat: infers mode from legacyMode when rolloutMode absent', async () => {
+  it('defaults to mcp-only when rolloutMode is absent', async () => {
     const tempDir = await createTempDir();
     try {
       setupInstall(tempDir);
-      // Simulate old manifest without rolloutMode
       const manifestPath = join(tempDir, '.claude', 'gss', 'runtime-manifest.json');
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
       delete manifest.rolloutMode;
-      manifest.legacyMode = true;
       writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 
-      // Infer: legacyMode true → 'legacy'
-      const inferred = manifest.legacyMode ? 'legacy' : 'mcp-only';
-      assert.equal(inferred, 'legacy');
+      const inferred = manifest.rolloutMode || 'mcp-only';
+      assert.equal(inferred, 'mcp-only');
     } finally {
       cleanupTempDir(tempDir);
     }
@@ -231,31 +226,25 @@ describe('readiness command', () => {
     }
   });
 
-  it('Gate B→C: legacy mode active → NOT READY for retirement', async () => {
+  it('Release C readiness expects artifact and report directories', async () => {
     const tempDir = await createTempDir();
     try {
-      setupInstall(tempDir, { rolloutMode: 'legacy' });
-
-      // Verify the manifest has legacyMode=true
-      const manifestPath = join(tempDir, '.claude', 'gss', 'runtime-manifest.json');
-      const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
-      assert.equal(manifest.legacyMode, true);
-      assert.equal(manifest.rolloutMode, 'legacy');
+      setupInstall(tempDir, { rolloutMode: 'mcp-only' });
+      assert.ok(existsSync(join(tempDir, '.gss', 'artifacts')));
+      assert.ok(existsSync(join(tempDir, '.gss', 'reports')));
     } finally {
       cleanupTempDir(tempDir);
     }
   });
 
-  it('Gate B→C: removal PR check always fails (manual gate)', () => {
-    // This is an intentional design: the removal PR check is always flagged as failing
-    // because it requires human action
+  it('Release C readiness artifact-directory check is pass-shaped', () => {
     const check = {
-      name: 'Removal PR prepared',
-      status: 'fail',
-      message: 'Manual check: Prepare PR to remove legacy specialist generation code',
+      name: 'Artifact directories ready',
+      status: 'pass',
+      message: 'Install created .gss/artifacts and .gss/reports',
     };
-    assert.equal(check.status, 'fail');
-    assert.ok(check.message.includes('Manual'));
+    assert.equal(check.status, 'pass');
+    assert.ok(check.message.includes('.gss/reports'));
   });
 
   it('--json output is valid JSON with expected structure', async () => {
@@ -265,7 +254,7 @@ describe('readiness command', () => {
 
       // Simulate readiness JSON output
       const result = {
-        gate: 'Release A → Release B (hybrid-shadow → mcp-only)',
+        gate: 'Release C steady-state (mcp-only)',
         checks: [
           { name: 'Install health', status: 'pass', message: 'Install manifest present' },
           { name: 'Comparison data', status: 'fail', message: '3/5 required comparison reports' },

@@ -22,7 +22,7 @@ Common issues and solutions for GSS v2 installations.
 1. Re-run the installer: `npx get-shit-secured --claude --local`
 2. Verify the corpus file at `.claude/gss/corpus/owasp-corpus.json`
 3. Check the file is valid JSON: `node -e "JSON.parse(require('fs').readFileSync('.claude/gss/corpus/owasp-corpus.json','utf-8'))"`
-4. If using legacy mode, the corpus is not needed — this is expected
+4. If the file is missing after install, re-run install and then `gss doctor`
 
 ### Settings.json merge conflicts
 
@@ -35,7 +35,7 @@ Common issues and solutions for GSS v2 installations.
 4. If the file has syntax errors, fix them manually and re-run
 5. Check file permissions — the installer needs write access
 
-### Legacy specialist files not cleaned up
+### Retired specialist files still exist after upgrade
 
 **Symptoms**: Old `gss-specialist-*.md` files remain after upgrading to mcp-only
 
@@ -53,9 +53,9 @@ Common issues and solutions for GSS v2 installations.
 
 **Solutions**:
 1. Ensure MCP server is running and accessible
-2. Check the workflow is using MCP-backed consultation (not legacy specialists)
+2. Check the workflow is using MCP-backed consultation
 3. Run `gss doctor` to verify MCP registration
-4. The consultation trace is only produced in `hybrid-shadow` and `mcp-only` modes
+4. The consultation trace is produced by MCP-backed workflows in both supported modes
 
 ### Doctor showing degraded state
 
@@ -95,15 +95,14 @@ Common issues and solutions for GSS v2 installations.
 3. If migration fails, restore from backup
 4. The migration utility writes to a temp file first, validates, then renames
 
-### `--hybrid-shadow` and `--legacy-specialists` conflict
+### Unknown legacy flag at install time
 
-**Symptoms**: Error: `Cannot use --hybrid-shadow and --legacy-specialists together`
+**Symptoms**: Install fails or ignores `--legacy-specialists`
 
 **Solutions**:
-1. Use only one flag at a time
-2. `--legacy-specialists` → legacy mode (specialists only)
-3. `--hybrid-shadow` → hybrid shadow mode (MCP + specialists for comparison)
-4. Default (no flag) → mcp-only mode (MCP only)
+1. Remove the retired `--legacy-specialists` flag
+2. Use default install for `mcp-only`
+3. Use `--hybrid-shadow` only if you want comparison reporting
 
 ## How to Re-install Cleanly
 

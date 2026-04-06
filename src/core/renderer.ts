@@ -2,7 +2,7 @@
  * Workflow Renderer
  *
  * Converts workflow definitions into runtime-specific file content.
- * Supports Claude commands/agents, Codex skills, specialists, and role agents.
+ * Supports Claude commands/agents, Codex skills, and role agents.
  */
 
 import type {
@@ -16,7 +16,6 @@ import type {
   WorkflowId,
   RoleAgentDefinition,
   AgentAccessLevel,
-  DelegationPolicy,
   RoleMcpConsultationLevel,
   RoleMcpConfig,
 } from './types.js';

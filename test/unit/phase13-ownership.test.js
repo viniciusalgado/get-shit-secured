@@ -4,9 +4,8 @@
  * Validates that the module ownership map document is complete and accurate:
  * - Every .ts file in src/ is listed in MODULE_MAP.md
  * - Every file listed in MODULE_MAP.md exists on disk
- * - Deprecated modules are classified correctly
+ * - Release C module cleanup is reflected in the map
  * - Active modules have correct status
- * - Legacy registry is complete
  * - Import rules are documented
  */
 
@@ -142,25 +141,18 @@ describe('Phase 13: MODULE_MAP.md — boundary classification', () => {
 
   const allRows = parseAllTables(moduleMapContent);
 
-  it('1.3 — Deprecated modules are classified correctly', () => {
-    const deprecatedFiles = [
+  it('1.3 — Release C retired modules are absent', () => {
+    const retiredFiles = [
       'delegation-planner.ts',
       'delegation-compliance.ts',
       'delegation-graph.ts',
       'specialist-generator.ts',
+      'legacy-specialist-pipeline.ts',
     ];
 
-    for (const filename of deprecatedFiles) {
+    for (const filename of retiredFiles) {
       const row = allRows.find(r => r.File && r.File.includes(filename));
-      assert.ok(row, `Module ${filename} not found in MODULE_MAP.md tables`);
-      assert.ok(
-        row.Status && row.Status.includes('deprecated'),
-        `${filename} should be deprecated, got: ${row.Status}`
-      );
-      assert.ok(
-        row.Retirement && row.Retirement.includes('Release C'),
-        `${filename} retirement should be Release C, got: ${row.Retirement}`
-      );
+      assert.equal(row, undefined, `${filename} should not appear in MODULE_MAP.md after Release C cleanup`);
     }
   });
 
@@ -191,70 +183,29 @@ describe('Phase 13: MODULE_MAP.md — boundary classification', () => {
     );
   });
 
-  it('1.6 — owasp-ingestion.ts is classified as repurpose', () => {
+  it('1.6 — owasp-ingestion.ts is classified as active', () => {
     const row = allRows.find(r => r.File && r.File.includes('owasp-ingestion.ts'));
     assert.ok(row, 'owasp-ingestion.ts not found in MODULE_MAP.md tables');
     assert.ok(
-      row.Status && row.Status.includes('repurpose'),
-      `owasp-ingestion.ts should be repurpose, got: ${row.Status}`
+      row.Status && row.Status.includes('active'),
+      `owasp-ingestion.ts should be active, got: ${row.Status}`
     );
-  });
-
-});
-
-describe('Phase 13: MODULE_MAP.md — legacy registry', () => {
-
-  it('1.7 — Legacy registry lists all 5 deprecated modules', () => {
-    const expectedModules = [
-      'delegation-planner.ts',
-      'delegation-compliance.ts',
-      'delegation-graph.ts',
-      'specialist-generator.ts',
-      'legacy-specialist-pipeline.ts',
-    ];
-
-    const legacySection = moduleMapContent.split('Legacy Module Registry')[1] || '';
-
-    for (const mod of expectedModules) {
-      assert.ok(
-        legacySection.includes(mod),
-        `Legacy registry should list ${mod}`
-      );
-    }
-  });
-
-  it('1.8 — Each legacy entry has a replacement reference', () => {
-    const legacySection = moduleMapContent.split('Legacy Module Registry')[1]?.split('##')[0] || '';
-    const rows = legacySection.split('\n')
-      .filter(line => line.startsWith('|') && line.endsWith('|') && !line.match(/^\|[\s\-:|]+\|$/) && !line.includes('Module'))
-      .map(line => line.split('|').map(c => c.trim()).filter(Boolean));
-
-    // Skip header row — rows after first data row should have replacement
-    for (const cells of rows) {
-      if (cells.length >= 3) {
-        const replacement = cells[2] || '';
-        assert.ok(
-          replacement.length > 0,
-          `Legacy entry ${cells[0]} should have a replacement reference`
-        );
-      }
-    }
   });
 
 });
 
 describe('Phase 13: MODULE_MAP.md — import rules', () => {
 
-  it('1.9 — Import rules section exists with 7 rules', () => {
+  it('1.7 — Import rules section exists with 6 rules', () => {
     const rulesSection = moduleMapContent.split('Import Rules')[1]?.split('##')[0] || '';
     const numberedRules = rulesSection.match(/^\d+\./gm) || [];
     assert.ok(
-      numberedRules.length >= 7,
-      `Expected at least 7 import rules, found ${numberedRules.length}`
+      numberedRules.length >= 6,
+      `Expected at least 6 import rules, found ${numberedRules.length}`
     );
   });
 
-  it('1.10 — Cross-boundary dependency table documents known imports', () => {
+  it('1.8 — Cross-boundary dependency table documents known imports', () => {
     assert.ok(
       moduleMapContent.includes('Cross-Boundary Dependency Map'),
       'MODULE_MAP.md should have Cross-Boundary Dependency Map section'

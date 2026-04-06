@@ -22,6 +22,7 @@ import { doctor } from './doctor.js';
 import { compareRuns } from './compare-runs.js';
 import { migrateInstall } from './migrate-install.js';
 import { readiness } from './readiness.js';
+import { diffArtifacts } from './diff-artifacts.js';
 import type { RolloutMode } from '../core/types.js';
 import { resolveInstallPlan, detectTargets, resolveCorpus, DEFAULT_WORKFLOWS, type CorpusResolution } from '../core/install-stages.js';
 
@@ -38,7 +39,7 @@ function parseTargetMode(args: string[]): RolloutMode | null {
   const toIdx = args.indexOf('--to');
   if (toIdx === -1 || toIdx + 1 >= args.length) return null;
   const target = args[toIdx + 1];
-  if (['legacy', 'hybrid-shadow', 'mcp-only'].includes(target)) {
+  if (['hybrid-shadow', 'mcp-only'].includes(target)) {
     return target as RolloutMode;
   }
   return null;
@@ -93,7 +94,7 @@ async function main(): Promise<number> {
     const targetMode = parseTargetMode(migrateArgs);
     const dryRun = migrateArgs.includes('--dry-run');
     if (!targetMode) {
-      console.error('Usage: gss migrate --to <legacy|hybrid-shadow|mcp-only> [--dry-run]');
+      console.error('Usage: gss migrate --to <hybrid-shadow|mcp-only> [--dry-run]');
       return 1;
     }
     const result = await migrateInstall(process.cwd(), { targetMode, dryRun });
@@ -110,6 +111,11 @@ async function main(): Promise<number> {
   // Handle readiness subcommand (Phase 11)
   if (firstArg === 'readiness') {
     return await readiness(process.argv.slice(3));
+  }
+
+  // Handle diff-artifacts subcommand (Phase 12)
+  if (firstArg === 'diff-artifacts') {
+    return await diffArtifacts(process.argv.slice(3));
   }
 
   // Handle doctor subcommand
@@ -210,7 +216,6 @@ async function main(): Promise<number> {
 
       const plan = resolveInstallPlan(targets, adapters, corpus, {
         dryRun: true,
-        legacySpecialists: args.legacySpecialists ?? false,
         pkgRoot,
       });
 
@@ -223,7 +228,6 @@ async function main(): Promise<number> {
 
   // Run installation
   const result = await install(adapters, args.scope, cwd, args.dryRun, {
-    legacySpecialists: args.legacySpecialists ?? false,
     hybridShadow: args.hybridShadow ?? false,
   });
 

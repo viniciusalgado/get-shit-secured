@@ -13,6 +13,7 @@
 
 import type { WorkflowId } from '../core/types.js';
 import { validateArtifactEnvelope } from './artifact-envelope-validator.js';
+import { validateWorkflowArtifact } from './workflow-artifact-schemas/index.js';
 
 /**
  * Result of a handoff validation check.
@@ -143,6 +144,12 @@ export function validateHandoffEdge(
     const envelopeResult = validateArtifactEnvelope(artifact, from);
     if (!envelopeResult.valid) {
       errors.push(`Invalid envelope for ${outputName}: ${envelopeResult.errors.join(', ')}`);
+      continue;
+    }
+
+    const artifactResult = validateWorkflowArtifact(from, outputName, artifact);
+    if (!artifactResult.valid) {
+      errors.push(`Invalid artifact payload for ${outputName}: ${artifactResult.errors.join(', ')}`);
       continue;
     }
 

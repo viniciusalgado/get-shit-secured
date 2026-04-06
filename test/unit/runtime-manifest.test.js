@@ -5,7 +5,6 @@
  * Tests that the runtime manifest includes the new Phase 10 fields:
  * - installedWorkflows
  * - installedRoles
- * - legacyMode
  * - mcpServerName
  */
 
@@ -62,7 +61,7 @@ describe('Runtime Manifest — Phase 10 fields (Claude)', () => {
       mkdirSync(join(tempDir, '.gss', 'reports'), { recursive: true });
 
       const result = await installRuntimeArtifacts(
-        targets, [adapter], corpus, { dryRun: false, legacySpecialists: false, specialists: [] }
+        targets, [adapter], corpus, { dryRun: false }
       );
 
       const manifestPath = result.runtimeManifestPaths['claude'];
@@ -89,7 +88,7 @@ describe('Runtime Manifest — Phase 10 fields (Claude)', () => {
       mkdirSync(join(tempDir, '.gss', 'reports'), { recursive: true });
 
       const result = await installRuntimeArtifacts(
-        targets, [adapter], corpus, { dryRun: false, legacySpecialists: false, specialists: [] }
+        targets, [adapter], corpus, { dryRun: false }
       );
 
       const manifestPath = result.runtimeManifestPaths['claude'];
@@ -99,52 +98,6 @@ describe('Runtime Manifest — Phase 10 fields (Claude)', () => {
       assert.equal(manifest.installedRoles.length, 6);
       assert.ok(manifest.installedRoles.includes('gss-mapper'));
       assert.ok(manifest.installedRoles.includes('gss-auditor'));
-    } finally {
-      rmSync(tempDir, { recursive: true, force: true });
-    }
-  });
-
-  it('includes legacyMode as false by default', async () => {
-    const tempDir = await mkdtemp(join(tmpdir(), 'gss-p10-mf-'));
-    try {
-      const adapter = new ClaudeAdapter();
-      const targets = detectTargets([adapter], 'local', tempDir);
-      const corpus = createMockCorpus(tempDir, 'claude');
-
-      mkdirSync(join(tempDir, '.gss', 'artifacts'), { recursive: true });
-      mkdirSync(join(tempDir, '.gss', 'reports'), { recursive: true });
-
-      const result = await installRuntimeArtifacts(
-        targets, [adapter], corpus, { dryRun: false, legacySpecialists: false, specialists: [] }
-      );
-
-      const manifestPath = result.runtimeManifestPaths['claude'];
-      const manifest = JSON.parse(await readFile(manifestPath, 'utf-8'));
-
-      assert.equal(manifest.legacyMode, false);
-    } finally {
-      rmSync(tempDir, { recursive: true, force: true });
-    }
-  });
-
-  it('includes legacyMode as true when legacy mode enabled', async () => {
-    const tempDir = await mkdtemp(join(tmpdir(), 'gss-p10-mf-'));
-    try {
-      const adapter = new ClaudeAdapter();
-      const targets = detectTargets([adapter], 'local', tempDir);
-      const corpus = createMockCorpus(tempDir, 'claude');
-
-      mkdirSync(join(tempDir, '.gss', 'artifacts'), { recursive: true });
-      mkdirSync(join(tempDir, '.gss', 'reports'), { recursive: true });
-
-      const result = await installRuntimeArtifacts(
-        targets, [adapter], corpus, { dryRun: false, legacySpecialists: true, specialists: [] }
-      );
-
-      const manifestPath = result.runtimeManifestPaths['claude'];
-      const manifest = JSON.parse(await readFile(manifestPath, 'utf-8'));
-
-      assert.equal(manifest.legacyMode, true);
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -161,7 +114,7 @@ describe('Runtime Manifest — Phase 10 fields (Claude)', () => {
       mkdirSync(join(tempDir, '.gss', 'reports'), { recursive: true });
 
       const result = await installRuntimeArtifacts(
-        targets, [adapter], corpus, { dryRun: false, legacySpecialists: false, specialists: [] }
+        targets, [adapter], corpus, { dryRun: false }
       );
 
       const manifestPath = result.runtimeManifestPaths['claude'];
@@ -203,7 +156,6 @@ describe('Runtime Manifest — Backward compatibility', () => {
       assert.equal(read.runtime, 'claude');
       assert.equal(read.installedWorkflows, undefined);
       assert.equal(read.installedRoles, undefined);
-      assert.equal(read.legacyMode, undefined);
       assert.equal(read.mcpServerName, undefined);
     } finally {
       rmSync(tempDir, { recursive: true, force: true });

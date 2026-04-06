@@ -1,5 +1,5 @@
 /**
- * Phase 3 Tests — Install stages, --legacy-specialists flag, corpus data files
+ * Phase 3 Tests — Install stages and corpus data files
  */
 
 import { describe, it } from 'node:test';
@@ -9,7 +9,6 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { detectTargets, DEFAULT_WORKFLOWS } from '../../dist/core/install-stages.js';
-import { parseArgs } from '../../dist/cli/parse-args.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -50,21 +49,6 @@ describe('DEFAULT_WORKFLOWS', () => {
     assert.ok(DEFAULT_WORKFLOWS.includes('audit'));
     assert.ok(DEFAULT_WORKFLOWS.includes('verify'));
     assert.ok(DEFAULT_WORKFLOWS.includes('report'));
-  });
-});
-
-// --- CLI: --legacy-specialists flag ---
-
-describe('CLI - --legacy-specialists flag', () => {
-  it('should parse --legacy-specialists flag', () => {
-    const args = parseArgs(['--claude', '--legacy-specialists']);
-    assert.equal(args.legacySpecialists, true);
-    assert.ok(args.runtimes.includes('claude'));
-  });
-
-  it('should default legacySpecialists to false', () => {
-    const args = parseArgs(['--claude']);
-    assert.equal(args.legacySpecialists, false);
   });
 });
 

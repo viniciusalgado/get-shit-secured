@@ -1,20 +1,19 @@
 # GSS Release Notes
 
-This directory contains release notes for each GSS v2 migration release.
+This directory contains release notes for the rollout that led to Release C.
 
 ## Releases
 
 | Release | Status | Description |
 |---------|--------|-------------|
-| [Release A](./release-a.md) | Available | Hybrid shadow mode — MCP + legacy side-by-side |
-| [Release B](./release-b.md) | Current default | MCP-only mode — MCP-backed consultation only |
-| Release C | Planned | Legacy retirement — remove specialist generation code |
+| [Release A](./release-a.md) | Historical | Early hybrid rollout |
+| [Release B](./release-b.md) | Historical | MCP-only default before retirement cleanup |
+| Release C | Current | MCP-backed runtime only; legacy specialist path removed |
 
 ## Quick Reference
 
-- **Current default mode**: `mcp-only` (Release B)
+- **Current default mode**: `mcp-only` (Release C)
 - **Shadow comparison mode**: `--hybrid-shadow` (Release A behavior)
-- **Legacy fallback**: `--legacy-specialists` (pre-migration behavior)
 - **Check current mode**: `gss doctor`
 - **Check release readiness**: `gss readiness`
 - **Migrate between modes**: `gss migrate --to <mode> [--dry-run]`

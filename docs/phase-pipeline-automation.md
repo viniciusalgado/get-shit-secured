@@ -10,6 +10,13 @@ This workflow automates the manual 4-agent loop for migration phases:
 Each stage is forced to read the artifacts produced by the previous stage before it can continue.
 
 Existing `phaseN-plan.md` files are reused by default. If a plan already exists, the runner treats the planning stage as complete and moves on to implementation-dependent work.
+Each stage prompt is also enriched with a document inventory for:
+
+- shared migration docs in `migration-plan/`
+- all available documents for the current phase
+- all available documents for the immediately previous phase
+
+That gives the Claude agent better awareness of what has already been written without forcing every document to be a required input every time.
 
 The scheduler is intentionally bounded:
 
@@ -91,6 +98,12 @@ Tune concurrency explicitly:
 node scripts/run-migration-phase-pipeline.mjs --run --max-parallel 3
 ```
 
+Disable automatic per-phase commits:
+
+```bash
+node scripts/run-migration-phase-pipeline.mjs --run --no-commit-after-phase
+```
+
 ## Output contract
 
 For phase `N`, the runner expects these artifacts:
@@ -105,13 +118,22 @@ The stage fails if its required predecessor artifacts are missing.
 
 That gives you a hard handoff chain instead of hoping the next agent remembered what the previous one produced.
 
+When commit mode is enabled, the runner also attempts a git commit after each phase reaches its terminal selected stage. The commit is intentionally conservative:
+
+- it snapshots git status when that phase first starts running
+- it commits only files whose git status changed after that baseline
+- it excludes generated docs from other phases to avoid sweeping up overlapping planning work
+- it does not try to auto-separate changes on files that were already dirty before the phase started
+
 ## Why this shape is safer
 
 - Dry-run is the default, so you can inspect the queue before spending tokens.
 - The implementer is constrained to the current phase plan.
 - Existing `phaseN-plan.md` files prevent unnecessary replanning.
+- The agent prompt explicitly points Claude at the current phase docs and previous phase docs that already exist.
 - The test planner no longer waits for the implementation report, so it can overlap safely with execution.
 - The validator must write expected-vs-actual verification results into the completion handoff.
+- Per-phase commits are scoped conservatively so unrelated work is less likely to be swept into automation commits.
 - Existing repository instructions still apply because Claude reads the repo-local guidance files during execution.
 
 ## Current limitation

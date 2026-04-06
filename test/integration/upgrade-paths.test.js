@@ -88,7 +88,6 @@ function setupInstall(tempDir, options = {}) {
     gssVersion: '0.1.0',
     installedWorkflows: ['security-review', 'map-codebase', 'audit'],
     installedRoles: ['gss-mapper', 'gss-auditor', 'gss-verifier'],
-    legacyMode: mode === 'legacy',
     mcpServerName: 'gss-security-docs',
     rolloutMode: mode,
     ...(mode === 'hybrid-shadow' ? { comparisonEnabled: true } : {}),
@@ -124,7 +123,7 @@ function setupInstall(tempDir, options = {}) {
 }
 
 describe('Phase 11 — upgrade paths integration', () => {
-  it('fresh install at mcp-only → doctor shows Release B', async () => {
+  it('fresh install at mcp-only → doctor shows Release C', async () => {
     const tempDir = await createTempDir();
     try {
       setupInstall(tempDir, { rolloutMode: 'mcp-only' });
@@ -133,26 +132,8 @@ describe('Phase 11 — upgrade paths integration', () => {
       );
       assert.equal(result, 0);
       const output = logs.join('\n');
-      assert.ok(output.includes('mcp-only') || output.includes('Release B') || output.includes('rollout'),
+      assert.ok(output.includes('mcp-only') || output.includes('Release C') || output.includes('rollout'),
         `Expected rollout mode info. Got:\n${output}`);
-    } finally {
-      cleanupTempDir(tempDir);
-    }
-  });
-
-  it('legacy → migrate to mcp-only → doctor shows mcp-only', async () => {
-    const tempDir = await createTempDir();
-    try {
-      const { runtimeManifestPath } = setupInstall(tempDir, { rolloutMode: 'legacy' });
-
-      // Migrate to mcp-only
-      const migration = await migrateInstall(tempDir, { targetMode: 'mcp-only', dryRun: false });
-      assert.equal(migration.migrated, true);
-
-      // Verify manifest updated
-      const manifest = JSON.parse(readFileSync(runtimeManifestPath, 'utf-8'));
-      assert.equal(manifest.rolloutMode, 'mcp-only');
-      assert.equal(manifest.legacyMode, false);
     } finally {
       cleanupTempDir(tempDir);
     }
@@ -228,7 +209,7 @@ describe('Phase 11 — upgrade paths integration', () => {
   it('doctor shows correct rollout mode after migration', async () => {
     const tempDir = await createTempDir();
     try {
-      setupInstall(tempDir, { rolloutMode: 'legacy' });
+      setupInstall(tempDir, { rolloutMode: 'mcp-only' });
 
       // Migrate to mcp-only
       await migrateInstall(tempDir, { targetMode: 'mcp-only', dryRun: false });
@@ -239,7 +220,7 @@ describe('Phase 11 — upgrade paths integration', () => {
       );
       assert.equal(result, 0);
       const output = logs.join('\n');
-      assert.ok(output.includes('mcp-only') || output.includes('Release B'),
+      assert.ok(output.includes('mcp-only') || output.includes('Release C'),
         `Expected mcp-only after migration. Got:\n${output}`);
     } finally {
       cleanupTempDir(tempDir);

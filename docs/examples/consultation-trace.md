@@ -1,6 +1,6 @@
 # Consultation Trace Examples
 
-Example artifact outputs from GSS v2 MCP-backed workflows.
+Example artifact outputs from GSS Release C MCP-backed workflows.
 
 ## Consultation Trace
 
@@ -46,7 +46,7 @@ Produced by every workflow that consults the MCP. Embedded in the artifact JSON.
 
 ## Consultation Comparison Report
 
-Produced by `gss compare-runs` when comparing MCP and legacy paths.
+Produced by `gss compare-runs` when comparing MCP-backed runs across rollout modes.
 
 ```json
 {
@@ -60,7 +60,7 @@ Produced by `gss compare-runs` when comparing MCP and legacy paths.
     "session-management",
     "error-handling"
   ],
-  "legacyDocs": [
+  "comparisonDocs": [
     "sql-injection-prevention",
     "authentication",
     "error-handling"
@@ -69,14 +69,14 @@ Produced by `gss compare-runs` when comparing MCP and legacy paths.
     "input-validation",
     "session-management"
   ],
-  "legacyOnly": [],
+  "comparisonOnly": [],
   "common": [
     "sql-injection-prevention",
     "authentication",
     "error-handling"
   ],
   "mcpRequiredCoverage": 1.0,
-  "legacyRequiredCoverage": 0.667,
+  "comparisonRequiredCoverage": 0.667,
   "coverageDelta": 0.333,
   "assessment": "mcp-superior"
 }
@@ -86,9 +86,9 @@ Produced by `gss compare-runs` when comparing MCP and legacy paths.
 
 | Verdict | Meaning |
 |---------|---------|
-| `mcp-superior` | MCP path covers significantly more required docs (>5% delta) |
-| `equivalent` | Both paths cover roughly the same docs (within 5% tolerance) |
-| `mcp-inferior` | MCP path covers fewer required docs (>5% delta, negative) |
+| `mcp-superior` | Primary MCP run covers significantly more required docs (>5% delta) |
+| `equivalent` | Compared runs cover roughly the same docs (within 5% tolerance) |
+| `mcp-inferior` | Primary MCP run covers fewer required docs (>5% delta, negative) |
 
 ## Runtime Manifest (Phase 11)
 
@@ -107,7 +107,6 @@ Produced by `gss compare-runs` when comparing MCP and legacy paths.
   "gssVersion": "0.1.0",
   "installedWorkflows": ["security-review", "map-codebase", "threat-model", "audit", "validate-findings", "plan-remediation", "execute-remediation", "verify", "report"],
   "installedRoles": ["gss-mapper", "gss-threat-modeler", "gss-auditor", "gss-remediator", "gss-verifier", "gss-reporter"],
-  "legacyMode": false,
   "mcpServerName": "gss-security-docs",
   "rolloutMode": "mcp-only",
   "comparisonEnabled": false
@@ -118,6 +117,5 @@ Produced by `gss compare-runs` when comparing MCP and legacy paths.
 
 | Value | Behavior |
 |-------|----------|
-| `"legacy"` | Legacy specialist files only, no MCP |
-| `"hybrid-shadow"` | MCP + legacy side-by-side, comparison traces enabled |
-| `"mcp-only"` | MCP only, no legacy files |
+| `"hybrid-shadow"` | MCP-backed comparison mode, comparison traces enabled |
+| `"mcp-only"` | MCP-backed steady-state mode |

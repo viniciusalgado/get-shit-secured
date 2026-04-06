@@ -1,18 +1,17 @@
 # GSS Migration Guide
 
-This guide covers how to migrate between GSS v2 rollout modes.
+This guide covers the supported Release C rollout modes.
 
 ## Rollout Modes
 
 | Mode | Description | Use Case |
 |------|-------------|----------|
-| `legacy` | Legacy specialist files only | Pre-migration behavior, maximum compatibility |
-| `hybrid-shadow` | MCP + legacy side-by-side | Comparison testing, validation before upgrade |
-| `mcp-only` | MCP only, no legacy files | Production default, fastest installs |
+| `mcp-only` | MCP-backed workflows with runtime validation | Default production mode |
+| `hybrid-shadow` | MCP-backed workflows with comparison reporting enabled | Comparison and rollout validation |
 
 ## Upgrading
 
-### From v0.1.0 to mcp-only (Recommended)
+### Fresh Install or Upgrade to `mcp-only` (Recommended)
 
 The recommended path for most users:
 
@@ -25,12 +24,12 @@ npx get-shit-secured --claude --local
 
 # 3. Verify
 gss doctor
-# Should show: mode: mcp-only (Release B)
+# Should show: mode: mcp-only (Release C)
 ```
 
-### From v0.1.0 to hybrid-shadow (Testing First)
+### Enable `hybrid-shadow` for Comparison
 
-If you want to compare MCP vs legacy before committing:
+If you want comparison reporting before settling on steady-state `mcp-only`:
 
 ```bash
 # 1. Install with hybrid shadow mode
@@ -62,14 +61,7 @@ gss migrate --to mcp-only
 gss migrate --to mcp-only --dry-run
 ```
 
-## Falling Back
-
-### To legacy mode
-
-```bash
-# Reinstall with legacy flag
-npx get-shit-secured --claude --local --legacy-specialists
-```
+## Switching Modes
 
 ### To hybrid-shadow from mcp-only
 
@@ -93,15 +85,15 @@ gss compare-runs --mcp <trace-a> --legacy <trace-b>
 
 ## What Changes Between Modes
 
-| Aspect | legacy | hybrid-shadow | mcp-only |
-|--------|--------|---------------|----------|
-| Specialist files | ✅ Generated | ✅ Generated (for comparison) | ❌ Not generated |
-| MCP server | ❌ Not registered | ✅ Registered | ✅ Registered |
-| Corpus snapshot | ❌ Not installed | ✅ Installed | ✅ Installed |
-| Install time | Slow (HTTP fetch) | Medium | Fast |
-| Offline install | ❌ No | ✅ Yes | ✅ Yes |
-| Consultation traces | ❌ No | ✅ Yes (both paths) | ✅ Yes (MCP path) |
-| Comparison reports | ❌ No | ✅ Yes | ❌ No |
+| Aspect | hybrid-shadow | mcp-only |
+|--------|---------------|----------|
+| Runtime path | MCP-backed | MCP-backed |
+| Comparison reports | ✅ Yes | ❌ No |
+| MCP server | ✅ Registered | ✅ Registered |
+| Corpus snapshot | ✅ Installed | ✅ Installed |
+| Offline install | ✅ Yes | ✅ Yes |
+| Consultation traces | ✅ Yes | ✅ Yes |
+| Install health after install | ✅ Healthy | ✅ Healthy |
 
 ## Troubleshooting
 

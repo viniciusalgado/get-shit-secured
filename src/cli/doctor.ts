@@ -231,8 +231,16 @@ function checkRuntime(
 
   // Check 4: Hooks
   const hooksDir = join(supportSubtree, 'hooks');
-  const expectedHooks = ['session-start', 'pre-tool-write', 'pre-tool-edit', 'post-tool-write'];
-  if (existsSync(hooksDir)) {
+  const expectedHooks = runtime === 'claude'
+    ? ['session-start', 'pre-tool-write', 'pre-tool-edit', 'post-tool-write']
+    : [];
+  if (expectedHooks.length === 0) {
+    checks.push({
+      name: 'Hooks',
+      status: 'ok',
+      message: 'not used by this runtime',
+    });
+  } else if (existsSync(hooksDir)) {
     try {
       const hookFiles = readdirSync(hooksDir).filter(f => f.endsWith('.js'));
       const foundHookIds = hookFiles.map(f => f.replace(/\.js$/, ''));
@@ -348,12 +356,13 @@ function checkRuntime(
     });
   }
 
-  // Check 7: Phase 10 diagnostic metadata
+  // Check 7: Phase 10 diagnostic metadata (updated for Phase 11 rollout mode)
   if (runtimeManifest) {
     const workflowCount = (runtimeManifest as RuntimeManifest & { installedWorkflows?: string[] }).installedWorkflows?.length;
     const roleCount = (runtimeManifest as RuntimeManifest & { installedRoles?: string[] }).installedRoles?.length;
     const mcpServerName = (runtimeManifest as RuntimeManifest & { mcpServerName?: string }).mcpServerName;
-    const legacyMode = (runtimeManifest as RuntimeManifest & { legacyMode?: boolean }).legacyMode;
+    const rolloutMode = (runtimeManifest as RuntimeManifest & { rolloutMode?: string }).rolloutMode;
+    const effectiveRolloutMode = rolloutMode || 'mcp-only';
 
     const parts: string[] = [];
     if (workflowCount !== undefined) {
@@ -365,9 +374,9 @@ function checkRuntime(
     if (mcpServerName) {
       parts.push(`MCP: ${mcpServerName}`);
     }
-    if (legacyMode !== undefined) {
-      parts.push(`mode: ${legacyMode ? 'legacy' : 'hybrid'}`);
-    }
+    // Phase 11: display rollout mode with release label
+    const releaseLabel = effectiveRolloutMode === 'hybrid-shadow' ? 'Release C (comparison)' : 'Release C';
+    parts.push(`mode: ${effectiveRolloutMode} (${releaseLabel})`);
 
     checks.push({
       name: 'Diagnostic metadata',

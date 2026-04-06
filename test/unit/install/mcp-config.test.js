@@ -41,7 +41,7 @@ describe('registerMcpServers — Server binary copy', () => {
       mkdirSync(supportSubtree, { recursive: true });
 
       // Create source binary
-      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'mcp');
       mkdirSync(srcDir, { recursive: true });
       writeFileSync(join(srcDir, 'server.js'), '// MCP server test');
 
@@ -72,7 +72,7 @@ describe('registerMcpServers — Server binary copy', () => {
       const rootPath = join(tempDir, 'claude');
       const supportSubtree = join(rootPath, 'gss');
       mkdirSync(supportSubtree, { recursive: true });
-      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'mcp');
       mkdirSync(srcDir, { recursive: true });
       writeFileSync(join(srcDir, 'server.js'), '// test');
 
@@ -105,7 +105,7 @@ describe('registerMcpServers — Server binary copy', () => {
 
       const result = await registerMcpServers([adapter], targets, corpus, {
         dryRun: false,
-        pkgRoot: join(tempDir, 'pkg'), // no dist/mcp/server.js here
+        pkgRoot: join(tempDir, 'pkg'),
       });
 
       assert.ok(result.errors.length > 0);
@@ -121,7 +121,7 @@ describe('registerMcpServers — Server binary copy', () => {
       const rootPath = join(tempDir, 'claude');
       const supportSubtree = join(rootPath, 'gss');
       mkdirSync(supportSubtree, { recursive: true });
-      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'mcp');
       mkdirSync(srcDir, { recursive: true });
       writeFileSync(join(srcDir, 'server.js'), '// test');
 
@@ -150,7 +150,7 @@ describe('registerMcpServers — Config merge', () => {
       mkdirSync(supportSubtree, { recursive: true });
       mkdirSync(join(rootPath), { recursive: true });
 
-      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'mcp');
       mkdirSync(srcDir, { recursive: true });
       writeFileSync(join(srcDir, 'server.js'), '// test');
 
@@ -182,7 +182,7 @@ describe('registerMcpServers — Config merge', () => {
       mkdirSync(join(rootPath), { recursive: true });
       writeFileSync(join(rootPath, 'settings.json'), JSON.stringify({ otherKey: true }));
 
-      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'mcp');
       mkdirSync(srcDir, { recursive: true });
       writeFileSync(join(srcDir, 'server.js'), '// test');
 
@@ -209,7 +209,7 @@ describe('registerMcpServers — Config merge', () => {
       const rootPath = join(tempDir, 'claude');
       const supportSubtree = join(rootPath, 'gss');
       mkdirSync(supportSubtree, { recursive: true });
-      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'mcp');
       mkdirSync(srcDir, { recursive: true });
       writeFileSync(join(srcDir, 'server.js'), '// test');
 
@@ -235,7 +235,7 @@ describe('registerMcpServers — Config merge', () => {
       const rootPath = join(tempDir, 'claude');
       const supportSubtree = join(rootPath, 'gss');
       mkdirSync(supportSubtree, { recursive: true });
-      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'mcp');
       mkdirSync(srcDir, { recursive: true });
       writeFileSync(join(srcDir, 'server.js'), '// test');
 
@@ -288,7 +288,7 @@ describe('registerMcpServers — Error handling', () => {
       mkdirSync(join(rootPath), { recursive: true });
       writeFileSync(join(rootPath, 'settings.json'), 'not-json');
 
-      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'mcp');
       mkdirSync(srcDir, { recursive: true });
       writeFileSync(join(srcDir, 'server.js'), '// test');
 
@@ -385,7 +385,7 @@ describe('registerMcpServers — Multiple runtimes', () => {
       mkdirSync(join(claudeRoot, 'gss'), { recursive: true });
       mkdirSync(join(codexRoot, 'gss'), { recursive: true });
 
-      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'mcp');
       mkdirSync(srcDir, { recursive: true });
       writeFileSync(join(srcDir, 'server.js'), '// test');
 
@@ -433,7 +433,7 @@ describe('registerMcpServers — Multiple runtimes', () => {
       const codexRoot = join(tempDir, 'codex');
       mkdirSync(join(codexRoot, 'gss'), { recursive: true });
 
-      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'mcp');
       mkdirSync(srcDir, { recursive: true });
       writeFileSync(join(srcDir, 'server.js'), '// test');
 

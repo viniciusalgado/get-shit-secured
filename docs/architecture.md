@@ -2,7 +2,7 @@
 
 ## Overview
 
-`get-shit-secured` (gss) is an NPX-installable CLI that installs security-focused workflows, agents, and skills for AI coding runtimes. The architecture is designed around a shared installer core with pluggable runtime adapters.
+`get-shit-secured` (gss) is an NPX-installable CLI that installs security-focused workflows, agents, skills, MCP registration, and runtime validation support for AI coding runtimes. The architecture is designed around a shared installer core with pluggable runtime adapters.
 
 ## Core Design Principles
 
@@ -26,8 +26,7 @@ src/
 │   ├── manifest.ts        # Install manifest handling (v1 + v2 support)
 │   ├── installer.ts       # Main installer orchestration with staged pipeline
 │   ├── renderer.ts        # Workflow rendering for all runtimes
-│   ├── specialist-generator.ts  # OWASP specialist generation
-│   └── owasp-ingestion.ts # OWASP cheat sheet ingestion
+│   └── owasp-ingestion.ts # OWASP cheat sheet ingestion/build helpers
 ├── runtimes/               # Runtime-specific adapters
 │   ├── claude/
 │   │   └── adapter.ts     # Claude runtime adapter (hooks + agents)
@@ -80,7 +79,7 @@ Fixed role-based agents:
 - `gss-verifier` - Fix verification specialist
 - `gss-reporter` - Report aggregator
 
-## Adapter Contract (v2)
+## Adapter Contract (Release C)
 
 Each runtime implements `RuntimeAdapter` with the following methods:
 
@@ -107,7 +106,6 @@ interface RuntimeAdapter {
   // Hooks
   getHooks(): RuntimeHook[];
 
-  // Legacy (deprecated)
   getSettingsMerge?: () => { path: string; content: Record<string, unknown> } | null;
 }
 ```
@@ -173,7 +171,7 @@ interface RuntimeHook {
 4. For each adapter:
    a. Resolve install root
    b. Validate all paths (path safety check)
-   c. Collect entrypoint files, support files, and managed config declarations
+   c. Collect entrypoint files, support files, managed config declarations, and MCP registration
    d. Create support subtree (.claude/gss/ or .codex/gss/)
    e. Write support files
    f. Write entrypoint files
@@ -215,13 +213,17 @@ Each runtime has a support subtree under its root:
   - `session-start.js` - Environment sanity check
   - `pre-tool-write.js` - Sensitive file warnings
   - `pre-tool-edit.js` - Artifact edit warnings
-  - `post-tool-write.js` - Artifact validation
+  - `post-tool-write.js` - Artifact and handoff validation
+- `mcp/` - Installed MCP server entrypoint
+- `corpus/` - Packaged corpus snapshot
 - `runtime-manifest.json` - Runtime metadata
 - `README.md` - Support documentation
 
 ### Codex (`.codex/gss/`)
 - `runtime-manifest.json` - Runtime metadata
 - `README.md` - Support documentation
+- `mcp/` - Installed MCP server entrypoint
+- `corpus/` - Packaged corpus snapshot
 - (Hooks are not yet supported by Codex)
 
 ## Uninstall Flow

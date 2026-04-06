@@ -6,7 +6,7 @@
  * - Doctor output includes workflow count when Phase 10 metadata is present
  * - Doctor output includes role count when Phase 10 metadata is present
  * - Doctor output includes MCP server name when Phase 10 metadata is present
- * - Doctor output includes mode (hybrid/legacy) based on legacyMode flag
+ * - Doctor output includes mode when rollout metadata is present
  * - Doctor handles old manifests without Phase 10 fields gracefully
  */
 
@@ -54,7 +54,7 @@ describe('doctor — Phase 10 diagnostic metadata', () => {
         installedWorkflows: ['security-review', 'map-codebase', 'threat-model', 'audit',
           'validate-findings', 'plan-remediation', 'execute-remediation', 'verify', 'report'],
         installedRoles: ['gss-mapper', 'gss-auditor'],
-        legacyMode: false,
+        rolloutMode: 'mcp-only',
         mcpServerName: 'gss-security-docs',
       });
 
@@ -76,7 +76,7 @@ describe('doctor — Phase 10 diagnostic metadata', () => {
         installedWorkflows: ['audit'],
         installedRoles: ['gss-mapper', 'gss-auditor', 'gss-verifier',
           'gss-remediator', 'gss-threat-modeler', 'gss-reporter'],
-        legacyMode: false,
+        rolloutMode: 'mcp-only',
         mcpServerName: 'gss-security-docs',
       });
 
@@ -97,7 +97,7 @@ describe('doctor — Phase 10 diagnostic metadata', () => {
       setupHealthyInstallWithPhase10(tempDir, {
         installedWorkflows: ['audit'],
         installedRoles: ['gss-mapper'],
-        legacyMode: false,
+        rolloutMode: 'mcp-only',
         mcpServerName: 'gss-security-docs',
       });
 
@@ -112,13 +112,13 @@ describe('doctor — Phase 10 diagnostic metadata', () => {
     }
   });
 
-  it('doctor output includes mcp-only mode when legacyMode is false (Phase 11)', async () => {
+  it('doctor output includes mcp-only mode when rollout metadata is present', async () => {
     const tempDir = await createTempDir();
     try {
       setupHealthyInstallWithPhase10(tempDir, {
         installedWorkflows: ['audit'],
         installedRoles: ['gss-mapper'],
-        legacyMode: false,
+        rolloutMode: 'mcp-only',
         mcpServerName: 'gss-security-docs',
       });
 
@@ -126,30 +126,8 @@ describe('doctor — Phase 10 diagnostic metadata', () => {
         doctor(tempDir, { runtimes: ['claude'] })
       );
       const output = logs.join('\n');
-      // Phase 11: legacyMode false → mcp-only (Release B)
       assert.ok(output.includes('mcp-only'),
         `Should show mcp-only mode. Got: ${output}`);
-    } finally {
-      cleanupTempDir(tempDir);
-    }
-  });
-
-  it('doctor output includes legacy when legacyMode is true', async () => {
-    const tempDir = await createTempDir();
-    try {
-      setupHealthyInstallWithPhase10(tempDir, {
-        installedWorkflows: ['audit'],
-        installedRoles: ['gss-mapper'],
-        legacyMode: true,
-        mcpServerName: 'gss-security-docs',
-      });
-
-      const { logs } = await captureOutputAsync(() =>
-        doctor(tempDir, { runtimes: ['claude'] })
-      );
-      const output = logs.join('\n');
-      assert.ok(output.includes('legacy'),
-        `Should show legacy mode. Got: ${output}`);
     } finally {
       cleanupTempDir(tempDir);
     }

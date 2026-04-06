@@ -40,33 +40,25 @@ describe('Phase 14 — Schema registry completeness', () => {
     const all = getAllExecutionContracts();
     const registeredKeys = new Set(getRegisteredValidators());
 
-    // Known naming mismatches between contracts and validators:
-    // verify contract declares "residual-risks" but validator registers "residual-risk-assessment"
-    const KNOWN_MISMATCHES = new Map([
-      ['verify::residual-risks', 'verify::residual-risk-assessment'],
-    ]);
-
     const mismatches = [];
     for (const [workflowId, contract] of all) {
       for (const artifact of contract.artifacts) {
         const key = `${workflowId}::${artifact.name}`;
-        if (!registeredKeys.has(key) && !KNOWN_MISMATCHES.has(key)) {
+        if (!registeredKeys.has(key)) {
           mismatches.push(`No validator registered for artifact "${key}"`);
         }
       }
     }
 
-    // Assert no unexpected mismatches (known ones are documented in KNOWN_MISMATCHES)
     assert.equal(
       mismatches.length, 0,
-      `Unexpected contract-validator mismatches: ${mismatches.join('; ')}`,
+      `Contract-validator mismatches: ${mismatches.join('; ')}`,
     );
   });
 
   it('S.2: validator count is at least 35 (one per artifact across all contracts)', () => {
     const registered = getRegisteredValidators();
-    // 36 artifacts declared in contracts (9 workflows × 4-5 artifacts each)
-    // + 1 naming variant (residual-risk-assessment vs residual-risks)
+    // 36 artifacts declared across the workflow contracts
     assert.ok(
       registered.length >= 35,
       `Expected at least 35 validators, got ${registered.length}`,

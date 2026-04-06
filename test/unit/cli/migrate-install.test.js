@@ -39,9 +39,8 @@ function setupV2Install(tempDir, options = {}) {
     gssVersion: '0.1.0',
     installedWorkflows: ['security-review', 'audit'],
     installedRoles: ['gss-mapper', 'gss-auditor'],
-    legacyMode: options.legacyMode ?? false,
     mcpServerName: 'gss-security-docs',
-    rolloutMode: options.rolloutMode || (options.legacyMode ? 'legacy' : 'mcp-only'),
+    rolloutMode: options.rolloutMode || 'mcp-only',
     ...options.runtimeManifestOverrides,
   };
 
@@ -86,7 +85,6 @@ describe('migrateInstall', () => {
       const updated = JSON.parse(readFileSync(runtimeManifestPath, 'utf-8'));
       assert.equal(updated.rolloutMode, 'hybrid-shadow');
       assert.equal(updated.comparisonEnabled, true);
-      assert.equal(updated.legacyMode, false);
     } finally {
       cleanupTempDir(tempDir);
     }
@@ -107,27 +105,6 @@ describe('migrateInstall', () => {
       const updated = JSON.parse(readFileSync(runtimeManifestPath, 'utf-8'));
       assert.equal(updated.rolloutMode, 'mcp-only');
       assert.equal(updated.comparisonEnabled, undefined);
-      assert.equal(updated.legacyMode, false);
-    } finally {
-      cleanupTempDir(tempDir);
-    }
-  });
-
-  it('migrates legacy to mcp-only', async () => {
-    const tempDir = await createTempDir();
-    try {
-      const { runtimeManifestPath } = setupV2Install(tempDir, {
-        legacyMode: true,
-        rolloutMode: 'legacy',
-      });
-      const result = await migrateInstall(tempDir, { targetMode: 'mcp-only', dryRun: false });
-
-      assert.equal(result.migrated, true);
-      assert.equal(result.errors.length, 0);
-
-      const updated = JSON.parse(readFileSync(runtimeManifestPath, 'utf-8'));
-      assert.equal(updated.rolloutMode, 'mcp-only');
-      assert.equal(updated.legacyMode, false);
     } finally {
       cleanupTempDir(tempDir);
     }
@@ -257,13 +234,13 @@ describe('migrateInstall', () => {
         runtime: 'claude', scope: 'local', installedAt: '2026-04-01T12:00:00Z',
         version: '0.1.0', corpusVersion: '1.0.0',
         hooks: ['session-start'], managedConfigs: [],
-        rolloutMode: 'mcp-only', legacyMode: false,
+        rolloutMode: 'mcp-only',
       };
       const codexManifest = {
         runtime: 'codex', scope: 'local', installedAt: '2026-04-01T12:00:00Z',
         version: '0.1.0', corpusVersion: '1.0.0',
         hooks: ['session-start'], managedConfigs: [],
-        rolloutMode: 'mcp-only', legacyMode: false,
+        rolloutMode: 'mcp-only',
       };
 
       const claudeManifestPath = join(claudeDir, 'runtime-manifest.json');

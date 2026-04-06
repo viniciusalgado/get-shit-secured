@@ -25,7 +25,7 @@ This workflow cross-checks the application report from `execute-remediation` aga
 - `verification-report.json` - Pass/fail status for each remediation with evidence
 - `regression-analysis.json` - Analysis of whether remediations caused regressions
 - `test-coverage.json` - Test coverage metrics for security fixes
-- `residual-risks.md` - Remaining risks from blocked/skipped items
+- `residual-risk-assessment.json` - Remaining risks from blocked/skipped items
 
 ## Next Step
 

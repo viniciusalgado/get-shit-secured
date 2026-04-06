@@ -1,6 +1,6 @@
 # get-shit-secured (gss)
 
-Security workflow installer for AI coding runtimes. Installs security-focused agents, skills, and workflows for Claude, Codex, and other AI coding environments.
+Security workflow installer for AI coding runtimes. GSS installs workflow-first prompts, MCP-backed security consultation, and runtime validation support for Claude and Codex.
 
 ## Quick Start
 
@@ -25,13 +25,14 @@ npx get-shit-secured --uninstall
 
 ## Runtime Targets
 
-- `--claude`: Install Claude Code agents and commands
-- `--codex`: Install Codex skills
+- `--claude`: Install Claude Code commands, agents, hooks, and MCP registration
+- `--codex`: Install Codex skills and MCP registration
 - `--all`: Install for all supported runtimes
 
 ## Options
 
 - `--dry-run`: Show what would be installed without making changes
+- `--hybrid-shadow`: Keep comparison-oriented MCP mode enabled
 - `--uninstall`: Remove previously installed GSS files
 
 ## Structure
@@ -40,23 +41,24 @@ Installed files are organized under:
 
 ### Claude Runtime
 - `.claude/commands/gss/` - Claude slash commands
-- `.claude/agents/` - Claude security agents
-- `.claude/agents/gss-*.md` - Role-based agents (mapper, auditor, etc.)
-- `.claude/agents/gss-specialist-*.md` - OWASP specialist agents
+- `.claude/agents/gss-*.md` - Workflow and role agents
 - `.claude/gss/` - Runtime support subtree
   - `hooks/` - Hook scripts for session lifecycle
+  - `mcp/` - Installed MCP server entrypoint
+  - `corpus/` - Packaged OWASP corpus snapshot
   - `runtime-manifest.json` - Runtime metadata
 
 ### Codex Runtime
-- `.codex/skills/gss-*/` - Codex workflow skills
-- `.codex/skills/gss-*/SKILL.md` - Role-based skills
-- `.codex/skills/gss-specialist-*/` - OWASP specialist skills
+- `.codex/skills/gss-*/` - Codex workflow and role skills
 - `.codex/gss/` - Runtime support subtree
+  - `mcp/` - Installed MCP server entrypoint
+  - `corpus/` - Packaged OWASP corpus snapshot
   - `runtime-manifest.json` - Runtime metadata
 
 ### Project Artifacts
 - `.gss/install-manifest.json` - Installation record
-- `.gss/artifacts/` - Generated security artifacts (created during workflow execution)
+- `.gss/artifacts/` - Generated workflow artifacts
+- `.gss/reports/` - Generated reports and summaries
 
 ## Features
 
@@ -71,20 +73,20 @@ GSS includes six role-based agents that specialize in different security domains
 5. **gss-verifier** - Verifies security fixes
 6. **gss-reporter** - Generates comprehensive security reports
 
-### OWASP Specialists
+### MCP-Backed Consultation
 
-Each OWASP Cheat Sheet becomes a specialist agent/skill with:
-- Domain-specific security guidance
-- Trigger phrases for activation
-- Delegation rules to related specialists
-- Evidence requirements for findings
+Workflows consult the packaged OWASP corpus through the GSS MCP server:
+- Consultation planning is doc-based, not specialist-based
+- Required workflows emit consultation traces inside their artifacts
+- Runtime validation checks artifact envelopes and handoff compatibility
+- Fresh installs are healthy without requiring a first workflow run
 
 ### Runtime Hooks (Claude)
 
 Claude installations include hooks for:
 - **SessionStart**: Environment sanity check
 - **PreToolUse**: Warnings on sensitive file operations
-- **PostToolUse**: Artifact validation
+- **PostToolUse**: Artifact and handoff validation
 
 ## Security Guarantees
 
@@ -105,7 +107,7 @@ Claude installations include hooks for:
 
 ## Workflows
 
-Available security workflows (run in order):
+Available security workflows:
 
 1. `gss-security-review` - Change-scoped security review for current diff or a commit patch (recommended first for security-relevant changes)
 2. `gss-map-codebase` - Analyze codebase structure
@@ -116,7 +118,7 @@ Available security workflows (run in order):
 7. `gss-verify` - Verify the fixes
 8. `gss-report` - Generate reports
 
-`security-review` is a lightweight supplement to the full chain. In v1, invocation remains explicit.
+`security-review` is a lightweight supplement to the full chain and remains explicit.
 
 ## Development
 
@@ -136,7 +138,7 @@ npm run lint
 
 ## Architecture
 
-See [ARCHITECTURE.md](docs/architecture.md) for detailed design documentation.
+See [docs/architecture.md](docs/architecture.md) for detailed design documentation.
 
 See [AGENTS.md](AGENTS.md) for agent behavior guidelines.
 

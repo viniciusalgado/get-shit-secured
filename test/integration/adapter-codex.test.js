@@ -83,7 +83,7 @@ describeOrSkip('Phase 10 — Codex adapter integration', () => {
     const { tempDir, rootPath, supportSubtree } = await setupCodexIntegrationEnv();
     try {
       const adapter = new CodexAdapter();
-      await install([adapter], 'local', tempDir, false, { legacySpecialists: false });
+      await install([adapter], 'local', tempDir, false);
 
       const runtimeManifestPath = join(supportSubtree, 'runtime-manifest.json');
       assert.ok(existsSync(runtimeManifestPath), 'Runtime manifest should exist');
@@ -92,7 +92,6 @@ describeOrSkip('Phase 10 — Codex adapter integration', () => {
       assert.ok(Array.isArray(manifest.installedWorkflows), 'Should have installedWorkflows');
       assert.ok(Array.isArray(manifest.installedRoles), 'Should have installedRoles');
       assert.equal(manifest.installedRoles.length, 6, 'Should have 6 roles');
-      assert.equal(manifest.legacyMode, false);
       assert.equal(manifest.mcpServerName, 'gss-security-docs');
     } finally {
       rmSync(tempDir, { recursive: true, force: true });

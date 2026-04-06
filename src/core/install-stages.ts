@@ -26,9 +26,11 @@ import type {
   FileWriteResult,
   InstallFile,
   InstallPlan,
+  RolloutMode,
 } from './types.js';
 import { loadCorpusSnapshot, type LoadedSnapshot } from '../corpus/snapshot-loader.js';
 import { isCorpusSnapshot } from '../corpus/schema.js';
+import { getAllRoles } from '../catalog/roles/registry.js';
 
 /**
  * Default workflows to install.
@@ -44,6 +46,18 @@ export const DEFAULT_WORKFLOWS: WorkflowId[] = [
   'verify',
   'report',
 ];
+
+/**
+ * Compute the rollout mode from CLI flags.
+ * Priority: hybridShadow > default (mcp-only)
+ *
+ * @param args - CLI flags relevant to rollout mode
+ * @returns The computed RolloutMode
+ */
+export function computeRolloutMode(args: { hybridShadow?: boolean }): RolloutMode {
+  if (args.hybridShadow) return 'hybrid-shadow';
+  return 'mcp-only';
+}
 
 /**
  * Stage 0 output: detected installation targets.
@@ -169,16 +183,15 @@ export async function resolveCorpus(
 /**
  * Stage 2: Install runtime artifacts.
  *
- * Writes commands/agents, hooks, support files, and optionally copies the corpus snapshot.
- * When `legacySpecialists` is true, true, also fetches and generates specialist prompt files.
+ * Writes commands/agents, hooks, support files, and copies the corpus snapshot.
  */
 export async function installRuntimeArtifacts(
   targets: TargetDetection,
   adapters: RuntimeAdapter[],
   corpus: CorpusResolution | null,
-  options: { dryRun: boolean; legacySpecialists?: boolean; specialists?: unknown[] }
+  options: { dryRun: boolean; hybridShadow?: boolean }
 ): Promise<InstalledArtifacts> {
-  const { dryRun, legacySpecialists = false, specialists = [] } = options;
+  const { dryRun } = options;
   const errors: string[] = [];
   const filesByRuntime: Partial<Record<RuntimeTarget, string[]>> = {};
   const rootsByRuntime: Partial<Record<RuntimeTarget, string>> = {};
@@ -186,6 +199,11 @@ export async function installRuntimeArtifacts(
   const hooksByRuntime: Partial<Record<RuntimeTarget, string[]>> = {};
   const runtimeManifestPaths: Partial<Record<RuntimeTarget, string>> = {};
   let totalFilesCreated = 0;
+
+  if (!dryRun) {
+    await mkdir(join(targets.cwd, '.gss', 'artifacts'), { recursive: true });
+    await mkdir(join(targets.cwd, '.gss', 'reports'), { recursive: true });
+  }
 
   for (const adapter of adapters) {
     const runtime = adapter.runtime;
@@ -221,12 +239,7 @@ export async function installRuntimeArtifacts(
     }
 
     // Collect adapter output
-    const collected = collectAdapterOutput(
-      adapter,
-      specialists,
-      DEFAULT_WORKFLOWS,
-      legacySpecialists ?? false
-    );
+    const collected = collectAdapterOutput(adapter, DEFAULT_WORKFLOWS);
     const { entrypointFiles, supportFiles, managedJsonPatches, managedTextBlocks, hooks } = collected;
 
     // Write support files
@@ -330,6 +343,7 @@ export async function installRuntimeArtifacts(
 
     if (!dryRun) {
       try {
+        const rolloutMode = computeRolloutMode({ hybridShadow: options.hybridShadow });
         const runtimeManifest = {
           runtime,
           scope: targets.scope,
@@ -343,6 +357,12 @@ export async function installRuntimeArtifacts(
           mcpServerPath: corpus ? join(supportSubtreePath, 'mcp', 'server.js') : null,
           mcpConfigPath: join(rootPath, 'settings.json'),
           gssVersion: '0.1.0',
+          // Phase 10 additions for diagnostic metadata:
+          installedWorkflows: DEFAULT_WORKFLOWS,
+          installedRoles: getAllRoles().map(r => r.id),
+          mcpServerName: 'gss-security-docs',
+          rolloutMode,
+          ...(rolloutMode === 'hybrid-shadow' ? { comparisonEnabled: true } : {}),
         };
         await writeFile(runtimeManifestPath, JSON.stringify(runtimeManifest, null, 2), 'utf-8');
       } catch (error) {
@@ -383,7 +403,7 @@ export function resolveInstallPlan(
   targets: TargetDetection,
   adapters: RuntimeAdapter[],
   corpus: CorpusResolution | null,
-  options: { dryRun: boolean; legacySpecialists: boolean; pkgRoot: string }
+  options: { dryRun: boolean; pkgRoot: string }
 ): InstallPlan {
   const fileOps: InstallPlan['fileOps'] = [];
   const configOps: InstallPlan['configOps'] = [];
@@ -423,20 +443,9 @@ export function resolveInstallPlan(
       supportFiles.push(join(supportSubtreePath, file.relativePath));
     }
 
-    // Role agent files
-    const adapterWithRoles = adapter as unknown as {
-      getRoleAgentFiles?: () => RuntimeFile[];
-      getRoleSkillFiles?: () => RuntimeFile[];
-    };
-    if (typeof adapterWithRoles.getRoleAgentFiles === 'function') {
-      for (const file of adapterWithRoles.getRoleAgentFiles() ?? []) {
-        entrypointFiles.push(join(rootPath, file.relativePath));
-      }
-    }
-    if (typeof adapterWithRoles.getRoleSkillFiles === 'function') {
-      for (const file of adapterWithRoles.getRoleSkillFiles() ?? []) {
-        entrypointFiles.push(join(rootPath, file.relativePath));
-      }
+    // Role agent/skill files (via RuntimeAdapter interface)
+    for (const file of adapter.getRoleFiles()) {
+      entrypointFiles.push(join(rootPath, file.relativePath));
     }
 
     // Hooks
@@ -482,20 +491,17 @@ export function resolveInstallPlan(
       mcpConfigPatch,
     });
 
-    // Legacy cleanup
-    if (!options.legacySpecialists) {
-      const adapterWithExtras = adapter as unknown as {
-        getSpecialistFiles?: () => InstallFile[];
-      };
-      if (typeof adapterWithExtras.getSpecialistFiles === 'function') {
-        const specialistFiles = adapterWithExtras.getSpecialistFiles() ?? [];
-        if (specialistFiles.length > 0) {
-          cleanupOps.push({
-            runtime,
-            files: specialistFiles.map(f => join(rootPath, f.relativePath)),
-            description: `${specialistFiles.length} legacy specialist files`,
-          });
-        }
+    const adapterWithExtras = adapter as unknown as {
+      getSpecialistFiles?: () => InstallFile[];
+    };
+    if (typeof adapterWithExtras.getSpecialistFiles === 'function') {
+      const specialistFiles = adapterWithExtras.getSpecialistFiles() ?? [];
+      if (specialistFiles.length > 0) {
+        cleanupOps.push({
+          runtime,
+          files: specialistFiles.map(f => join(rootPath, f.relativePath)),
+          description: `${specialistFiles.length} retired specialist files`,
+        });
       }
     }
   }
@@ -618,8 +624,12 @@ export async function verifyInstall(
 
     // Check 5: Hooks
     const hooksDir = join(supportSubtree, 'hooks');
-    const expectedHookIds = ['session-start', 'pre-tool-write', 'pre-tool-edit', 'post-tool-write'];
-    if (existsSync(hooksDir)) {
+    const expectedHookIds = runtime === 'claude'
+      ? ['session-start', 'pre-tool-write', 'pre-tool-edit', 'post-tool-write']
+      : [];
+    if (expectedHookIds.length === 0) {
+      // Runtime has no hook support.
+    } else if (existsSync(hooksDir)) {
       try {
         const hookFiles = readdirSync(hooksDir).filter(f => f.endsWith('.js'));
         const foundHookIds = hookFiles.map(f => f.replace(/\.js$/, ''));
@@ -678,9 +688,7 @@ export async function verifyInstall(
  */
 function collectAdapterOutput(
   adapter: RuntimeAdapter,
-  specialists: unknown[],
-  workflows: WorkflowId[],
-  legacySpecialists: boolean
+  workflows: WorkflowId[]
 ): {
   entrypointFiles: RuntimeFile[];
   supportFiles: RuntimeFile[];
@@ -690,16 +698,6 @@ function collectAdapterOutput(
 } {
   const entrypointFiles: RuntimeFile[] = [];
   const supportFiles: RuntimeFile[] = [];
-
-  // Only inject specialists when legacy mode is active
-  if (legacySpecialists) {
-    const adapterWithExtras = adapter as unknown as {
-      setSpecialists(specialists: unknown[]): void;
-    };
-    if (typeof adapterWithExtras.setSpecialists === 'function') {
-      adapterWithExtras.setSpecialists(specialists);
-    }
-  }
 
   // Get placeholder files
   const placeholderFiles = adapter.getPlaceholderFiles();
@@ -727,34 +725,9 @@ function collectAdapterOutput(
   const adapterSupportFiles = adapter.getSupportFiles();
   supportFiles.push(...adapterSupportFiles);
 
-  // Get specialist files only in legacy mode
-  if (legacySpecialists) {
-    const adapterWithExtras = adapter as unknown as {
-      getSpecialistFiles?: () => InstallFile[];
-    };
-    if (typeof adapterWithExtras.getSpecialistFiles === 'function') {
-      const specialistFiles = adapterWithExtras.getSpecialistFiles() ?? [];
-      for (const file of specialistFiles) {
-        entrypointFiles.push({
-          relativePath: file.relativePath,
-          content: file.content,
-          category: 'entrypoint',
-          overwritePolicy: file.merge ? 'merge-json' : 'create-only',
-        });
-      }
-    }
-  }
-
-  // Get role agent/skill files
-  const adapterWithRoles = adapter as unknown as {
-    getRoleAgentFiles?: () => RuntimeFile[];
-    getRoleSkillFiles?: () => RuntimeFile[];
-  };
-  if (typeof adapterWithRoles.getRoleAgentFiles === 'function') {
-    entrypointFiles.push(...(adapterWithRoles.getRoleAgentFiles() ?? []));
-  }
-  if (typeof adapterWithRoles.getRoleSkillFiles === 'function') {
-    entrypointFiles.push(...(adapterWithRoles.getRoleSkillFiles() ?? []));
+  // Get role files via the RuntimeAdapter interface method
+  for (const file of adapter.getRoleFiles()) {
+    entrypointFiles.push(file);
   }
 
   // Get managed configs and hooks

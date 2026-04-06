@@ -94,7 +94,7 @@ export async function registerMcpServers(
     const mcpDir = join(supportSubtree, 'mcp');
 
     // Copy compiled MCP server to support subtree
-    const srcServerPath = resolve(options.pkgRoot, 'dist', 'mcp', 'server.js');
+    const srcServerPath = resolve(options.pkgRoot, 'mcp', 'server.js');
     const destServerPath = join(mcpDir, 'server.js');
 
     try {

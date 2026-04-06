@@ -1,6 +1,6 @@
 # Module Ownership Map
 
-This document records every module's boundary owner, status, and retirement target.
+This document records every active module's boundary owner and status.
 It is the authoritative reference for import boundary rules and technical debt tracking.
 
 ---
@@ -22,8 +22,7 @@ It is the authoritative reference for import boundary rules and technical debt t
 3. **Role (B)** must NOT import Knowledge (C) modules directly
 4. **Installer (D)** may import from all boundaries (it is the integrator)
 5. **Artifact (E)** may import types from all boundaries but must not depend on runtime state
-6. **Compatibility** modules may import from Knowledge (C) legacy modules only
-7. `types.ts` is cross-cutting and may be imported by any boundary
+6. `types.ts` is cross-cutting and may be imported by any boundary
 
 ---
 
@@ -35,7 +34,7 @@ It is the authoritative reference for import boundary rules and technical debt t
 |------|----------|--------|------------|-------|
 | `types.ts` | Cross-cutting | active | never | All type definitions; shared across boundaries |
 | `renderer.ts` | A (Workflow) | active | never | Workflow/role rendering to runtime files |
-| `installer.ts` | D (Installer) | active | never | Install orchestration; imports legacy facade |
+| `installer.ts` | D (Installer) | active | never | Install orchestration |
 | `install-stages.ts` | D (Installer) | active | never | Install pipeline stages |
 | `manifest.ts` | D (Installer) | active | never | Manifest read/write |
 | `paths.ts` | D (Installer) | active | never | Path resolution utilities |
@@ -45,11 +44,7 @@ It is the authoritative reference for import boundary rules and technical debt t
 | `consultation-comparator.ts` | C (Knowledge) | active | never | Trace comparison for rollout |
 | `stack-normalizer.ts` | C (Knowledge) | active | never | Stack normalization |
 | `issue-taxonomy.ts` | C (Knowledge) | active | never | Issue classification |
-| `delegation-planner.ts` | C (Knowledge) | **deprecated** | Release C | Old planner operating on SpecialistDefinition[] |
-| `delegation-compliance.ts` | C (Knowledge) | **deprecated** | Release C | Old compliance operating on SpecialistExecutionRecord[] |
-| `delegation-graph.ts` | C (Knowledge) | **deprecated** | Release C | Old delegation graph |
-| `specialist-generator.ts` | C (Knowledge) | **deprecated** | Release C | Specialist generation for --legacy-specialists |
-| `owasp-ingestion.ts` | C (Knowledge) | **repurpose** | Release C (install-time path) | Dual-use: build-time + legacy install-time |
+| `owasp-ingestion.ts` | C (Knowledge) | active | never | Corpus build helpers and ingestion utilities |
 
 ### `src/corpus/` — Corpus build and runtime
 
@@ -93,7 +88,7 @@ It is the authoritative reference for import boundary rules and technical debt t
 | File | Boundary | Status | Retirement | Notes |
 |------|----------|--------|------------|-------|
 | `mcp-config.ts` | D (Installer) | active | never | MCP registration stage |
-| `legacy-cleanup.ts` | D (Installer) | active | Release C (after full rollout) | Legacy artifact cleanup |
+| `legacy-cleanup.ts` | D (Installer) | active | never | Cleanup of retired specialist artifacts during reinstall/uninstall |
 
 ### `src/hooks/` — Hook validators
 
@@ -108,7 +103,7 @@ It is the authoritative reference for import boundary rules and technical debt t
 |------|----------|--------|------------|-------|
 | `workflows/registry.ts` | A (Workflow) | active | never | Workflow registry |
 | `workflows/*/definition.ts` (9 files) | A (Workflow) | active | never | Workflow definitions |
-| `specialists/mapping.ts` | C (Knowledge) | **build-only** | Release C (runtime use) | Curated overrides; consumed by corpus build only |
+| `specialists/mapping.ts` | C (Knowledge) | **build-only** | never | Curated overrides; consumed by corpus build only |
 | `roles/registry.ts` | B (Role) | active | never | Role catalog |
 
 ### `src/runtimes/` — Runtime adapters
@@ -131,22 +126,12 @@ It is the authoritative reference for import boundary rules and technical debt t
 | `readiness.ts` | D (Installer) | active | never | Readiness check CLI |
 | `diff-artifacts.ts` | D (Installer) | active | never | Artifact diff CLI |
 
-### `src/compatibility/` — Legacy compatibility
-
-| File | Boundary | Status | Retirement | Notes |
-|------|----------|--------|------------|-------|
-| `legacy-specialist-pipeline.ts` | Compatibility | **deprecated** | Release C | Facade re-exporting legacy modules |
-
----
-
 ## Cross-Boundary Dependency Map
 
 ### Acceptable Cross-Boundary Imports
 
 | Importer | Imported From | Module | Justification |
 |----------|--------------|--------|---------------|
-| `installer.ts` (D) | `specialist-generator.ts` (C) via facade | `generateAllSpecialists` | Installer is integrator; gated by `--legacy-specialists` |
-| `installer.ts` (D) | `owasp-ingestion.ts` (C) | `fetchAllCheatSheets` | Installer is integrator; gated by `--legacy-specialists` |
 | `renderer.ts` (A) | `types.ts` (Cross-cutting) | Type imports only | Types are shared |
 | `mcp/tools/consultation-plan.ts` (C) | `stack-normalizer.ts` (C) | `normalizeStack` | Same boundary |
 | `install-stages.ts` (D) | `corpus/*` (C) | Corpus resolution | Installer is integrator |
@@ -158,23 +143,9 @@ It is the authoritative reference for import boundary rules and technical debt t
 None beyond the acceptable cross-boundary imports listed above.
 The import boundary audit script (`npm run audit-boundaries`) validates these rules.
 
----
-
-## Legacy Module Registry
-
-| Module | Deprecated Since | Replacement | Removal Target |
-|--------|-----------------|-------------|----------------|
-| `delegation-planner.ts` | Phase 13 | `consultation-planner.ts` | Release C |
-| `delegation-compliance.ts` | Phase 13 | `consultation-compliance.ts` | Release C |
-| `delegation-graph.ts` | Phase 13 | Doc relationships in corpus `relatedDocIds` | Release C |
-| `specialist-generator.ts` | Phase 13 | MCP consultation pipeline | Release C |
-| `legacy-specialist-pipeline.ts` | Phase 13 | Remove entirely | Release C |
-
----
-
 ## Dual-Use Modules
 
 | Module | Build-Time Use | Install-Time Use | Notes |
 |--------|---------------|-----------------|-------|
-| `owasp-ingestion.ts` | `snapshot-builder.ts` imports `fetchCheatSheet`, `parseCheatSheetHtml`, `urlToId`, `urlToTitle` | `installer.ts` imports `fetchAllCheatSheets` (legacy only) | Install-time path removed in Release C |
-| `mapping.ts` | `catalog.ts` imports curated overrides | None (should not be imported at runtime) | Runtime use deprecated in Phase 13 |
+| `owasp-ingestion.ts` | `snapshot-builder.ts` imports `fetchCheatSheet`, `parseCheatSheetHtml`, `urlToId`, `urlToTitle` | None | Install-time fetch path retired in Release C |
+| `mapping.ts` | `catalog.ts` imports curated overrides | None | Runtime use retired in Release C |

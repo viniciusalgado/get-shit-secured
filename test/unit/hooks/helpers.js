@@ -9,6 +9,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
 
+const cjsRequire = createRequire(import.meta.url);
+
 export function getHookCommand(hookId) {
   const adapter = new ClaudeAdapter();
   const hooks = adapter.getHooks();
@@ -31,15 +33,14 @@ export async function cleanupTempDir(dir) {
 }
 
 export function executeHook(commandStr, context) {
-  const script = new vm.Script(
-    'const { existsSync, readFileSync, unlinkSync, readdirSync, mkdirSync, writeFileSync } = require("fs");\n' +
-    'const { join } = require("path");\n' +
-    'module.exports = async function(context) {\n' +
-    commandStr + '\n};',
-    { filename: 'hook-runner.js' }
-  );
-  const mod = script.runInThisContext({ console, process, require, __filename: '/hook-runner.js' });
-  return mod(context);
+  // Hook command strings use CJS require('fs') / require('path').
+  // We inject a CJS require function via new Function parameters.
+  const fn = new Function('context', 'require', 'console', 'process', `
+    return (async () => {
+      ${commandStr}
+    })();
+  `);
+  return fn(context, cjsRequire, console, process);
 }
 
 export function captureOutput(fn) {

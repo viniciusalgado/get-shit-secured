@@ -83,7 +83,7 @@ describeOrSkip('Phase 10 — Claude adapter integration', () => {
     const { tempDir, rootPath, supportSubtree } = await setupClaudeIntegrationEnv();
     try {
       const adapter = new ClaudeAdapter();
-      const result = await install([adapter], 'local', tempDir, false, { legacySpecialists: false });
+      const result = await install([adapter], 'local', tempDir, false);
 
       // Check runtime manifest
       const runtimeManifestPath = join(supportSubtree, 'runtime-manifest.json');
@@ -94,7 +94,6 @@ describeOrSkip('Phase 10 — Claude adapter integration', () => {
       assert.ok(manifest.installedWorkflows.length > 0, 'Should have at least 1 workflow');
       assert.ok(Array.isArray(manifest.installedRoles), 'Should have installedRoles');
       assert.equal(manifest.installedRoles.length, 6, 'Should have 6 roles');
-      assert.equal(manifest.legacyMode, false);
       assert.equal(manifest.mcpServerName, 'gss-security-docs');
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
@@ -105,7 +104,7 @@ describeOrSkip('Phase 10 — Claude adapter integration', () => {
     const { tempDir, rootPath, supportSubtree } = await setupClaudeIntegrationEnv();
     try {
       const adapter = new ClaudeAdapter();
-      await install([adapter], 'local', tempDir, false, { legacySpecialists: false });
+      await install([adapter], 'local', tempDir, false);
 
       // Check role agent files exist
       assert.ok(existsSync(join(rootPath, 'agents', 'gss-mapper.md')), 'gss-mapper.md should exist');
@@ -121,7 +120,7 @@ describeOrSkip('Phase 10 — Claude adapter integration', () => {
     const { tempDir, rootPath, supportSubtree } = await setupClaudeIntegrationEnv();
     try {
       const adapter = new ClaudeAdapter();
-      await install([adapter], 'local', tempDir, false, { legacySpecialists: false });
+      await install([adapter], 'local', tempDir, false);
 
       // Doctor may return non-zero due to test MCP binary setup (known test limitation)
       // The important thing is it doesn't crash
@@ -146,20 +145,6 @@ describeOrSkip('Phase 10 — Claude adapter integration', () => {
         const entries = readdirSync(gssDir);
         assert.equal(entries.length, 0, '.gss/ should be empty after uninstall');
       }
-    } finally {
-      rmSync(tempDir, { recursive: true, force: true });
-    }
-  });
-
-  it('install with --legacy-specialists sets legacyMode true', async () => {
-    const { tempDir, rootPath, supportSubtree } = await setupClaudeIntegrationEnv();
-    try {
-      const adapter = new ClaudeAdapter();
-      await install([adapter], 'local', tempDir, false, { legacySpecialists: true });
-
-      const runtimeManifestPath = join(supportSubtree, 'runtime-manifest.json');
-      const manifest = JSON.parse(readFileSync(runtimeManifestPath, 'utf-8'));
-      assert.equal(manifest.legacyMode, true, 'legacyMode should be true');
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }

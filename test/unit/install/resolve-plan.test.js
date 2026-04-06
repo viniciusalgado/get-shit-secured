@@ -206,18 +206,6 @@ describe('resolveInstallPlan — Cleanup operations', () => {
     assert.ok(plan.cleanupOps[0].files.length > 0);
   });
 
-  it('no cleanup when legacySpecialists flag is set', () => {
-    const adapter = createMockAdapter();
-    adapter.getSpecialistFiles = () => [
-      { relativePath: 'agents/gss-specialist-sql.md', content: 'x' },
-    ];
-    const targets = makeTargets();
-    const plan = resolveInstallPlan(targets, [adapter], makeCorpus(), {
-      dryRun: false, legacySpecialists: true, pkgRoot: '/pkg',
-    });
-    assert.equal(plan.cleanupOps.length, 0);
-  });
-
   it('cleanup description is human-readable', () => {
     const adapter = createMockAdapter();
     adapter.getSpecialistFiles = () => [
