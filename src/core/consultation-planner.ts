@@ -56,9 +56,12 @@ const SCORE_WEIGHTS = {
   WORKFLOW_BINDING_OPTIONAL: 5,
   STACK_MATCH: 15,
   ISSUE_TAG_MATCH: 20,
+  ISSUE_TAG_BOOST_EXISTING: 12,
   RELATED_DOC: 8,
   FALLBACK_DEFAULT: 3,
 } as const;
+
+const MAX_RELATED_FOLLOWUP_FANOUT = 8;
 
 /**
  * Internal candidate during plan computation.
@@ -211,13 +214,26 @@ function expandFromIssueTags(
   if (classifiedTags.length === 0) return;
 
   for (const doc of snapshot.snapshot.documents) {
-    if (candidates.has(doc.id)) continue;
     if (doc.issueTypes.length === 0) continue;
 
-    // Check if any classified tag matches this doc's issue types
-    const match = classifiedTags.find(tag =>
-      doc.issueTypes.includes(tag)
-    );
+    const match = classifiedTags.find(tag => doc.issueTypes.includes(tag));
+
+    if (!match) continue;
+
+    const confidence = doc.issueTypeConfidence?.[match];
+    const existing = candidates.get(doc.id);
+
+    if (existing) {
+      existing.score += SCORE_WEIGHTS.ISSUE_TAG_BOOST_EXISTING;
+      existing.reason = `${existing.reason}; issue tag match: ${match}`;
+      if (
+        existing.tier === 'optional' &&
+        (confidence === 'curated' || confidence === 'inferred-high')
+      ) {
+        existing.tier = 'required';
+      }
+      continue;
+    }
 
     if (match) {
       candidates.set(doc.id, {
@@ -225,8 +241,8 @@ function expandFromIssueTags(
         docUri: doc.uri,
         score: SCORE_WEIGHTS.ISSUE_TAG_MATCH,
         signalType: 'issue-tag',
-        reason: `Matches issue type: ${match}`,
-        tier: 'optional',
+        reason: `Matches issue type: ${match}${confidence ? ` (${confidence})` : ''}`,
+        tier: confidence === 'curated' || confidence === 'inferred-high' ? 'required' : 'optional',
       });
     }
   }
@@ -249,6 +265,14 @@ function expandFollowUps(
   // Collect related docs from all required/optional candidates
   for (const [docId, candidate] of candidates) {
     if (candidate.tier !== 'required' && candidate.tier !== 'optional') continue;
+
+    const sourceDoc = snapshot.byId.get(docId);
+    if (!sourceDoc) continue;
+
+    if (sourceDoc.relatedDocIds.length > MAX_RELATED_FOLLOWUP_FANOUT) {
+      candidate.reason = `${candidate.reason}; follow-up expansion skipped: related graph too dense`;
+      continue;
+    }
 
     const relatedDocs = getRelatedDocuments(snapshot, docId);
     for (const relatedDoc of relatedDocs) {

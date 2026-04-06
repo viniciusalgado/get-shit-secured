@@ -12,6 +12,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { RuntimeManifest } from '../core/types.js';
+import { resolveInstalledMcpServerPath } from '../core/mcp-server-path.js';
 
 interface GateCheck {
   name: string;
@@ -218,18 +219,31 @@ function checkMcpServer(cwd: string): boolean {
   for (const supportDir of candidates) {
     if (!existsSync(supportDir)) continue;
 
-    const serverPath = join(supportDir, 'mcp', 'server.js');
     const manifestPath = join(supportDir, 'runtime-manifest.json');
-
-    if (!existsSync(serverPath)) continue;
+    let serverPath = resolveInstalledMcpServerPath(supportDir);
 
     if (existsSync(manifestPath)) {
       try {
         const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+        if (typeof manifest.mcpServerPath === 'string' && manifest.mcpServerPath.length > 0) {
+          serverPath = manifest.mcpServerPath;
+        }
+
+        if (!serverPath || !existsSync(serverPath)) {
+          continue;
+        }
+
         if (manifest.mcpConfigPath && existsSync(manifest.mcpConfigPath)) {
-          const config = JSON.parse(readFileSync(manifest.mcpConfigPath, 'utf-8'));
-          if (config.mcpServers?.['gss-security-docs']) {
-            return true;
+          const configContent = readFileSync(manifest.mcpConfigPath, 'utf-8');
+          if (manifest.mcpConfigPath.endsWith('.toml')) {
+            if (configContent.includes('[mcp_servers.gss-security-docs]')) {
+              return true;
+            }
+          } else {
+            const config = JSON.parse(configContent);
+            if (config.mcpServers?.['gss-security-docs']) {
+              return true;
+            }
           }
         }
       } catch {

@@ -174,7 +174,7 @@ describe('Phase 3 — verifyInstall (Stage 4)', () => {
         targets,
         [new ClaudeAdapter()],
         corpus,
-        { dryRun: false, legacySpecialists: false }
+        { dryRun: false, legacySpecialists: false, pkgRoot }
       );
 
       const verification = await verifyInstall(targets, corpus, { dryRun: false });
@@ -194,7 +194,7 @@ describe('Phase 3 — verifyInstall (Stage 4)', () => {
         targets,
         [new ClaudeAdapter()],
         corpus,
-        { dryRun: false, legacySpecialists: false }
+        { dryRun: false, legacySpecialists: false, pkgRoot }
       );
 
       // Delete the installed corpus file
@@ -215,7 +215,7 @@ describe('Phase 3 — verifyInstall (Stage 4)', () => {
 
   it('2.10 returns healthy in dry-run mode', async () => {
     const targets = detectTargets([new ClaudeAdapter()], 'local', '/tmp/test');
-    const verification = await verifyInstall(targets, null, { dryRun: true });
+    const verification = await verifyInstall(targets, null, null, { dryRun: true });
     assert.ok(verification.healthy);
   });
 });

@@ -1,50 +1,99 @@
 /**
  * Tool: read_security_doc
- *
- * Retrieves a security document by canonical ID or security:// URI.
- * Supports alias resolution via corpus/ids.ts.
  */
 
 import type { LoadedSnapshot } from '../../corpus/snapshot-loader.js';
-import {
-  getDocumentById,
-  getDocumentByUri,
-} from '../../corpus/snapshot-loader.js';
+import { getDocumentById, getDocumentByUri } from '../../corpus/snapshot-loader.js';
 import { resolveDocAlias } from '../../corpus/ids.js';
-import type { SecurityDoc } from '../../core/types.js';
+import type { SecurityDoc, SecurityDocSection } from '../../core/types.js';
 
-/**
- * Input schema for the read-doc tool.
- */
 export interface ReadDocToolInput {
   id?: string;
   uri?: string;
+  sectionAnchor?: string;
+  headingQuery?: string;
+  excerptQuery?: string;
 }
 
-/**
- * Retrieve a security document by ID or URI.
- *
- * @param input - Tool input (id or uri, at least one required)
- * @param loaded - Loaded corpus snapshot
- * @returns The SecurityDoc, or null if not found
- */
+export interface ReadDocToolResult {
+  doc: SecurityDoc;
+  selectedSection?: {
+    heading: string;
+    anchor: string;
+    excerpt: string;
+  };
+}
+
 export function handleReadDoc(
   input: ReadDocToolInput,
   loaded: LoadedSnapshot,
-): SecurityDoc | null {
+): SecurityDoc | ReadDocToolResult | null {
+  const doc = resolveDoc(input, loaded);
+  if (!doc) return null;
+
+  const selectedSection = selectSection(doc, input);
+  if (!selectedSection) {
+    return doc;
+  }
+  return selectedSection
+    ? {
+        doc,
+        selectedSection: {
+          heading: selectedSection.heading,
+          anchor: selectedSection.anchor,
+          excerpt: selectedSection.text.slice(0, 400),
+        },
+      }
+    : doc;
+}
+
+function resolveDoc(input: ReadDocToolInput, loaded: LoadedSnapshot): SecurityDoc | null {
   if (input.uri) {
     return getDocumentByUri(loaded, input.uri) ?? null;
   }
 
   if (input.id) {
-    // Try alias resolution first
     const resolved = resolveDocAlias(input.id);
-    if (resolved) {
-      return getDocumentById(loaded, resolved) ?? null;
-    }
-    // Try direct lookup
-    return getDocumentById(loaded, input.id) ?? null;
+    return getDocumentById(loaded, resolved ?? input.id) ?? null;
   }
 
   return null;
+}
+
+function selectSection(doc: SecurityDoc, input: ReadDocToolInput): SecurityDocSection | null {
+  if (!input.sectionAnchor && !input.headingQuery && !input.excerptQuery) return null;
+  const sections = doc.sections ?? [];
+
+  if (input.sectionAnchor) {
+    const byAnchor = sections.find(section => section.anchor === input.sectionAnchor);
+    if (byAnchor) return byAnchor;
+  }
+
+  if (input.headingQuery) {
+    const query = input.headingQuery.toLowerCase();
+    const byHeading = [...sections].sort((a, b) => scoreText(b.heading, query) - scoreText(a.heading, query))[0];
+    if (byHeading && scoreText(byHeading.heading, query) > 0) return byHeading;
+  }
+
+  if (input.excerptQuery) {
+    const query = input.excerptQuery.toLowerCase();
+    const byExcerpt = [...sections].sort((a, b) => {
+      const aScore = scoreText(`${a.heading}\n${a.text}`, query);
+      const bScore = scoreText(`${b.heading}\n${b.text}`, query);
+      return bScore - aScore;
+    })[0];
+    if (byExcerpt && scoreText(`${byExcerpt.heading}\n${byExcerpt.text}`, query) > 0) return byExcerpt;
+  }
+
+  return null;
+}
+
+function scoreText(text: string, query: string): number {
+  const normalized = text.toLowerCase();
+  if (normalized === query) return 100;
+  if (normalized.includes(query)) return 50;
+  return query
+    .split(/\s+/)
+    .filter(Boolean)
+    .reduce((sum, term) => sum + (normalized.includes(term) ? 10 : 0), 0);
 }

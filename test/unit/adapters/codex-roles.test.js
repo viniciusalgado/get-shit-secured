@@ -66,6 +66,25 @@ describeOrSkip('Codex adapter — Role file rendering', () => {
     }
   });
 
+  it('each role file content includes YAML frontmatter', () => {
+    const adapter = new CodexAdapter();
+    const roles = getAllRoles();
+    const files = adapter.getRoleFiles();
+
+    for (const role of roles) {
+      const file = files.find(f => f.relativePath.includes(role.id));
+      assert.ok(file, `Should find file for role ${role.id}`);
+      assert.ok(file.content.startsWith('---\n'),
+        `${file.relativePath} should start with YAML frontmatter`);
+      assert.ok(file.content.includes(`name: "${role.id}"`),
+        `${file.relativePath} should include skill name frontmatter`);
+      assert.ok(file.content.includes(`description: "${role.description}"`),
+        `${file.relativePath} should include skill description frontmatter`);
+      assert.ok(file.content.includes('\n---\n\n# '),
+        `${file.relativePath} should terminate frontmatter before the markdown body`);
+    }
+  });
+
   it('each role file content references the primary workflow', () => {
     const adapter = new CodexAdapter();
     const roles = getAllRoles();

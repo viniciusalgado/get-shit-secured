@@ -140,9 +140,16 @@ describe('Renderer - Claude Agent', () => {
 describe('Renderer - Codex Skill', () => {
   const workflow = getWorkflow('audit');
 
-  it('should render skill header', () => {
+  it('should render skill frontmatter header', () => {
     const output = renderCodexSkill(workflow);
-    assert.ok(output.startsWith('# '));
+    assert.ok(output.startsWith('---\n'));
+    assert.ok(output.includes(`name: "gss-${workflow.id}"`));
+    assert.ok(output.includes(`description: "${workflow.goal}"`));
+    assert.ok(output.includes('\n---\n\n# '));
+  });
+
+  it('should render skill body header', () => {
+    const output = renderCodexSkill(workflow);
     assert.ok(output.includes('**Workflow ID:**'));
   });
 

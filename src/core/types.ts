@@ -90,7 +90,7 @@ export type JsonMergeStrategy = 'shallow' | 'deep';
  * Used to merge GSS-owned config sections into existing JSON files.
  */
 export interface ManagedJsonPatch {
-  /** Relative path from runtime root */
+  /** Relative path from the base determined by resolveFrom */
   path: string;
   /** Owner identifier (e.g., "gss") */
   owner: string;
@@ -100,6 +100,13 @@ export interface ManagedJsonPatch {
   mergeStrategy: JsonMergeStrategy;
   /** Key path where content should be merged (e.g., "gss.hooks") */
   keyPath?: string;
+  /**
+   * Determines the base directory for resolving `path`.
+   * - 'runtime-root': relative to the runtime root (default, backward-compatible)
+   * - 'cwd': relative to the project working directory
+   * - 'home': relative to the user's home directory
+   */
+  resolveFrom?: 'runtime-root' | 'cwd' | 'home';
 }
 
 /**
@@ -530,6 +537,34 @@ export interface DocProvenance {
   inferred: string[];
   /** Fields that were overridden from curated mapping.ts data */
   overridden: string[];
+  /** Fields or content reused from the prior snapshot */
+  reused?: string[];
+}
+
+export type FetchStatus = 'success' | 'timeout' | 'http-error' | 'parse-error' | 'reused-cache';
+
+export type IssueTypeConfidence = 'curated' | 'inferred-high' | 'inferred-medium';
+
+export interface SecurityDocSection {
+  /** Section heading text */
+  heading: string;
+  /** Stable-ish anchor extracted from the source page */
+  anchor: string;
+  /** Normalized section body text */
+  text: string;
+  /** Optional keywords extracted from heading/list content */
+  keywords?: string[];
+}
+
+export interface SecurityDocFetchMetadata {
+  /** Outcome of the most recent refresh/build attempt */
+  fetchStatus: FetchStatus;
+  /** Number of fetch attempts performed for this refresh */
+  fetchAttempts: number;
+  /** Timestamp of the last successful source fetch used for this doc */
+  lastSuccessfulFetchAt?: string;
+  /** Hash of the source content used to build this doc */
+  sourceContentHash?: string;
 }
 
 /**
@@ -560,10 +595,14 @@ export interface SecurityDoc {
   headings: string[];
   /** Checklist items (was checklistItems in OwaspCorpusEntry) */
   checklist: string[];
+  /** Section-aware normalized content used for retrieval */
+  sections: SecurityDocSection[];
   /** Tags for categorization and search */
   tags: string[];
   /** Issue taxonomy tags from issue-taxonomy.ts */
   issueTypes: string[];
+  /** Confidence for each issue type tag */
+  issueTypeConfidence?: Partial<Record<string, IssueTypeConfidence>>;
   /** Structured workflow bindings (was flat WorkflowId[] in OwaspCorpusEntry) */
   workflowBindings: DocWorkflowBinding[];
   /** Structured stack bindings (was flat string[] in OwaspCorpusEntry) */
@@ -574,6 +613,8 @@ export interface SecurityDoc {
   aliases: string[];
   /** Provenance tracking for binding decisions */
   provenance: DocProvenance;
+  /** Build-time fetch and reuse metadata */
+  fetchMetadata?: SecurityDocFetchMetadata;
 }
 
 /**
@@ -590,6 +631,18 @@ export interface CorpusSnapshotStats {
   totalBindings: number;
   /** Total related-doc edges across all docs */
   totalRelatedEdges: number;
+  /** Total docs reused from the prior snapshot */
+  reusedDocs: number;
+  /** Docs with at least one issue type tag */
+  docsWithIssueTypes: number;
+  /** Docs with at least one workflow binding */
+  docsWithWorkflowBindings: number;
+  /** Docs with at least one non-empty section */
+  docsWithSections: number;
+  /** Total section count across all docs */
+  totalSections: number;
+  /** Average out-degree of the related graph */
+  averageRelatedDocDegree: number;
 }
 
 /**
@@ -598,7 +651,7 @@ export interface CorpusSnapshotStats {
  */
 export interface CorpusSnapshot {
   /** Snapshot schema version (increment when format changes) */
-  schemaVersion: 1;
+  schemaVersion: 2;
   /** Corpus version (semver, e.g., "1.0.0") */
   corpusVersion: string;
   /** ISO 8601 timestamp of snapshot generation */

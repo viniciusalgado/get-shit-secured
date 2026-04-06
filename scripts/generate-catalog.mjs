@@ -16,6 +16,55 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const { urlToId, OWASP_CANONICAL_URLS } = await import('../dist/core/owasp-ingestion.js');
 const { WORKFLOW_SPECIALIST_MAPPING } = await import('../dist/catalog/specialists/mapping.js');
 
+const ISSUE_TAG_RULES = [
+  ['sql-injection', [/sql-injection/, /\bsqli\b/]],
+  ['nosql-injection', [/nosql/]],
+  ['command-injection', [/command-injection/, /os-command/]],
+  ['ldap-injection', [/ldap-injection/]],
+  ['xss', [/\bxss\b/, /cross-site-scripting/]],
+  ['dom-xss', [/dom-xss/, /dom-based-xss/]],
+  ['dom-clobbering', [/dom-clobbering/]],
+  ['authn', [/authentication/, /\bauthn\b/]],
+  ['authz', [/authorization/, /\bauthz\b/]],
+  ['access-control', [/access-control/]],
+  ['session-management', [/session-management/, /^session$/]],
+  ['password-storage', [/password-storage/]],
+  ['mfa', [/\bmfa\b/, /multifactor-authentication/]],
+  ['secrets', [/secrets-management/, /^secrets$/]],
+  ['crypto', [/cryptographic-storage/, /^crypto$/]],
+  ['key-management', [/key-management/]],
+  ['file-upload', [/file-upload/]],
+  ['deserialization', [/deserialization/]],
+  ['ssrf', [/\bssrf\b/, /server-side-request-forgery/]],
+  ['xxe', [/\bxxe\b/, /xml-external-entity/]],
+  ['csrf', [/\bcsrf\b/, /cross-site-request-forgery/]],
+  ['config', [/configuration/]],
+  ['security-headers', [/http-headers/]],
+  ['csp', [/\bcsp\b/, /content-security-policy/]],
+  ['hsts', [/\bhsts\b/, /http-strict-transport-security/]],
+  ['tls', [/\btls\b/, /transport-layer-security/]],
+  ['logging', [/logging/]],
+  ['error-handling', [/error-handling/]],
+  ['supply-chain', [/supply-chain/, /\bsbom\b/]],
+  ['dependency', [/dependency/]],
+  ['ai-security', [/ai-agent-security/, /secure-ai-model-ops/]],
+  ['mcp-security', [/mcp-security/]],
+  ['prompt-injection', [/prompt-injection/]],
+  ['clickjacking', [/clickjacking/]],
+  ['idor', [/\bidor\b/, /insecure-direct-object-reference/]],
+  ['mass-assignment', [/mass-assignment/]],
+  ['prototype-pollution', [/prototype-pollution/]],
+  ['subdomain-takeover', [/subdomain-takeover/]],
+  ['redirect', [/redirect/]],
+  ['privacy', [/privacy/]],
+  ['virtual-patching', [/virtual-patching/]],
+  ['xss-evasion', [/xss-filter-evasion/]],
+  ['xs-leaks', [/xs-leaks/]],
+  ['disclosure', [/vulnerability-disclosure/]],
+  ['reporting', [/vulnerability-disclosure/, /logging-vocabulary/]],
+  ['terminology', [/security-terminology/, /logging-vocabulary/]],
+];
+
 // Alias detection: common shortenings
 function detectAliases(id) {
   const aliases = [];
@@ -96,14 +145,45 @@ function detectAliases(id) {
   return aliases;
 }
 
+function inferIssueTypes(id, aliases, curatedIssueTypes = []) {
+  if (curatedIssueTypes.length > 0) {
+    return {
+      issueTypes: [...new Set(curatedIssueTypes)].sort(),
+      issueTypeConfidence: Object.fromEntries(curatedIssueTypes.map(tag => [tag, 'curated'])),
+    };
+  }
+
+  const searchable = [id, ...aliases].join(' ');
+  const issueTypes = new Set();
+  const confidence = {};
+
+  for (const [tag, patterns] of ISSUE_TAG_RULES) {
+    if (patterns.some(pattern => pattern.test(searchable))) {
+      issueTypes.add(tag);
+      confidence[tag] = aliases.includes(tag) || id === tag ? 'inferred-high' : 'inferred-medium';
+    }
+  }
+
+  if ([...issueTypes].some(tag => tag.endsWith('-injection'))) {
+    issueTypes.add('injection');
+    confidence['injection'] = 'inferred-medium';
+  }
+
+  return {
+    issueTypes: [...issueTypes].sort(),
+    issueTypeConfidence: confidence,
+  };
+}
+
 // --- Generate catalog.json ---
 const catalogEntries = OWASP_CANONICAL_URLS.map(url => {
   const id = urlToId(url);
+  const aliases = detectAliases(id);
   return {
     id,
     url,
     sourceType: 'owasp-cheatsheet',
-    aliases: detectAliases(id),
+    aliases,
   };
 });
 
@@ -164,8 +244,28 @@ for (const [workflowId, binding] of Object.entries(WORKFLOW_SPECIALIST_MAPPING))
       }
       if (detail.issueTags) {
         overrides[specialistId].issueTypes = detail.issueTags;
+        overrides[specialistId].issueTypeConfidence = Object.fromEntries(
+          detail.issueTags.map(tag => [tag, 'curated']),
+        );
       }
     }
+  }
+}
+
+for (const entry of catalogEntries) {
+  if (!overrides[entry.id]) {
+    overrides[entry.id] = { workflowBindings: [], stackBindings: [], issueTypes: [] };
+  }
+  const inferred = inferIssueTypes(
+    entry.id,
+    entry.aliases,
+    overrides[entry.id].issueTypes ?? [],
+  );
+  if ((overrides[entry.id].issueTypes ?? []).length === 0) {
+    overrides[entry.id].issueTypes = inferred.issueTypes;
+    overrides[entry.id].issueTypeConfidence = inferred.issueTypeConfidence;
+  } else if (!overrides[entry.id].issueTypeConfidence) {
+    overrides[entry.id].issueTypeConfidence = inferred.issueTypeConfidence;
   }
 }
 

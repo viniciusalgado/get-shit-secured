@@ -61,7 +61,8 @@ export function getDocumentById(loaded: LoadedSnapshot, id: string): SecurityDoc
  * @returns SecurityDoc or undefined
  */
 export function getDocumentByUri(loaded: LoadedSnapshot, uri: string): SecurityDoc | undefined {
-  return loaded.byUri.get(uri);
+  const normalizedUri = uri.split('#')[0] ?? uri;
+  return loaded.byUri.get(normalizedUri);
 }
 
 /**

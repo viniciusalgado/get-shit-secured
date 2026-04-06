@@ -24,7 +24,8 @@
     "./runtimes/*": "./dist/runtimes/*/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run build:mcp",
+    "build:mcp": "node scripts/bundle-mcp.mjs",
     "dev": "tsc --watch",
     "prepublishOnly": "npm run build",
     "test": "npm run test:unit && npm run test:integration",
@@ -60,6 +61,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "esbuild": "^0.28.0",
     "typescript": "^5.3.3"
   },
   "dependencies": {

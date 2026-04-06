@@ -267,6 +267,40 @@ describe('Phase 7 — Integration: Role Agent Install', () => {
     }
   });
 
+  it('each Codex role skill contains YAML frontmatter', async () => {
+    const tempDir = await createTempDir();
+    try {
+      await install([new CodexAdapter()], 'local', tempDir, false);
+
+      const skillsDir = join(tempDir, '.codex', 'skills');
+      if (!existsSync(skillsDir)) return;
+
+      for (const roleId of ROLE_IDS) {
+        const skillDir = join(skillsDir, roleId);
+        if (!existsSync(skillDir)) continue;
+
+        const skillFile = join(skillDir, 'SKILL.md');
+        if (!existsSync(skillFile)) continue;
+
+        const content = await readFile(skillFile, 'utf-8');
+        assert.ok(
+          content.startsWith('---\n'),
+          `${roleId} Codex skill should start with YAML frontmatter`
+        );
+        assert.ok(
+          content.includes(`name: "${roleId}"`),
+          `${roleId} Codex skill should include frontmatter name`
+        );
+        assert.ok(
+          content.includes('\n---\n\n# '),
+          `${roleId} Codex skill should terminate frontmatter before the markdown body`
+        );
+      }
+    } finally {
+      await cleanupTempDir(tempDir);
+    }
+  });
+
   // ---------------------------------------------------------------------------
   // Each Codex role skill contains "## MCP Security Consultation"
   // ---------------------------------------------------------------------------

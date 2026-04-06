@@ -83,6 +83,10 @@ export function renderCodexSkill(workflow: WorkflowDefinition): string {
   return sections.join('\n\n');
 }
 
+function yamlDoubleQuote(value: string): string {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
+
 /**
  * Render the "Done Means" section for Codex skills.
  */
@@ -664,7 +668,12 @@ ${phaseLines}`;
 // =============================================================================
 
 function renderSkillHeader(workflow: WorkflowDefinition): string {
-  return `# ${workflow.title}
+  return `---
+name: ${yamlDoubleQuote(`gss-${workflow.id}`)}
+description: ${yamlDoubleQuote(workflow.goal)}
+---
+
+# ${workflow.title}
 
 **Workflow ID:** \`gss-${workflow.id}\`
 
@@ -1465,7 +1474,12 @@ export function renderCodexRoleSkill(agent: {
   const primaryWorkflow = getPrimaryWorkflowForRole(agent.id);
   const mcpConfig = getRoleMcpConfig(agent.id);
 
-  return `# ${agent.title}
+  return `---
+name: ${yamlDoubleQuote(agent.id)}
+description: ${yamlDoubleQuote(agent.description)}
+---
+
+# ${agent.title}
 
 **Skill ID:** \`${agent.id}\`
 **Primary Workflow:** \`${primaryWorkflow}\`

@@ -82,13 +82,16 @@ describe('Corpus Schema - type guards', () => {
       summary: 'A test doc',
       headings: ['Section 1'],
       checklist: ['Item 1'],
+      sections: [{ heading: 'Section 1', anchor: 'section-1', text: 'Item 1' }],
       tags: ['test'],
       issueTypes: ['injection'],
+      issueTypeConfidence: { injection: 'curated' },
       workflowBindings: [{ workflowId: 'audit', priority: 'required' }],
       stackBindings: [{ stack: 'nodejs' }],
       relatedDocIds: [],
       aliases: [],
-      provenance: { inferred: [], overridden: [] },
+      provenance: { inferred: [], overridden: [], reused: [] },
+      fetchMetadata: { fetchStatus: 'success', fetchAttempts: 1 },
     };
     assert.equal(isSecurityDoc(doc), true);
   });
@@ -102,11 +105,15 @@ describe('Corpus Schema - type guards', () => {
 
   it('should validate a well-formed CorpusSnapshot', () => {
     const snapshot = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       corpusVersion: '1.0.0',
       generatedAt: '2026-03-31T00:00:00Z',
       documents: [],
-      stats: { totalDocs: 0, readyDocs: 0, pendingDocs: 0, totalBindings: 0, totalRelatedEdges: 0 },
+      stats: {
+        totalDocs: 0, readyDocs: 0, pendingDocs: 0, totalBindings: 0, totalRelatedEdges: 0,
+        reusedDocs: 0, docsWithIssueTypes: 0, docsWithWorkflowBindings: 0, docsWithSections: 0,
+        totalSections: 0, averageRelatedDocDegree: 0,
+      },
     };
     assert.equal(isCorpusSnapshot(snapshot), true);
   });
@@ -114,7 +121,7 @@ describe('Corpus Schema - type guards', () => {
   it('should reject a malformed CorpusSnapshot', () => {
     assert.equal(isCorpusSnapshot(null), false);
     assert.equal(isCorpusSnapshot({}), false);
-    assert.equal(isCorpusSnapshot({ schemaVersion: 2 }), false);
+    assert.equal(isCorpusSnapshot({ schemaVersion: 1 }), false);
   });
 });
 
@@ -194,6 +201,7 @@ describe('Corpus Normalize', () => {
     assert.ok(result.summary.length > 0);
     assert.ok(result.headings.length > 0);
     assert.ok(result.checklist.length > 0);
+    assert.ok(result.sections.length > 0);
     assert.ok(result.relatedDocIds.includes('authentication'));
   });
 
@@ -217,6 +225,8 @@ describe('Corpus Bindings - merge', () => {
     const inferred = {
       workflowBindings: [{ workflowId: 'audit', priority: 'required', rationale: 'inferred' }],
       stackBindings: [],
+      issueTypes: [],
+      issueTypeConfidence: {},
     };
     const override = {
       workflowBindings: [
@@ -236,6 +246,8 @@ describe('Corpus Bindings - merge', () => {
     const inferred = {
       workflowBindings: [{ workflowId: 'audit', priority: 'required', rationale: 'inferred' }],
       stackBindings: [],
+      issueTypes: [],
+      issueTypeConfidence: {},
     };
     const result = mergeBindings('some-unknown-doc', inferred, undefined);
     assert.equal(result.workflowBindings.length, 1);
@@ -250,6 +262,8 @@ describe('Corpus Bindings - merge', () => {
         { workflowId: 'audit', priority: 'required', rationale: 'inferred' },
       ],
       stackBindings: [],
+      issueTypes: [],
+      issueTypeConfidence: {},
     };
     const result = mergeBindings('test-doc', inferred, undefined);
     assert.equal(result.workflowBindings[0].workflowId, 'audit');
@@ -262,7 +276,7 @@ describe('Corpus Bindings - merge', () => {
 describe('Corpus Validators', () => {
   it('should pass a valid snapshot', () => {
     const snapshot = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       corpusVersion: '1.0.0',
       generatedAt: '2026-03-31T00:00:00Z',
       documents: [
@@ -277,16 +291,23 @@ describe('Corpus Validators', () => {
           summary: 'Test doc',
           headings: [],
           checklist: [],
+          sections: [{ heading: 'Overview', anchor: 'overview', text: 'Test doc' }],
           tags: [],
           issueTypes: [],
+          issueTypeConfidence: {},
           workflowBindings: [{ workflowId: 'audit', priority: 'required' }],
           stackBindings: [],
           relatedDocIds: [],
           aliases: [],
-          provenance: { inferred: [], overridden: [] },
+          provenance: { inferred: [], overridden: [], reused: [] },
+          fetchMetadata: { fetchStatus: 'success', fetchAttempts: 1 },
         },
       ],
-      stats: { totalDocs: 1, readyDocs: 1, pendingDocs: 0, totalBindings: 1, totalRelatedEdges: 0 },
+      stats: {
+        totalDocs: 1, readyDocs: 1, pendingDocs: 0, totalBindings: 1, totalRelatedEdges: 0,
+        reusedDocs: 0, docsWithIssueTypes: 0, docsWithWorkflowBindings: 1, docsWithSections: 1,
+        totalSections: 1, averageRelatedDocDegree: 0,
+      },
     };
     const result = validateSnapshot(snapshot);
     assert.equal(result.valid, true);
@@ -305,20 +326,27 @@ describe('Corpus Validators', () => {
       summary: 'Dup',
       headings: [],
       checklist: [],
+      sections: [{ heading: 'Overview', anchor: 'overview', text: 'Dup' }],
       tags: [],
       issueTypes: [],
+      issueTypeConfidence: {},
       workflowBindings: [],
       stackBindings: [],
       relatedDocIds: [],
       aliases: [],
-      provenance: { inferred: [], overridden: [] },
+      provenance: { inferred: [], overridden: [], reused: [] },
+      fetchMetadata: { fetchStatus: 'success', fetchAttempts: 1 },
     };
     const snapshot = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       corpusVersion: '1.0.0',
       generatedAt: '2026-03-31T00:00:00Z',
       documents: [doc, { ...doc }],
-      stats: { totalDocs: 2, readyDocs: 2, pendingDocs: 0, totalBindings: 0, totalRelatedEdges: 0 },
+      stats: {
+        totalDocs: 2, readyDocs: 2, pendingDocs: 0, totalBindings: 0, totalRelatedEdges: 0,
+        reusedDocs: 0, docsWithIssueTypes: 0, docsWithWorkflowBindings: 0, docsWithSections: 2,
+        totalSections: 2, averageRelatedDocDegree: 0,
+      },
     };
     const result = validateSnapshot(snapshot);
     assert.equal(result.valid, false);
@@ -327,7 +355,7 @@ describe('Corpus Validators', () => {
 
   it('should fail on invalid related edges', () => {
     const snapshot = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       corpusVersion: '1.0.0',
       generatedAt: '2026-03-31T00:00:00Z',
       documents: [
@@ -342,16 +370,23 @@ describe('Corpus Validators', () => {
           summary: 'Test',
           headings: [],
           checklist: [],
+          sections: [{ heading: 'Overview', anchor: 'overview', text: 'Test' }],
           tags: [],
           issueTypes: [],
+          issueTypeConfidence: {},
           workflowBindings: [],
           stackBindings: [],
           relatedDocIds: ['nonexistent-doc'],
           aliases: [],
-          provenance: { inferred: [], overridden: [] },
+          provenance: { inferred: [], overridden: [], reused: [] },
+          fetchMetadata: { fetchStatus: 'success', fetchAttempts: 1 },
         },
       ],
-      stats: { totalDocs: 1, readyDocs: 1, pendingDocs: 0, totalBindings: 0, totalRelatedEdges: 1 },
+      stats: {
+        totalDocs: 1, readyDocs: 1, pendingDocs: 0, totalBindings: 0, totalRelatedEdges: 1,
+        reusedDocs: 0, docsWithIssueTypes: 0, docsWithWorkflowBindings: 0, docsWithSections: 1,
+        totalSections: 1, averageRelatedDocDegree: 1,
+      },
     };
     const result = validateSnapshot(snapshot);
     assert.equal(result.valid, false);
@@ -360,7 +395,7 @@ describe('Corpus Validators', () => {
 
   it('should fail on invalid workflow ID', () => {
     const snapshot = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       corpusVersion: '1.0.0',
       generatedAt: '2026-03-31T00:00:00Z',
       documents: [
@@ -375,16 +410,23 @@ describe('Corpus Validators', () => {
           summary: 'Test',
           headings: [],
           checklist: [],
+          sections: [{ heading: 'Overview', anchor: 'overview', text: 'Test' }],
           tags: [],
           issueTypes: [],
+          issueTypeConfidence: {},
           workflowBindings: [{ workflowId: 'invalid-workflow', priority: 'required' }],
           stackBindings: [],
           relatedDocIds: [],
           aliases: [],
-          provenance: { inferred: [], overridden: [] },
+          provenance: { inferred: [], overridden: [], reused: [] },
+          fetchMetadata: { fetchStatus: 'success', fetchAttempts: 1 },
         },
       ],
-      stats: { totalDocs: 1, readyDocs: 1, pendingDocs: 0, totalBindings: 1, totalRelatedEdges: 0 },
+      stats: {
+        totalDocs: 1, readyDocs: 1, pendingDocs: 0, totalBindings: 1, totalRelatedEdges: 0,
+        reusedDocs: 0, docsWithIssueTypes: 0, docsWithWorkflowBindings: 1, docsWithSections: 1,
+        totalSections: 1, averageRelatedDocDegree: 0,
+      },
     };
     const result = validateSnapshot(snapshot);
     assert.equal(result.valid, false);

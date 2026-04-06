@@ -148,16 +148,16 @@ describe('resolveInstallPlan — File operations', () => {
 });
 
 describe('resolveInstallPlan — Config operations', () => {
-  it('config ops include MCP server copy when adapter has MCP', () => {
+  it('config ops include MCP config patch when adapter has MCP and no server copy', () => {
     const adapter = createMockAdapterWithMcp();
     const targets = makeTargets();
     const corpus = makeCorpus();
     const plan = resolveInstallPlan(targets, [adapter], corpus, {
       dryRun: false, legacySpecialists: false, pkgRoot: '/pkg',
     });
-    assert.ok(plan.configOps[0].mcpServerCopy !== null);
-    assert.ok(plan.configOps[0].mcpServerCopy.src);
-    assert.ok(plan.configOps[0].mcpServerCopy.dest);
+    // mcpServerCopy is no longer populated; mcpConfigPatch is the key field
+    assert.ok(plan.configOps[0].mcpConfigPatch !== null);
+    assert.ok(plan.configOps[0].mcpConfigPatch.keyPath?.includes('gss-security-docs'));
   });
 
   it('config ops include MCP config patch when adapter has MCP', () => {

@@ -36,7 +36,7 @@ function setupHealthyInstallWithPhase10(tempDir, phase10Fields) {
     managedConfigs: [],
     corpusPath: paths.corpusPath,
     mcpServerPath: paths.mcpServerPath,
-    mcpConfigPath: paths.settingsPath,
+    mcpConfigPath: paths.mcpConfigPath,
     gssVersion: '0.1.0',
   };
 

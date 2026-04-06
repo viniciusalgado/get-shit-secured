@@ -22,7 +22,8 @@ import type {
   RuntimeManifest,
 } from '../core/types.js';
 import { readManifest } from '../core/manifest.js';
-import { resolveRuntimeRoot, resolveSupportSubtree } from '../core/paths.js';
+import { resolveRuntimeRoot, resolveSupportSubtree, getHomeDir } from '../core/paths.js';
+import { resolveInstalledMcpServerPath } from '../core/mcp-server-path.js';
 
 /**
  * Health check result for a single runtime.
@@ -175,8 +176,20 @@ function checkRuntime(
   }
 
   // Check 2: MCP server binary
-  const mcpServerPath = join(supportSubtree, 'mcp', 'server.js');
-  if (existsSync(mcpServerPath)) {
+  let mcpServerPath = resolveInstalledMcpServerPath(supportSubtree);
+  const mcpRuntimeManifestPath = join(supportSubtree, 'runtime-manifest.json');
+  if (existsSync(mcpRuntimeManifestPath)) {
+    try {
+      const manifest = JSON.parse(readFileSync(mcpRuntimeManifestPath, 'utf-8'));
+      if (typeof manifest.mcpServerPath === 'string' && manifest.mcpServerPath.length > 0) {
+        mcpServerPath = manifest.mcpServerPath;
+      }
+    } catch {
+      // Runtime manifest validation happens separately.
+    }
+  }
+
+  if (mcpServerPath && existsSync(mcpServerPath)) {
     checks.push({
       name: 'MCP server binary',
       status: 'ok',
@@ -186,29 +199,43 @@ function checkRuntime(
     checks.push({
       name: 'MCP server binary',
       status: 'fail',
-      message: `not found at ${relative(cwd, mcpServerPath)}`,
+      message: `not found at ${relative(cwd, mcpServerPath ?? join(supportSubtree, 'mcp', 'server.js'))}`,
       fixHint: 'Re-run: npx get-shit-secured --claude --local',
     });
   }
 
   // Check 3: MCP config registration
-  const settingsPath = join(rootPath, 'settings.json');
-  if (existsSync(settingsPath)) {
+  // Claude Code uses .mcp.json (project) or ~/.claude.json (user), Codex uses config.toml
+  const isCodex = runtime === 'codex';
+  let mcpConfigPath: string;
+  let mcpConfigFileName: string;
+  if (isCodex) {
+    mcpConfigFileName = 'config.toml';
+    mcpConfigPath = join(rootPath, mcpConfigFileName);
+  } else if (scope === 'local') {
+    mcpConfigFileName = '.mcp.json';
+    mcpConfigPath = join(cwd, mcpConfigFileName);
+  } else {
+    mcpConfigFileName = '.claude.json';
+    mcpConfigPath = join(getHomeDir(), mcpConfigFileName);
+  }
+  if (existsSync(mcpConfigPath)) {
     try {
-      const content = readFileSync(settingsPath, 'utf-8');
-      const config = JSON.parse(content);
-      const mcpServers = config?.mcpServers as Record<string, unknown> | undefined;
-      if (mcpServers && 'gss-security-docs' in mcpServers) {
+      const content = readFileSync(mcpConfigPath, 'utf-8');
+      const registered = isCodex
+        ? content.includes('mcp_servers.gss-security-docs')
+        : Boolean((JSON.parse(content)?.mcpServers as Record<string, unknown> | undefined)?.['gss-security-docs']);
+      if (registered) {
         checks.push({
           name: 'MCP config registered',
           status: 'ok',
-          message: relative(cwd, settingsPath),
+          message: relative(cwd, mcpConfigPath),
         });
       } else {
         checks.push({
           name: 'MCP config registered',
           status: 'fail',
-          message: `gss-security-docs not found in ${relative(cwd, settingsPath)}`,
+          message: `gss-security-docs not found in ${relative(cwd, mcpConfigPath)}`,
           fixHint: 'Re-run: npx get-shit-secured --claude --local',
         });
       }
@@ -216,16 +243,16 @@ function checkRuntime(
       checks.push({
         name: 'MCP config registered',
         status: 'warn',
-        message: `Cannot parse ${relative(cwd, settingsPath)}`,
-        fixHint: 'Check settings.json syntax',
+        message: `Cannot parse ${relative(cwd, mcpConfigPath)}`,
+        fixHint: isCodex ? 'Check config.toml syntax' : `Check ${mcpConfigFileName} syntax`,
       });
     }
   } else {
     checks.push({
       name: 'MCP config registered',
       status: 'fail',
-      message: `settings.json not found at ${relative(cwd, settingsPath)}`,
-      fixHint: 'Re-run: npx get-shit-secured --claude --local',
+      message: `${mcpConfigFileName} not found at ${relative(cwd, mcpConfigPath)}`,
+      fixHint: `Re-run: npx get-shit-secured --${runtime} --local`,
     });
   }
 

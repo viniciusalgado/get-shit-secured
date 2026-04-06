@@ -192,6 +192,10 @@ describe('install', () => {
 
         // Verify content has key elements
         const skillContent = await readFile(skillFile, 'utf-8');
+        assert.ok(skillContent.startsWith('---\n'), 'Skill should start with YAML frontmatter');
+        assert.ok(skillContent.includes(`name: "gss-${workflow.id}"`), 'Skill should declare frontmatter name');
+        assert.ok(skillContent.includes(`description: "${workflow.goal}"`), 'Skill should declare frontmatter description');
+        assert.ok(skillContent.includes('\n---\n\n# '), 'Skill should end frontmatter before markdown body');
         assert.ok(
           skillContent.includes('## OWASP') || skillContent.includes('## Prerequisites'),
           'Should include OWASP or prerequisites'

@@ -129,6 +129,7 @@ export async function corpusRefresh(): Promise<number> {
   console.log('Refreshing corpus snapshot...');
 
   const { buildCorpusSnapshot } = await import('../corpus/snapshot-builder.js');
+  const { getLastRefreshReport } = await import('../corpus/snapshot-builder.js');
 
   // Backup existing snapshot
   const existingPath = findSnapshotPath();
@@ -143,6 +144,14 @@ export async function corpusRefresh(): Promise<number> {
     console.log(`\nCorpus refreshed to v${snapshot.corpusVersion}`);
     console.log(`  Documents: ${snapshot.stats.totalDocs} total, ${snapshot.stats.readyDocs} ready, ${snapshot.stats.pendingDocs} pending`);
     console.log(`  Bindings: ${snapshot.stats.totalBindings} workflow bindings`);
+    const report = getLastRefreshReport();
+    if (report) {
+      console.log('  Refresh health:');
+      console.log(`    fetched successfully: ${report.fetchedSuccessfully}`);
+      console.log(`    reused from previous snapshot: ${report.reusedFromPreviousSnapshot}`);
+      console.log(`    pending with no prior content: ${report.pendingWithNoPriorContent}`);
+      console.log(`    semantic warnings: ${report.semanticWarnings.length}`);
+    }
     return 0;
   } catch (error) {
     console.error('Refresh failed:', error instanceof Error ? error.message : String(error));

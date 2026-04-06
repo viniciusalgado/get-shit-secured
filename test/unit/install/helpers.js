@@ -45,16 +45,21 @@ export function createMockAdapter(overrides = {}) {
  */
 export function createMockAdapterWithMcp(overrides = {}) {
   const base = createMockAdapter(overrides);
-  base.getMcpRegistration = (serverPath, corpusPath) => ({
-    path: 'settings.json',
-    owner: 'gss',
-    content: {
-      command: 'node',
-      args: [serverPath, '--corpus', corpusPath],
-    },
-    mergeStrategy: 'deep',
-    keyPath: 'mcpServers.gss-security-docs',
-  });
+  base.getMcpRegistration = (serverPath, corpusPath, opts) => {
+    const scope = opts?.scope ?? 'local';
+    const isLocal = scope === 'local';
+    return {
+      path: isLocal ? '.mcp.json' : '.claude.json',
+      owner: 'gss',
+      content: {
+        command: 'node',
+        args: [serverPath, '--corpus', corpusPath],
+      },
+      mergeStrategy: 'deep',
+      keyPath: 'mcpServers.gss-security-docs',
+      resolveFrom: isLocal ? 'cwd' : 'home',
+    };
+  };
   return base;
 }
 
@@ -80,7 +85,7 @@ export function setupHealthyInstall(tempDir, options = {}) {
 
   const corpusPath = join(corpusDir, 'owasp-corpus.json');
   const mcpServerPath = join(mcpDir, 'server.js');
-  const settingsPath = join(rootPath, 'settings.json');
+  const mcpConfigPath = join(tempDir, '.mcp.json');
   const runtimeManifestPath = join(supportDir, 'runtime-manifest.json');
   const installManifestPath = join(gssDir, 'install-manifest.json');
 
@@ -97,8 +102,8 @@ export function setupHealthyInstall(tempDir, options = {}) {
   // Write MCP server binary
   writeFileSync(mcpServerPath, '// MCP server placeholder');
 
-  // Write settings with MCP registration
-  const settings = options.settingsData || {
+  // Write MCP config (local scope: .mcp.json at project root)
+  const mcpConfig = options.mcpConfigData || {
     mcpServers: {
       'gss-security-docs': {
         command: 'node',
@@ -106,7 +111,7 @@ export function setupHealthyInstall(tempDir, options = {}) {
       },
     },
   };
-  writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+  writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2));
 
   // Write runtime manifest
   const runtimeManifest = options.runtimeManifestData || {
@@ -119,7 +124,7 @@ export function setupHealthyInstall(tempDir, options = {}) {
     managedConfigs: [],
     corpusPath,
     mcpServerPath,
-    mcpConfigPath: settingsPath,
+    mcpConfigPath,
     gssVersion: packageVersion,
   };
   writeFileSync(runtimeManifestPath, JSON.stringify(runtimeManifest, null, 2));
@@ -145,14 +150,14 @@ export function setupHealthyInstall(tempDir, options = {}) {
     hooks: { claude: [join(hooksDir, 'session-start.js')] },
     runtimeManifests: { claude: runtimeManifestPath },
     mcpServerPaths: { claude: mcpServerPath },
-    mcpConfigPaths: { claude: settingsPath },
+    mcpConfigPaths: { claude: mcpConfigPath },
   };
   writeFileSync(installManifestPath, JSON.stringify(installManifest, null, 2));
 
   return {
     rootPath, supportDir, gssDir, artifactsDir, reportsDir,
     hooksDir, corpusDir, mcpDir, corpusPath, mcpServerPath,
-    settingsPath, runtimeManifestPath, installManifestPath,
+    mcpConfigPath, runtimeManifestPath, installManifestPath,
   };
 }
 

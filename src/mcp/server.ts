@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { loadCorpusSnapshot, type LoadedSnapshot } from '../corpus/snapshot-loader.js';
 import { isCorpusSnapshot } from '../corpus/schema.js';
+import { validateSnapshot } from '../corpus/validators.js';
 
 import { computeDiagnostics, type CorpusDiagnostics } from './diagnostics.js';
 import { readResource, buildResourceList, type ResourceEntry } from './resources.js';
@@ -152,6 +153,18 @@ const TOOL_DEFINITIONS = [
           type: 'string' as const,
           description: 'security:// URI (e.g., "security://owasp/cheatsheet/sql-injection-prevention")',
         },
+        sectionAnchor: {
+          type: 'string' as const,
+          description: 'Optional section anchor to target within the document',
+        },
+        headingQuery: {
+          type: 'string' as const,
+          description: 'Optional section heading query for selecting the best matching section',
+        },
+        excerptQuery: {
+          type: 'string' as const,
+          description: 'Optional text query for selecting the best matching section by excerpt',
+        },
       },
     },
   },
@@ -258,12 +271,25 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  const validation = validateSnapshot(loaded.snapshot);
+  if (!validation.valid) {
+    process.stderr.write(`[gss-mcp] Fatal corpus validation failure: ${validation.errors.length} errors\n`);
+    for (const error of validation.errors) {
+      process.stderr.write(`  x ${error.rule}: ${error.message}\n`);
+    }
+    process.exit(1);
+  }
+
   const diag = computeDiagnostics(loaded);
   const resourceList = buildResourceList(diag);
 
   process.stderr.write(
     `[gss-mcp] Loaded corpus v${diag.corpusVersion} (${diag.totalDocs} docs, ` +
     `${diag.supportedWorkflows.length} workflows, ${diag.supportedStacks.length} stacks)\n`,
+  );
+  process.stderr.write(
+    `[gss-mcp] Health: warnings=${diag.warnings.length}, reused=${diag.reusedDocs}, ` +
+    `issueCoverage=${diag.docsWithIssueTypes}/${diag.totalDocs}, sections=${diag.docsWithSections}/${diag.totalDocs}\n`,
   );
 
   // Create MCP server
@@ -358,8 +384,8 @@ async function main(): Promise<void> {
         }
 
         case 'read_security_doc': {
-          const doc = handleReadDoc(input as ReadDocToolInput, loaded);
-          if (!doc) {
+          const result = handleReadDoc(input as ReadDocToolInput, loaded);
+          if (!result) {
             return {
               content: [
                 {
@@ -374,7 +400,7 @@ async function main(): Promise<void> {
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(doc, null, 2),
+                text: JSON.stringify(result, null, 2),
               },
             ],
           };

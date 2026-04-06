@@ -206,7 +206,7 @@ async function main(): Promise<number> {
     // Enriched dry-run: resolve and display the install plan
     try {
       const targets = detectTargets(adapters, args.scope, cwd);
-      const pkgRoot = resolve(__dirname, '..');
+      const pkgRoot = resolve(__dirname, '..', '..');
       let corpus: CorpusResolution | null = null;
       try {
         corpus = await resolveCorpus(targets, pkgRoot);

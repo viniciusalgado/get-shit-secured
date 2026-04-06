@@ -31,6 +31,11 @@ import type {
 import { loadCorpusSnapshot, type LoadedSnapshot } from '../corpus/snapshot-loader.js';
 import { isCorpusSnapshot } from '../corpus/schema.js';
 import { getAllRoles } from '../catalog/roles/registry.js';
+import {
+  getDefaultPackagedMcpServerPath,
+  resolvePackagedMcpServerPath,
+} from './mcp-server-path.js';
+import { getHomeDir } from './paths.js';
 
 /**
  * Default workflows to install.
@@ -189,7 +194,7 @@ export async function installRuntimeArtifacts(
   targets: TargetDetection,
   adapters: RuntimeAdapter[],
   corpus: CorpusResolution | null,
-  options: { dryRun: boolean; hybridShadow?: boolean }
+  options: { dryRun: boolean; hybridShadow?: boolean; pkgRoot: string }
 ): Promise<InstalledArtifacts> {
   const { dryRun } = options;
   const errors: string[] = [];
@@ -344,6 +349,7 @@ export async function installRuntimeArtifacts(
     if (!dryRun) {
       try {
         const rolloutMode = computeRolloutMode({ hybridShadow: options.hybridShadow });
+        const packagedMcpServerPath = resolvePackagedMcpServerPath(options.pkgRoot);
         const runtimeManifest = {
           runtime,
           scope: targets.scope,
@@ -354,8 +360,10 @@ export async function installRuntimeArtifacts(
           managedConfigs: jsonConfigRecords.map(r => r.path),
           // Phase 8 additions for session-start health checks:
           corpusPath: corpus?.destinationPaths[runtime] ?? null,
-          mcpServerPath: corpus ? join(supportSubtreePath, 'mcp', 'server.js') : null,
-          mcpConfigPath: join(rootPath, 'settings.json'),
+          mcpServerPath: corpus ? packagedMcpServerPath : null,
+          mcpConfigPath: runtime === 'codex'
+            ? join(rootPath, 'config.toml')
+            : (targets.scope === 'local' ? join(targets.cwd, '.mcp.json') : join(getHomeDir(), '.claude.json')),
           gssVersion: '0.1.0',
           // Phase 10 additions for diagnostic metadata:
           installedWorkflows: DEFAULT_WORKFLOWS,
@@ -472,15 +480,21 @@ export function resolveInstallPlan(
     let mcpConfigPatch: ManagedJsonPatch | null = null;
 
     const adapterWithMcp = adapter as unknown as {
-      getMcpRegistration?: (serverPath: string, corpusPath: string) => ManagedJsonPatch;
+      getMcpRegistration?: (
+        serverPath: string,
+        corpusPath: string,
+        opts?: { scope: string; cwd: string },
+      ) => ManagedJsonPatch;
     };
     if (typeof adapterWithMcp.getMcpRegistration === 'function' && corpus) {
-      const destServerPath = join(supportSubtreePath, 'mcp', 'server.js');
-      const srcServerPath = resolve(options.pkgRoot, 'dist', 'mcp', 'server.js');
-      mcpServerCopy = { src: srcServerPath, dest: destServerPath };
+      const srcServerPath = resolvePackagedMcpServerPath(options.pkgRoot)
+        ?? getDefaultPackagedMcpServerPath(options.pkgRoot);
 
       const corpusDestPath = corpus.destinationPaths[runtime]!;
-      mcpConfigPatch = adapterWithMcp.getMcpRegistration(destServerPath, corpusDestPath);
+      mcpConfigPatch = adapterWithMcp.getMcpRegistration(srcServerPath, corpusDestPath, {
+        scope: targets.scope,
+        cwd: targets.cwd,
+      });
     }
 
     configOps.push({

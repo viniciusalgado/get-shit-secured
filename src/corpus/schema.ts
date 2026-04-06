@@ -12,6 +12,8 @@ import type {
   DocWorkflowBinding,
   DocStackBinding,
   DocProvenance,
+  SecurityDocSection,
+  SecurityDocFetchMetadata,
 } from '../core/types.js';
 
 /**
@@ -51,7 +53,33 @@ function isDocProvenance(obj: unknown): obj is DocProvenance {
     Array.isArray(record.inferred) &&
     record.inferred.every((v: unknown) => typeof v === 'string') &&
     Array.isArray(record.overridden) &&
-    record.overridden.every((v: unknown) => typeof v === 'string')
+    record.overridden.every((v: unknown) => typeof v === 'string') &&
+    (record.reused === undefined ||
+      (Array.isArray(record.reused) && record.reused.every((v: unknown) => typeof v === 'string')))
+  );
+}
+
+function isSecurityDocSection(obj: unknown): obj is SecurityDocSection {
+  if (typeof obj !== 'object' || obj === null) return false;
+  const record = obj as Record<string, unknown>;
+  return (
+    typeof record.heading === 'string' &&
+    typeof record.anchor === 'string' &&
+    typeof record.text === 'string' &&
+    (record.keywords === undefined ||
+      (Array.isArray(record.keywords) && record.keywords.every((v: unknown) => typeof v === 'string')))
+  );
+}
+
+function isSecurityDocFetchMetadata(obj: unknown): obj is SecurityDocFetchMetadata {
+  if (typeof obj !== 'object' || obj === null) return false;
+  const record = obj as Record<string, unknown>;
+  return (
+    typeof record.fetchStatus === 'string' &&
+    ['success', 'timeout', 'http-error', 'parse-error', 'reused-cache'].includes(record.fetchStatus) &&
+    typeof record.fetchAttempts === 'number' &&
+    (record.lastSuccessfulFetchAt === undefined || typeof record.lastSuccessfulFetchAt === 'string') &&
+    (record.sourceContentHash === undefined || typeof record.sourceContentHash === 'string')
   );
 }
 
@@ -95,6 +123,17 @@ export function isSecurityDoc(obj: unknown): obj is SecurityDoc {
     if (!(doc[field] as unknown[]).every((v: unknown) => typeof v === 'string')) return false;
   }
 
+  if (!Array.isArray(doc.sections) || !(doc.sections as unknown[]).every(isSecurityDocSection)) {
+    return false;
+  }
+
+  if (
+    doc.issueTypeConfidence !== undefined &&
+    (typeof doc.issueTypeConfidence !== 'object' || doc.issueTypeConfidence === null)
+  ) {
+    return false;
+  }
+
   // workflowBindings: DocWorkflowBinding[]
   if (
     !Array.isArray(doc.workflowBindings) ||
@@ -114,6 +153,8 @@ export function isSecurityDoc(obj: unknown): obj is SecurityDoc {
   // provenance: DocProvenance
   if (!isDocProvenance(doc.provenance)) return false;
 
+  if (doc.fetchMetadata !== undefined && !isSecurityDocFetchMetadata(doc.fetchMetadata)) return false;
+
   return true;
 }
 
@@ -129,7 +170,7 @@ export function isCorpusSnapshot(obj: unknown): obj is CorpusSnapshot {
   const snap = obj as Record<string, unknown>;
 
   // Metadata fields
-  if (snap.schemaVersion !== 1) return false;
+  if (snap.schemaVersion !== 2) return false;
   if (typeof snap.corpusVersion !== 'string') return false;
   if (typeof snap.generatedAt !== 'string') return false;
 
@@ -145,7 +186,13 @@ export function isCorpusSnapshot(obj: unknown): obj is CorpusSnapshot {
     typeof stats.readyDocs !== 'number' ||
     typeof stats.pendingDocs !== 'number' ||
     typeof stats.totalBindings !== 'number' ||
-    typeof stats.totalRelatedEdges !== 'number'
+    typeof stats.totalRelatedEdges !== 'number' ||
+    typeof stats.reusedDocs !== 'number' ||
+    typeof stats.docsWithIssueTypes !== 'number' ||
+    typeof stats.docsWithWorkflowBindings !== 'number' ||
+    typeof stats.docsWithSections !== 'number' ||
+    typeof stats.totalSections !== 'number' ||
+    typeof stats.averageRelatedDocDegree !== 'number'
   ) {
     return false;
   }

@@ -8,6 +8,7 @@
 
 import type { LoadedSnapshot } from '../corpus/snapshot-loader.js';
 import type { WorkflowId } from '../core/types.js';
+import { validateSnapshot, type ValidationIssue } from '../corpus/validators.js';
 
 /**
  * Diagnostic info about the loaded corpus.
@@ -23,12 +24,22 @@ export interface CorpusDiagnostics {
   totalBindings: number;
   /** Total related-doc edges */
   totalRelatedEdges: number;
+  /** Docs reused from previous snapshot */
+  reusedDocs: number;
+  /** Docs carrying issue type tags */
+  docsWithIssueTypes: number;
+  /** Docs with normalized sections */
+  docsWithSections: number;
+  /** Average related-doc degree */
+  averageRelatedDocDegree: number;
   /** Workflows that have at least one required doc */
   supportedWorkflows: WorkflowId[];
   /** Union of all stack tags in the corpus */
   supportedStacks: string[];
   /** Snapshot was generated at */
   generatedAt: string;
+  /** Semantic validation warnings */
+  warnings: ValidationIssue[];
 }
 
 /**
@@ -39,6 +50,7 @@ export interface CorpusDiagnostics {
  */
 export function computeDiagnostics(loaded: LoadedSnapshot): CorpusDiagnostics {
   const { snapshot } = loaded;
+  const validation = validateSnapshot(snapshot);
 
   // Compute supported workflows (those with at least one required binding)
   const workflowRequiredCounts = new Map<WorkflowId, number>();
@@ -64,8 +76,13 @@ export function computeDiagnostics(loaded: LoadedSnapshot): CorpusDiagnostics {
     readyDocs: snapshot.stats.readyDocs,
     totalBindings: snapshot.stats.totalBindings,
     totalRelatedEdges: snapshot.stats.totalRelatedEdges,
+    reusedDocs: snapshot.stats.reusedDocs,
+    docsWithIssueTypes: snapshot.stats.docsWithIssueTypes,
+    docsWithSections: snapshot.stats.docsWithSections,
+    averageRelatedDocDegree: snapshot.stats.averageRelatedDocDegree,
     supportedWorkflows: [...workflowRequiredCounts.keys()].sort(),
     supportedStacks: [...stacks].sort(),
     generatedAt: snapshot.generatedAt,
+    warnings: validation.warnings,
   };
 }

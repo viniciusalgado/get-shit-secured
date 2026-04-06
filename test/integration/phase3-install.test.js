@@ -56,6 +56,24 @@ describe('Phase 3 Integration — Full install pipeline', () => {
     }
   });
 
+  it('6.1b install resolves packaged corpus even when cwd has no local data directory', async () => {
+    const tempDir = await createTempDir();
+    const originalCwd = process.cwd();
+    try {
+      process.chdir(tempDir);
+      const result = await install([new ClaudeAdapter()], 'local', tempDir, false);
+
+      assert.ok(result.success, `Install failed: ${result.errors.join(', ')}`);
+      assert.ok(
+        existsSync(join(tempDir, '.claude', 'gss', 'corpus', 'owasp-corpus.json')),
+        'Corpus should still be installed from the packaged snapshot'
+      );
+    } finally {
+      process.chdir(originalCwd);
+      await cleanupTempDir(tempDir);
+    }
+  });
+
   it('6.2 full install (Codex) succeeds with corpus-based path', async () => {
     const tempDir = await createTempDir();
     try {

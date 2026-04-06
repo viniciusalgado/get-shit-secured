@@ -148,21 +148,40 @@ export class ClaudeAdapter implements RuntimeAdapter {
   }
 
   /**
-   * Get MCP server registration for Claude settings.json.
+   * Get MCP server registration for Claude Code.
+   *
+   * Claude Code reads MCP server definitions from:
+   * - Project scope (.mcp.json at project root)
+   * - User scope (~/.claude.json)
+   *
+   * NOT from .claude/settings.json (that's for hooks/permissions only).
    *
    * @param serverPath - Absolute path to the compiled MCP server entrypoint
    * @param corpusPath - Absolute path to the corpus snapshot
+   * @param options - Scope and cwd for determining the correct config file
    */
-  getMcpRegistration(serverPath: string, corpusPath: string): ManagedJsonPatch {
+  getMcpRegistration(
+    serverPath: string,
+    corpusPath: string,
+    options?: { scope: InstallScope; cwd: string }
+  ): ManagedJsonPatch {
+    const scope = options?.scope ?? 'local';
+
+    // Local scope: write to <cwd>/.mcp.json (project root)
+    // Global scope: write to ~/.claude.json (user home)
+    const isLocal = scope === 'local';
+
     return {
-      path: 'settings.json',
+      path: isLocal ? '.mcp.json' : '.claude.json',
       owner: 'gss',
       content: {
         command: 'node',
         args: [serverPath, '--corpus-path', corpusPath],
+        env: {},
       },
       mergeStrategy: 'deep',
       keyPath: 'mcpServers.gss-security-docs',
+      resolveFrom: isLocal ? 'cwd' : 'home',
     };
   }
 

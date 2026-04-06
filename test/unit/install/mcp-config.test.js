@@ -13,11 +13,11 @@ import { tmpdir } from 'node:os';
 import { registerMcpServers } from '../../../dist/install/mcp-config.js';
 import { createMockAdapterWithMcp } from './helpers.js';
 
-function makeTargets(rootPath, supportSubtree) {
+function makeTargets(rootPath, supportSubtree, cwd) {
   return {
     runtimes: ['claude'],
     scope: 'local',
-    cwd: '/mock',
+    cwd: cwd ?? '/mock',
     roots: { claude: rootPath },
     supportSubtrees: { claude: supportSubtree },
   };
@@ -33,24 +33,24 @@ function makeCorpus(destPath) {
 }
 
 describe('registerMcpServers — Server binary copy', () => {
-  it('copies MCP server binary to support subtree', async () => {
+  it('resolves MCP server binary path from package', async () => {
     const tempDir = await mkdtemp(join(tmpdir(), 'gss-p9-'));
     try {
       const rootPath = join(tempDir, 'claude');
       const supportSubtree = join(rootPath, 'gss');
       mkdirSync(supportSubtree, { recursive: true });
 
-      // Create source binary
-      const srcDir = join(tempDir, 'pkg', 'mcp');
+      // Create source binary at dist/mcp/server.bundle.js (matches resolvePackagedMcpServerPath)
+      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
       mkdirSync(srcDir, { recursive: true });
-      writeFileSync(join(srcDir, 'server.js'), '// MCP server test');
+      writeFileSync(join(srcDir, 'server.bundle.js'), '// MCP server test');
 
       const adapter = createMockAdapterWithMcp({
         runtime: 'claude',
         rootPath,
         supportSubtree,
       });
-      const targets = makeTargets(rootPath, supportSubtree);
+      const targets = makeTargets(rootPath, supportSubtree, tempDir);
       const corpus = makeCorpus(join(supportSubtree, 'corpus', 'owasp-corpus.json'));
 
       const result = await registerMcpServers([adapter], targets, corpus, {
@@ -58,8 +58,8 @@ describe('registerMcpServers — Server binary copy', () => {
         pkgRoot: join(tempDir, 'pkg'),
       });
 
-      const expectedPath = join(supportSubtree, 'mcp', 'server.js');
-      assert.ok(existsSync(expectedPath), 'Server binary should exist');
+      const expectedPath = join(tempDir, 'pkg', 'dist', 'mcp', 'server.bundle.js');
+      assert.ok(result.serverBinaryPaths.claude);
       assert.equal(result.serverBinaryPaths.claude, expectedPath);
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
@@ -72,12 +72,12 @@ describe('registerMcpServers — Server binary copy', () => {
       const rootPath = join(tempDir, 'claude');
       const supportSubtree = join(rootPath, 'gss');
       mkdirSync(supportSubtree, { recursive: true });
-      const srcDir = join(tempDir, 'pkg', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
       mkdirSync(srcDir, { recursive: true });
-      writeFileSync(join(srcDir, 'server.js'), '// test');
+      writeFileSync(join(srcDir, 'server.bundle.js'), '// test');
 
       const adapter = createMockAdapterWithMcp({ runtime: 'claude', rootPath, supportSubtree });
-      const targets = makeTargets(rootPath, supportSubtree);
+      const targets = makeTargets(rootPath, supportSubtree, tempDir);
       const corpus = makeCorpus(join(supportSubtree, 'corpus/owasp-corpus.json'));
 
       const result = await registerMcpServers([adapter], targets, corpus, {
@@ -86,13 +86,13 @@ describe('registerMcpServers — Server binary copy', () => {
       });
 
       assert.ok(result.serverBinaryPaths.claude);
-      assert.ok(result.serverBinaryPaths.claude.includes('server.js'));
+      assert.ok(result.serverBinaryPaths.claude.includes('server'));
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
   });
 
-  it('skips copy when source binary absent', async () => {
+  it('reports error when source binary absent', async () => {
     const tempDir = await mkdtemp(join(tmpdir(), 'gss-p9-'));
     try {
       const rootPath = join(tempDir, 'claude');
@@ -100,7 +100,7 @@ describe('registerMcpServers — Server binary copy', () => {
       mkdirSync(supportSubtree, { recursive: true });
 
       const adapter = createMockAdapterWithMcp({ runtime: 'claude', rootPath, supportSubtree });
-      const targets = makeTargets(rootPath, supportSubtree);
+      const targets = makeTargets(rootPath, supportSubtree, tempDir);
       const corpus = makeCorpus(join(supportSubtree, 'corpus/owasp-corpus.json'));
 
       const result = await registerMcpServers([adapter], targets, corpus, {
@@ -109,32 +109,33 @@ describe('registerMcpServers — Server binary copy', () => {
       });
 
       assert.ok(result.errors.length > 0);
-      assert.ok(result.errors[0].includes('MCP server binary not found'));
+      assert.ok(result.errors[0].includes('MCP server entrypoint not found') || result.errors[0].includes('not found'));
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
   });
 
-  it('creates mcp/ directory if missing', async () => {
+  it('resolves packaged server path correctly', async () => {
     const tempDir = await mkdtemp(join(tmpdir(), 'gss-p9-'));
     try {
       const rootPath = join(tempDir, 'claude');
       const supportSubtree = join(rootPath, 'gss');
       mkdirSync(supportSubtree, { recursive: true });
-      const srcDir = join(tempDir, 'pkg', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
       mkdirSync(srcDir, { recursive: true });
-      writeFileSync(join(srcDir, 'server.js'), '// test');
+      writeFileSync(join(srcDir, 'server.bundle.js'), '// test');
 
       const adapter = createMockAdapterWithMcp({ runtime: 'claude', rootPath, supportSubtree });
-      const targets = makeTargets(rootPath, supportSubtree);
+      const targets = makeTargets(rootPath, supportSubtree, tempDir);
       const corpus = makeCorpus(join(supportSubtree, 'corpus/owasp-corpus.json'));
 
-      await registerMcpServers([adapter], targets, corpus, {
+      const result = await registerMcpServers([adapter], targets, corpus, {
         dryRun: false,
         pkgRoot: join(tempDir, 'pkg'),
       });
 
-      assert.ok(existsSync(join(supportSubtree, 'mcp')), 'mcp/ directory should be created');
+      assert.ok(result.serverBinaryPaths.claude);
+      assert.ok(result.serverBinaryPaths.claude.includes('server.bundle.js'));
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -142,7 +143,7 @@ describe('registerMcpServers — Server binary copy', () => {
 });
 
 describe('registerMcpServers — Config merge', () => {
-  it('merges MCP config into settings.json', async () => {
+  it('merges MCP config into .mcp.json', async () => {
     const tempDir = await mkdtemp(join(tmpdir(), 'gss-p9-'));
     try {
       const rootPath = join(tempDir, 'claude');
@@ -150,12 +151,12 @@ describe('registerMcpServers — Config merge', () => {
       mkdirSync(supportSubtree, { recursive: true });
       mkdirSync(join(rootPath), { recursive: true });
 
-      const srcDir = join(tempDir, 'pkg', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
       mkdirSync(srcDir, { recursive: true });
-      writeFileSync(join(srcDir, 'server.js'), '// test');
+      writeFileSync(join(srcDir, 'server.bundle.js'), '// test');
 
       const adapter = createMockAdapterWithMcp({ runtime: 'claude', rootPath, supportSubtree });
-      const targets = makeTargets(rootPath, supportSubtree);
+      const targets = makeTargets(rootPath, supportSubtree, tempDir);
       const corpus = makeCorpus(join(supportSubtree, 'corpus/owasp-corpus.json'));
 
       const result = await registerMcpServers([adapter], targets, corpus, {
@@ -163,31 +164,31 @@ describe('registerMcpServers — Config merge', () => {
         pkgRoot: join(tempDir, 'pkg'),
       });
 
-      const settingsPath = result.configPaths.claude;
-      assert.ok(settingsPath);
-      const settings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
-      assert.ok(settings.mcpServers);
-      assert.ok('gss-security-docs' in settings.mcpServers);
+      const mcpConfigPath = result.configPaths.claude;
+      assert.ok(mcpConfigPath);
+      const config = JSON.parse(readFileSync(mcpConfigPath, 'utf-8'));
+      assert.ok(config.mcpServers);
+      assert.ok('gss-security-docs' in config.mcpServers);
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
   });
 
-  it('preserves existing settings.json content', async () => {
+  it('preserves existing .mcp.json content', async () => {
     const tempDir = await mkdtemp(join(tmpdir(), 'gss-p9-'));
     try {
       const rootPath = join(tempDir, 'claude');
       const supportSubtree = join(rootPath, 'gss');
       mkdirSync(supportSubtree, { recursive: true });
       mkdirSync(join(rootPath), { recursive: true });
-      writeFileSync(join(rootPath, 'settings.json'), JSON.stringify({ otherKey: true }));
+      writeFileSync(join(tempDir, '.mcp.json'), JSON.stringify({ otherKey: true }));
 
-      const srcDir = join(tempDir, 'pkg', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
       mkdirSync(srcDir, { recursive: true });
-      writeFileSync(join(srcDir, 'server.js'), '// test');
+      writeFileSync(join(srcDir, 'server.bundle.js'), '// test');
 
       const adapter = createMockAdapterWithMcp({ runtime: 'claude', rootPath, supportSubtree });
-      const targets = makeTargets(rootPath, supportSubtree);
+      const targets = makeTargets(rootPath, supportSubtree, tempDir);
       const corpus = makeCorpus(join(supportSubtree, 'corpus/owasp-corpus.json'));
 
       const result = await registerMcpServers([adapter], targets, corpus, {
@@ -195,9 +196,9 @@ describe('registerMcpServers — Config merge', () => {
         pkgRoot: join(tempDir, 'pkg'),
       });
 
-      const settings = JSON.parse(readFileSync(result.configPaths.claude, 'utf-8'));
-      assert.equal(settings.otherKey, true);
-      assert.ok(settings.mcpServers);
+      const config = JSON.parse(readFileSync(result.configPaths.claude, 'utf-8'));
+      assert.equal(config.otherKey, true);
+      assert.ok(config.mcpServers);
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -209,12 +210,12 @@ describe('registerMcpServers — Config merge', () => {
       const rootPath = join(tempDir, 'claude');
       const supportSubtree = join(rootPath, 'gss');
       mkdirSync(supportSubtree, { recursive: true });
-      const srcDir = join(tempDir, 'pkg', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
       mkdirSync(srcDir, { recursive: true });
-      writeFileSync(join(srcDir, 'server.js'), '// test');
+      writeFileSync(join(srcDir, 'server.bundle.js'), '// test');
 
       const adapter = createMockAdapterWithMcp({ runtime: 'claude', rootPath, supportSubtree });
-      const targets = makeTargets(rootPath, supportSubtree);
+      const targets = makeTargets(rootPath, supportSubtree, tempDir);
       const corpus = makeCorpus(join(supportSubtree, 'corpus/owasp-corpus.json'));
 
       const result = await registerMcpServers([adapter], targets, corpus, {
@@ -223,24 +224,24 @@ describe('registerMcpServers — Config merge', () => {
       });
 
       assert.ok(result.configPaths.claude);
-      assert.ok(result.configPaths.claude.endsWith('settings.json'));
+      assert.ok(result.configPaths.claude.endsWith('.mcp.json'));
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
   });
 
-  it('creates settings directory if missing', async () => {
+  it('creates .mcp.json if missing', async () => {
     const tempDir = await mkdtemp(join(tmpdir(), 'gss-p9-'));
     try {
       const rootPath = join(tempDir, 'claude');
       const supportSubtree = join(rootPath, 'gss');
       mkdirSync(supportSubtree, { recursive: true });
-      const srcDir = join(tempDir, 'pkg', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
       mkdirSync(srcDir, { recursive: true });
-      writeFileSync(join(srcDir, 'server.js'), '// test');
+      writeFileSync(join(srcDir, 'server.bundle.js'), '// test');
 
       const adapter = createMockAdapterWithMcp({ runtime: 'claude', rootPath, supportSubtree });
-      const targets = makeTargets(rootPath, supportSubtree);
+      const targets = makeTargets(rootPath, supportSubtree, tempDir);
       const corpus = makeCorpus(join(supportSubtree, 'corpus/owasp-corpus.json'));
 
       const result = await registerMcpServers([adapter], targets, corpus, {
@@ -265,7 +266,7 @@ describe('registerMcpServers — Error handling', () => {
       mkdirSync(supportSubtree, { recursive: true });
 
       const adapter = createMockAdapterWithMcp({ runtime: 'claude', rootPath, supportSubtree });
-      const targets = makeTargets(rootPath, supportSubtree);
+      const targets = makeTargets(rootPath, supportSubtree, tempDir);
       const corpus = makeCorpus(join(supportSubtree, 'corpus/owasp-corpus.json'));
 
       // Should not throw
@@ -279,21 +280,21 @@ describe('registerMcpServers — Error handling', () => {
     }
   });
 
-  it('non-fatal error on invalid JSON in existing settings', async () => {
+  it('non-fatal error on invalid JSON in existing .mcp.json', async () => {
     const tempDir = await mkdtemp(join(tmpdir(), 'gss-p9-'));
     try {
       const rootPath = join(tempDir, 'claude');
       const supportSubtree = join(rootPath, 'gss');
       mkdirSync(supportSubtree, { recursive: true });
       mkdirSync(join(rootPath), { recursive: true });
-      writeFileSync(join(rootPath, 'settings.json'), 'not-json');
+      writeFileSync(join(tempDir, '.mcp.json'), 'not-json');
 
-      const srcDir = join(tempDir, 'pkg', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
       mkdirSync(srcDir, { recursive: true });
-      writeFileSync(join(srcDir, 'server.js'), '// test');
+      writeFileSync(join(srcDir, 'server.bundle.js'), '// test');
 
       const adapter = createMockAdapterWithMcp({ runtime: 'claude', rootPath, supportSubtree });
-      const targets = makeTargets(rootPath, supportSubtree);
+      const targets = makeTargets(rootPath, supportSubtree, tempDir);
       const corpus = makeCorpus(join(supportSubtree, 'corpus/owasp-corpus.json'));
 
       // Should not throw — error goes into result.errors
@@ -385,9 +386,9 @@ describe('registerMcpServers — Multiple runtimes', () => {
       mkdirSync(join(claudeRoot, 'gss'), { recursive: true });
       mkdirSync(join(codexRoot, 'gss'), { recursive: true });
 
-      const srcDir = join(tempDir, 'pkg', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
       mkdirSync(srcDir, { recursive: true });
-      writeFileSync(join(srcDir, 'server.js'), '// test');
+      writeFileSync(join(srcDir, 'server.bundle.js'), '// test');
 
       const claudeAdapter = createMockAdapterWithMcp({
         runtime: 'claude', rootPath: claudeRoot, supportSubtree: join(claudeRoot, 'gss'),
@@ -433,9 +434,9 @@ describe('registerMcpServers — Multiple runtimes', () => {
       const codexRoot = join(tempDir, 'codex');
       mkdirSync(join(codexRoot, 'gss'), { recursive: true });
 
-      const srcDir = join(tempDir, 'pkg', 'mcp');
+      const srcDir = join(tempDir, 'pkg', 'dist', 'mcp');
       mkdirSync(srcDir, { recursive: true });
-      writeFileSync(join(srcDir, 'server.js'), '// test');
+      writeFileSync(join(srcDir, 'server.bundle.js'), '// test');
 
       // Claude adapter with nonexistent paths will fail
       const claudeAdapter = createMockAdapterWithMcp({

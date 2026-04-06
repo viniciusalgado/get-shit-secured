@@ -12,7 +12,6 @@ import {
   getDocumentById,
   getDocumentsForWorkflow,
 } from '../corpus/snapshot-loader.js';
-import { docUriFromId } from '../corpus/ids.js';
 import type { WorkflowId } from '../core/types.js';
 import type { CorpusDiagnostics } from './diagnostics.js';
 
@@ -36,6 +35,12 @@ export function buildResourceList(diag: CorpusDiagnostics): ResourceEntry[] {
       uri: 'security://catalog/index',
       name: 'Security Document Catalog',
       description: 'Corpus metadata: version, doc counts, supported workflows and stacks',
+      mimeType: 'application/json',
+    },
+    {
+      uri: 'security://catalog/diagnostics',
+      name: 'Security Document Diagnostics',
+      description: 'Semantic validation warnings and corpus health signals',
       mimeType: 'application/json',
     },
   ];
@@ -84,11 +89,30 @@ export function readResource(
         corpusVersion: diag.corpusVersion,
         totalDocs: diag.totalDocs,
         readyDocs: diag.readyDocs,
+        pendingDocs: loaded.snapshot.stats.pendingDocs,
         totalBindings: diag.totalBindings,
         totalRelatedEdges: diag.totalRelatedEdges,
+        reusedDocs: diag.reusedDocs,
+        docsWithIssueTypes: diag.docsWithIssueTypes,
+        docsWithSections: diag.docsWithSections,
+        averageRelatedDocDegree: diag.averageRelatedDocDegree,
         supportedWorkflows: diag.supportedWorkflows,
         supportedStacks: diag.supportedStacks,
         generatedAt: diag.generatedAt,
+        health: {
+          warningCount: diag.warnings.length,
+        },
+      }, null, 2),
+    };
+  }
+
+  if (uri === 'security://catalog/diagnostics') {
+    return {
+      uri,
+      mimeType: 'application/json',
+      text: JSON.stringify({
+        corpusVersion: diag.corpusVersion,
+        warnings: diag.warnings,
       }, null, 2),
     };
   }
@@ -115,7 +139,7 @@ export function readResource(
   }
 
   // security://owasp/cheatsheet/{id}
-  const cheatsheetMatch = uri.match(/^security:\/\/owasp\/cheatsheet\/(.+)$/);
+  const cheatsheetMatch = uri.match(/^security:\/\/owasp\/cheatsheet\/([^#]+)(?:#section=(.+))?$/);
   if (cheatsheetMatch) {
     const id = cheatsheetMatch[1];
     const doc = getDocumentById(loaded, id);
@@ -125,7 +149,16 @@ export function readResource(
     return {
       uri,
       mimeType: 'application/json',
-      text: JSON.stringify(doc, null, 2),
+      text: JSON.stringify(
+        cheatsheetMatch[2]
+          ? {
+              doc,
+              selectedSection: doc.sections.find(section => section.anchor === cheatsheetMatch[2]) ?? null,
+            }
+          : doc,
+        null,
+        2,
+      ),
     };
   }
 

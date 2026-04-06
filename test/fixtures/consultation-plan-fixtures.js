@@ -255,26 +255,21 @@ export function makeMinimalSnapshot() {
     },
   ];
 
+  const normalizedDocs = docs.map(enrichDoc);
   const byId = new Map();
   const byUri = new Map();
-  for (const doc of docs) {
+  for (const doc of normalizedDocs) {
     byId.set(doc.id, doc);
     byUri.set(doc.uri, doc);
   }
 
   return {
     snapshot: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       corpusVersion: '1.0.0',
       generatedAt: '2026-03-30T00:00:00.000Z',
-      documents: docs,
-      stats: {
-        totalDocs: docs.length,
-        readyDocs: docs.length,
-        pendingDocs: 0,
-        totalBindings: 9,
-        totalRelatedEdges: 8,
-      },
+      documents: normalizedDocs,
+      stats: computeStats(normalizedDocs),
     },
     byId,
     byUri,
@@ -287,17 +282,11 @@ export function makeMinimalSnapshot() {
 export function makeEmptySnapshot() {
   return {
     snapshot: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       corpusVersion: '1.0.0',
       generatedAt: '2026-03-30T00:00:00.000Z',
       documents: [],
-      stats: {
-        totalDocs: 0,
-        readyDocs: 0,
-        pendingDocs: 0,
-        totalBindings: 0,
-        totalRelatedEdges: 0,
-      },
+      stats: computeStats([]),
     },
     byId: new Map(),
     byUri: new Map(),
@@ -309,25 +298,20 @@ export function makeEmptySnapshot() {
  * Builds byId/byUri lookup Maps.
  */
 export function createLoadedSnapshot(docs) {
+  const normalizedDocs = docs.map(enrichDoc);
   const byId = new Map();
   const byUri = new Map();
-  for (const doc of docs) {
+  for (const doc of normalizedDocs) {
     byId.set(doc.id, doc);
     byUri.set(doc.uri, doc);
   }
   return {
     snapshot: {
-      schemaVersion: 1,
-      corpusVersion: docs[0]?.corpusVersion ?? '1.0.0',
+      schemaVersion: 2,
+      corpusVersion: normalizedDocs[0]?.corpusVersion ?? '1.0.0',
       generatedAt: '2026-03-30T00:00:00.000Z',
-      documents: docs,
-      stats: {
-        totalDocs: docs.length,
-        readyDocs: docs.filter(d => d.status === 'ready').length,
-        pendingDocs: docs.filter(d => d.status === 'pending').length,
-        totalBindings: docs.reduce((n, d) => n + d.workflowBindings.length, 0),
-        totalRelatedEdges: docs.reduce((n, d) => n + d.relatedDocIds.length, 0),
-      },
+      documents: normalizedDocs,
+      stats: computeStats(normalizedDocs),
     },
     byId,
     byUri,
@@ -398,7 +382,7 @@ export function createLargeSnapshot() {
  * Helper to create a minimal valid doc object.
  */
 export function createDoc(overrides = {}) {
-  return {
+  return enrichDoc({
     id: 'test-doc',
     uri: 'security://owasp/cheatsheet/test-doc',
     title: 'Test Doc',
@@ -409,6 +393,7 @@ export function createDoc(overrides = {}) {
     summary: 'A test document',
     headings: [],
     checklist: [],
+    sections: [],
     tags: [],
     issueTypes: [],
     workflowBindings: [],
@@ -416,6 +401,49 @@ export function createDoc(overrides = {}) {
     relatedDocIds: [],
     aliases: [],
     provenance: { inferred: [], overridden: [] },
+    fetchMetadata: { fetchStatus: 'success', fetchAttempts: 1, lastSuccessfulFetchAt: '2026-03-30T00:00:00.000Z', sourceContentHash: 'fixture' },
     ...overrides,
+  });
+}
+
+function enrichDoc(doc) {
+  return {
+    sections: doc.sections ?? [{
+      heading: doc.headings?.[0] ?? 'Overview',
+      anchor: (doc.headings?.[0] ?? 'overview').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      text: [doc.summary, ...(doc.checklist ?? [])].filter(Boolean).join('\n'),
+      keywords: doc.issueTypes ?? [],
+    }],
+    issueTypeConfidence: doc.issueTypeConfidence ?? Object.fromEntries((doc.issueTypes ?? []).map(tag => [tag, 'curated'])),
+    provenance: { reused: [], ...(doc.provenance ?? { inferred: [], overridden: [] }) },
+    fetchMetadata: doc.fetchMetadata ?? { fetchStatus: 'success', fetchAttempts: 1, lastSuccessfulFetchAt: '2026-03-30T00:00:00.000Z', sourceContentHash: doc.id },
+    ...doc,
+  };
+}
+
+function computeStats(docs) {
+  const totalDocs = docs.length;
+  const readyDocs = docs.filter(d => d.status === 'ready').length;
+  const pendingDocs = docs.filter(d => d.status === 'pending').length;
+  const totalBindings = docs.reduce((n, d) => n + d.workflowBindings.length, 0);
+  const totalRelatedEdges = docs.reduce((n, d) => n + d.relatedDocIds.length, 0);
+  const reusedDocs = docs.filter(d => d.fetchMetadata?.fetchStatus === 'reused-cache').length;
+  const docsWithIssueTypes = docs.filter(d => (d.issueTypes ?? []).length > 0).length;
+  const docsWithWorkflowBindings = docs.filter(d => (d.workflowBindings ?? []).length > 0).length;
+  const docsWithSections = docs.filter(d => (d.sections ?? []).length > 0).length;
+  const totalSections = docs.reduce((n, d) => n + (d.sections ?? []).length, 0);
+
+  return {
+    totalDocs,
+    readyDocs,
+    pendingDocs,
+    totalBindings,
+    totalRelatedEdges,
+    reusedDocs,
+    docsWithIssueTypes,
+    docsWithWorkflowBindings,
+    docsWithSections,
+    totalSections,
+    averageRelatedDocDegree: totalDocs > 0 ? totalRelatedEdges / totalDocs : 0,
   };
 }

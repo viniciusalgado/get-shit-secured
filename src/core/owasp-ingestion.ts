@@ -19,6 +19,29 @@
 
 import type { OwaspCorpusEntry, WorkflowId } from './types.js';
 
+export interface FetchCheatSheetOptions {
+  timeoutMs?: number;
+  maxAttempts?: number;
+  retryableStatuses?: number[];
+  fetchImpl?: typeof fetch;
+}
+
+export interface FetchCheatSheetResult {
+  ok: boolean;
+  html: string;
+  fetchStatus: 'success' | 'timeout' | 'http-error' | 'parse-error';
+  attempts: number;
+  lastSuccessfulFetchAt?: string;
+  statusCode?: number;
+  error?: string;
+}
+
+const DEFAULT_FETCH_OPTIONS: Required<Omit<FetchCheatSheetOptions, 'fetchImpl'>> = {
+  timeoutMs: 10_000,
+  maxAttempts: 3,
+  retryableStatuses: [408, 425, 429, 500, 502, 503, 504],
+};
+
 /**
  * Canonical seed URL for the OWASP Cheat Sheet Series.
  * The Index Alphabetical page lists all cheat sheets.
@@ -303,12 +326,85 @@ function extractTags(id: string, headings: string[]): string[] {
  * @param url - The cheat sheet URL
  * @returns HTML content
  */
-export async function fetchCheatSheet(url: string): Promise<string> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
+export async function fetchCheatSheetWithMetadata(
+  url: string,
+  options: FetchCheatSheetOptions = {},
+): Promise<FetchCheatSheetResult> {
+  const opts = { ...DEFAULT_FETCH_OPTIONS, ...options };
+  const fetchImpl = options.fetchImpl ?? fetch;
+  let lastError: string | undefined;
+  let lastStatusCode: number | undefined;
+  let lastStatus: FetchCheatSheetResult['fetchStatus'] = 'http-error';
+
+  for (let attempt = 1; attempt <= opts.maxAttempts; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), opts.timeoutMs);
+
+    try {
+      const response = await fetchImpl(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        lastStatusCode = response.status;
+        lastError = `HTTP ${response.status} ${response.statusText}`.trim();
+        lastStatus = 'http-error';
+
+        if (attempt < opts.maxAttempts && opts.retryableStatuses.includes(response.status)) {
+          await sleep(backoffMs(attempt));
+          continue;
+        }
+
+        return {
+          ok: false,
+          html: '',
+          fetchStatus: 'http-error',
+          attempts: attempt,
+          statusCode: response.status,
+          error: lastError,
+        };
+      }
+
+      const html = await response.text();
+      return {
+        ok: true,
+        html,
+        fetchStatus: 'success',
+        attempts: attempt,
+        lastSuccessfulFetchAt: new Date().toISOString(),
+        statusCode: response.status,
+      };
+    } catch (error) {
+      clearTimeout(timeoutId);
+      const isAbort = error instanceof Error && error.name === 'AbortError';
+      lastStatus = isAbort ? 'timeout' : 'http-error';
+      lastError = error instanceof Error ? error.message : String(error);
+
+      if (attempt < opts.maxAttempts) {
+        await sleep(backoffMs(attempt));
+        continue;
+      }
+    }
   }
-  return response.text();
+
+  return {
+    ok: false,
+    html: '',
+    fetchStatus: lastStatus,
+    attempts: opts.maxAttempts,
+    ...(lastStatusCode ? { statusCode: lastStatusCode } : {}),
+    ...(lastError ? { error: lastError } : {}),
+  };
+}
+
+export async function fetchCheatSheet(
+  url: string,
+  options: FetchCheatSheetOptions = {},
+): Promise<string> {
+  const result = await fetchCheatSheetWithMetadata(url, options);
+  if (!result.ok) {
+    throw new Error(`Failed to fetch ${url}: ${result.error ?? result.fetchStatus}`);
+  }
+  return result.html;
 }
 
 /**
@@ -347,6 +443,14 @@ export async function fetchAllCheatSheets(): Promise<OwaspCorpusEntry[]> {
   }
 
   return results;
+}
+
+function backoffMs(attempt: number): number {
+  return 250 * (2 ** Math.max(0, attempt - 1));
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**

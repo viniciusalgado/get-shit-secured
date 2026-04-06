@@ -12,6 +12,7 @@ import type {
   DocWorkflowBinding,
   DocStackBinding,
   DocProvenance,
+  IssueTypeConfidence,
   WorkflowId,
 } from '../core/types.js';
 import type { CuratedOverride } from './catalog.js';
@@ -27,6 +28,8 @@ export interface MergedBindings {
   stackBindings: DocStackBinding[];
   /** Issue type tags (from override or empty) */
   issueTypes: string[];
+  /** Confidence metadata for issue type tags */
+  issueTypeConfidence: Partial<Record<string, IssueTypeConfidence>>;
   /** Provenance tracking which fields came from where */
   provenance: DocProvenance;
 }
@@ -53,16 +56,18 @@ export function mergeBindings(
   const provenance: DocProvenance = {
     inferred: [],
     overridden: [],
+    reused: [],
   };
 
   const workflowBindings = mergeWorkflowBindings(docId, inferred, override, provenance);
   const stackBindings = mergeStackBindings(docId, inferred, override, provenance);
-  const issueTypes = mergeIssueTypes(docId, override, provenance);
+  const { issueTypes, issueTypeConfidence } = mergeIssueTypes(docId, inferred, override, provenance);
 
   return {
     workflowBindings,
     stackBindings,
     issueTypes,
+    issueTypeConfidence,
     provenance,
   };
 }
@@ -167,15 +172,30 @@ function mergeStackBindings(
  */
 function mergeIssueTypes(
   docId: string,
+  inferred: InferredBindings,
   override: CuratedOverride | undefined,
   provenance: DocProvenance
-): string[] {
+): {
+  issueTypes: string[];
+  issueTypeConfidence: Partial<Record<string, IssueTypeConfidence>>;
+} {
   if (override && override.issueTypes.length > 0) {
     provenance.overridden.push('issueTypes:curated');
-    return [...override.issueTypes];
+    return {
+      issueTypes: [...new Set(override.issueTypes)].sort(),
+      issueTypeConfidence: override.issueTypeConfidence ?? Object.fromEntries(
+        override.issueTypes.map(tag => [tag, 'curated' as const]),
+      ),
+    };
   }
 
-  // No override — leave empty; issueTypes will be populated by
-  // the planner from actual findings during workflow execution
-  return [];
+  if ((inferred.issueTypes ?? []).length > 0) {
+    provenance.inferred.push('issueTypes:inferred');
+    return {
+      issueTypes: [...new Set(inferred.issueTypes ?? [])].sort(),
+      issueTypeConfidence: inferred.issueTypeConfidence ?? {},
+    };
+  }
+
+  return { issueTypes: [], issueTypeConfidence: {} };
 }

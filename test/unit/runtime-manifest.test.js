@@ -10,14 +10,18 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { mkdtemp, readFile } from 'node:fs/promises';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 
 import { installRuntimeArtifacts, detectTargets, DEFAULT_WORKFLOWS } from '../../dist/core/install-stages.js';
 import { ClaudeAdapter } from '../../dist/runtimes/claude/adapter.js';
 import { CodexAdapter } from '../../dist/runtimes/codex/adapter.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkgRoot = resolve(__dirname, '..', '..');
 
 /**
  * Create a minimal corpus resolution for testing.
@@ -61,7 +65,7 @@ describe('Runtime Manifest — Phase 10 fields (Claude)', () => {
       mkdirSync(join(tempDir, '.gss', 'reports'), { recursive: true });
 
       const result = await installRuntimeArtifacts(
-        targets, [adapter], corpus, { dryRun: false }
+        targets, [adapter], corpus, { dryRun: false, pkgRoot }
       );
 
       const manifestPath = result.runtimeManifestPaths['claude'];
@@ -88,7 +92,7 @@ describe('Runtime Manifest — Phase 10 fields (Claude)', () => {
       mkdirSync(join(tempDir, '.gss', 'reports'), { recursive: true });
 
       const result = await installRuntimeArtifacts(
-        targets, [adapter], corpus, { dryRun: false }
+        targets, [adapter], corpus, { dryRun: false, pkgRoot }
       );
 
       const manifestPath = result.runtimeManifestPaths['claude'];
@@ -114,7 +118,7 @@ describe('Runtime Manifest — Phase 10 fields (Claude)', () => {
       mkdirSync(join(tempDir, '.gss', 'reports'), { recursive: true });
 
       const result = await installRuntimeArtifacts(
-        targets, [adapter], corpus, { dryRun: false }
+        targets, [adapter], corpus, { dryRun: false, pkgRoot }
       );
 
       const manifestPath = result.runtimeManifestPaths['claude'];
@@ -128,6 +132,35 @@ describe('Runtime Manifest — Phase 10 fields (Claude)', () => {
 });
 
 describe('Runtime Manifest — Backward compatibility', () => {
+  it('writes mcpServerPath as null when no packaged MCP server exists', async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), 'gss-p10-mf-'));
+    try {
+      const adapter = new ClaudeAdapter();
+      const targets = detectTargets([adapter], 'local', tempDir);
+      const corpus = createMockCorpus(tempDir, 'claude');
+
+      mkdirSync(join(tempDir, '.gss', 'artifacts'), { recursive: true });
+      mkdirSync(join(tempDir, '.gss', 'reports'), { recursive: true });
+
+      const pkgRoot = join(tempDir, 'pkg-without-mcp-build');
+      mkdirSync(pkgRoot, { recursive: true });
+
+      const result = await installRuntimeArtifacts(
+        targets,
+        [adapter],
+        corpus,
+        { dryRun: false, pkgRoot }
+      );
+
+      const manifestPath = result.runtimeManifestPaths['claude'];
+      const manifest = JSON.parse(await readFile(manifestPath, 'utf-8'));
+
+      assert.equal(manifest.mcpServerPath, null);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it('old manifests without Phase 10 fields do not crash readers', async () => {
     const tempDir = await mkdtemp(join(tmpdir(), 'gss-p10-mf-'));
     try {

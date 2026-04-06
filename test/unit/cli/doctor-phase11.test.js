@@ -28,7 +28,7 @@ function setupInstallWithRolloutMode(tempDir, options = {}) {
     managedConfigs: [],
     corpusPath: paths.corpusPath,
     mcpServerPath: paths.mcpServerPath,
-    mcpConfigPath: paths.settingsPath,
+    mcpConfigPath: paths.mcpConfigPath,
     gssVersion: '0.1.0',
     installedWorkflows: ['security-review', 'audit'],
     installedRoles: ['gss-mapper', 'gss-auditor'],

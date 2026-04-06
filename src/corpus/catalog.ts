@@ -5,7 +5,7 @@
  * and curated overrides (data/corpus/overrides.json).
  */
 
-import type { WorkflowId } from '../core/types.js';
+import type { IssueTypeConfidence, WorkflowId } from '../core/types.js';
 import { docIdFromUrl } from './ids.js';
 
 /**
@@ -37,6 +37,8 @@ export interface CuratedOverride {
   }>;
   /** Issue type tags from specialistDetails */
   issueTypes: string[];
+  /** Confidence for issue type tags when curated or inferred in catalog generation */
+  issueTypeConfidence?: Partial<Record<string, IssueTypeConfidence>>;
 }
 
 /**

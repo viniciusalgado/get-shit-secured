@@ -75,9 +75,9 @@ export async function install(
   const targets = detectTargets(adapters, scope, cwd);
 
   // Stage 1: Resolve corpus
+  const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
   let corpus: CorpusResolution | null = null;
   try {
-    const pkgRoot = resolve(dirname(import.meta.url ?? __dirname), '..');
     corpus = await resolveCorpus(targets, pkgRoot);
   } catch (error) {
     return {
@@ -93,12 +93,11 @@ export async function install(
     targets,
     adapters,
     corpus,
-    { dryRun, hybridShadow }
+    { dryRun, hybridShadow, pkgRoot }
   );
 
   // Stage 3: MCP registration (extracted to stage module)
   let mcpResult = null;
-  const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   mcpResult = await registerMcpServers(adapters, targets, corpus, {
     dryRun,
     pkgRoot,

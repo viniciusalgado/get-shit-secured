@@ -145,7 +145,7 @@ describe('doctor — Degraded installation', () => {
     const tempDir = await createTempDir();
     try {
       const paths = setupHealthyInstall(tempDir);
-      writeFileSync(paths.settingsPath, JSON.stringify({}));
+      writeFileSync(paths.mcpConfigPath, JSON.stringify({}));
       const { result } = await captureOutputAsync(() =>
         doctor(tempDir, { runtimes: ['claude'] })
       );
@@ -226,7 +226,7 @@ describe('doctor — Warning states', () => {
         hooks: { claude: [join(paths.hooksDir, 'session-start.js')] },
         runtimeManifests: { claude: paths.runtimeManifestPath },
         mcpServerPaths: { claude: paths.mcpServerPath },
-        mcpConfigPaths: { claude: paths.settingsPath },
+        mcpConfigPaths: { claude: paths.mcpConfigPath },
       };
       writeFileSync(paths.installManifestPath, JSON.stringify(installManifest, null, 2));
 

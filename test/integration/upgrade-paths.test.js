@@ -44,7 +44,7 @@ function setupInstall(tempDir, options = {}) {
 
   const corpusPath = join(corpusDir, 'owasp-corpus.json');
   const mcpServerPath = join(mcpDir, 'server.js');
-  const settingsPath = join(claudeRoot, 'settings.json');
+  const mcpConfigPath = join(tempDir, '.mcp.json');
   const runtimeManifestPath = join(claudeSupport, 'runtime-manifest.json');
   const installManifestPath = join(gssDir, 'install-manifest.json');
 
@@ -58,8 +58,8 @@ function setupInstall(tempDir, options = {}) {
   // Write MCP server binary
   writeFileSync(mcpServerPath, '// MCP server', 'utf-8');
 
-  // Write settings with MCP registration
-  writeFileSync(settingsPath, JSON.stringify({
+  // Write MCP config (local scope: .mcp.json at project root)
+  writeFileSync(mcpConfigPath, JSON.stringify({
     mcpServers: {
       'gss-security-docs': {
         command: 'node',
@@ -84,7 +84,7 @@ function setupInstall(tempDir, options = {}) {
     managedConfigs: [],
     corpusPath,
     mcpServerPath,
-    mcpConfigPath: settingsPath,
+    mcpConfigPath,
     gssVersion: '0.1.0',
     installedWorkflows: ['security-review', 'map-codebase', 'audit'],
     installedRoles: ['gss-mapper', 'gss-auditor', 'gss-verifier'],
@@ -110,7 +110,7 @@ function setupInstall(tempDir, options = {}) {
     hooks: { claude: [join(hooksDir, 'session-start.js')] },
     runtimeManifests: { claude: runtimeManifestPath },
     mcpServerPaths: { claude: mcpServerPath },
-    mcpConfigPaths: { claude: settingsPath },
+    mcpConfigPaths: { claude: mcpConfigPath },
   };
   writeFileSync(installManifestPath, JSON.stringify(installManifest, null, 2));
 
@@ -118,7 +118,7 @@ function setupInstall(tempDir, options = {}) {
     gssDir, claudeRoot, claudeSupport,
     artifactsDir, reportsDir,
     hooksDir, corpusDir, mcpDir,
-    corpusPath, mcpServerPath, settingsPath, runtimeManifestPath, installManifestPath,
+    corpusPath, mcpServerPath, mcpConfigPath, runtimeManifestPath, installManifestPath,
   };
 }
 

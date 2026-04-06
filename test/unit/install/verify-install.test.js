@@ -108,7 +108,7 @@ describe('verifyInstall — Check 1: Corpus snapshot', () => {
       };
       const result = await verifyInstall(targets, corpus, {
         serverBinaryPaths: { claude: paths.mcpServerPath },
-        configPaths: { claude: paths.settingsPath },
+        configPaths: { claude: paths.mcpConfigPath },
       }, { dryRun: false });
       // No corpus-related errors
       assert.ok(!result.errors.some(e => e.includes('corpus')));
@@ -180,7 +180,7 @@ describe('verifyInstall — Check 3: MCP config registration', () => {
     const tempDir = await createTempDir();
     try {
       const paths = setupHealthyInstall(tempDir);
-      writeFileSync(paths.settingsPath, JSON.stringify({}));
+      writeFileSync(paths.mcpConfigPath, JSON.stringify({}));
 
       const targets = {
         runtimes: ['claude'], scope: 'local', cwd: tempDir,
@@ -188,7 +188,7 @@ describe('verifyInstall — Check 3: MCP config registration', () => {
         supportSubtrees: { claude: paths.supportDir },
       };
       const result = await verifyInstall(targets, null, {
-        configPaths: { claude: paths.settingsPath },
+        configPaths: { claude: paths.mcpConfigPath },
       }, { dryRun: false });
       assert.ok(result.errors.some(e => e.includes('missing mcpServers.gss-security-docs') || e.includes('MCP not registered')));
     } finally {
@@ -206,7 +206,7 @@ describe('verifyInstall — Check 3: MCP config registration', () => {
         supportSubtrees: { claude: paths.supportDir },
       };
       const result = await verifyInstall(targets, null, {
-        configPaths: { claude: paths.settingsPath },
+        configPaths: { claude: paths.mcpConfigPath },
       }, { dryRun: false });
       assert.ok(!result.errors.some(e => e.includes('gss-security-docs')));
     } finally {
@@ -218,7 +218,7 @@ describe('verifyInstall — Check 3: MCP config registration', () => {
     const tempDir = await createTempDir();
     try {
       const paths = setupHealthyInstall(tempDir);
-      rmSync(paths.settingsPath);
+      rmSync(paths.mcpConfigPath);
 
       const targets = {
         runtimes: ['claude'], scope: 'local', cwd: tempDir,
@@ -226,7 +226,7 @@ describe('verifyInstall — Check 3: MCP config registration', () => {
         supportSubtrees: { claude: paths.supportDir },
       };
       const result = await verifyInstall(targets, null, {
-        configPaths: { claude: paths.settingsPath },
+        configPaths: { claude: paths.mcpConfigPath },
       }, { dryRun: false });
       assert.ok(result.errors.some(e => e.includes('MCP config not found')));
     } finally {
@@ -484,7 +484,7 @@ describe('verifyInstall — Overall health', () => {
       };
       const mcpResult = {
         serverBinaryPaths: { claude: paths.mcpServerPath },
-        configPaths: { claude: paths.settingsPath },
+        configPaths: { claude: paths.mcpConfigPath },
         errors: [],
       };
       const result = await verifyInstall(targets, corpus, mcpResult, { dryRun: false });
