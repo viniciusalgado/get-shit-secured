@@ -13,6 +13,8 @@ import type {
   ConsultationMode,
 } from '../core/types.js';
 import { ARTIFACT_ENVELOPE_SCHEMA_VERSION } from '../core/types.js';
+import { createHash } from 'node:crypto';
+import { canonicalize } from '../core/sanitize.js';
 
 /** Valid workflow IDs */
 const VALID_WORKFLOW_IDS: readonly string[] = [
@@ -142,9 +144,27 @@ export function validateArtifactEnvelope(
     }
   }
 
+  // Verify content hash if present (PATCH-006)
+  if ('contentHash' in rec && typeof rec['contentHash'] === 'string') {
+    const computed = computeArtifactContentHash(rec);
+    if (rec['contentHash'] !== computed) {
+      errors.push('contentHash does not match computed hash — artifact may have been tampered with');
+    }
+  }
+
   return {
     valid: errors.length === 0,
     errors,
     warnings,
   };
+}
+
+/**
+ * Compute content hash for an artifact envelope.
+ * Uses recursive canonicalization (SRV-001) for deterministic nested key ordering.
+ * Excludes the contentHash field from the hash input.
+ */
+export function computeArtifactContentHash(artifact: Record<string, unknown>): string {
+  const { contentHash, ...rest } = artifact;
+  return createHash('sha256').update(canonicalize(rest)).digest('hex');
 }

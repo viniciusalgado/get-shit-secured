@@ -137,7 +137,12 @@ export async function install(
         artifacts.managedConfigsByRuntime,
         artifacts.hooksByRuntime,
         artifacts.runtimeManifestPaths,
-        mcpPaths
+        mcpPaths,
+        {
+          corpusHash: corpus?.corpusHash,
+          mcpServerHashes: mcpResult?.serverBinaryHashes,
+          hookHashes: artifacts.hookHashesByRuntime,
+        }
       );
       // Add corpus version to merged manifest
       if ('manifestVersion' in manifest && manifest.manifestVersion === 2 && corpus) {
@@ -154,7 +159,12 @@ export async function install(
         artifacts.hooksByRuntime,
         artifacts.runtimeManifestPaths,
         corpus?.corpusVersion,
-        mcpPaths
+        mcpPaths,
+        {
+          corpusHash: corpus?.corpusHash,
+          mcpServerHashes: mcpResult?.serverBinaryHashes,
+          hookHashes: artifacts.hookHashesByRuntime,
+        }
       );
     }
 
@@ -173,7 +183,12 @@ export async function install(
       mcpResult ? {
         serverPaths: mcpResult.serverBinaryPaths,
         configPaths: mcpResult.configPaths,
-      } : undefined
+      } : undefined,
+      {
+        corpusHash: corpus?.corpusHash,
+        mcpServerHashes: mcpResult?.serverBinaryHashes,
+        hookHashes: artifacts.hookHashesByRuntime,
+      }
     );
   }
 

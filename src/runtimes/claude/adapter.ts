@@ -396,6 +396,33 @@ try {
     console.warn('[GSS WARN] MCP: Server binary not found at ' + mcpServerPath);
   }
 
+  // 3b. MCP server binary integrity verification
+  if (serverBinaryPresent) {
+    try {
+      const installManifestPath = join(gssDir, 'install-manifest.json');
+      if (existsSync(installManifestPath)) {
+        const installManifest = JSON.parse(readFileSync(installManifestPath, 'utf-8'));
+        if (installManifest.mcpServerHashes && installManifest.mcpServerHashes['claude']) {
+          const crypto = require('crypto');
+          const expectedHash = installManifest.mcpServerHashes['claude'];
+          const actualHash = crypto.createHash('sha256')
+            .update(readFileSync(mcpServerPath))
+            .digest('hex');
+          if (actualHash !== expectedHash) {
+            console.error('[GSS ERROR] MCP: Server binary integrity check FAILED. Binary may have been tampered with.');
+            console.error('             Expected: ' + expectedHash.substring(0, 16) + '...');
+            console.error('             Actual:   ' + actualHash.substring(0, 16) + '...');
+            console.error('             Re-run: npx get-shit-secured --claude --local');
+          }
+        }
+      }
+    } catch (e) {
+      // SRV-004: Log when the integrity check itself fails to execute
+      // (e.g., corrupt manifest JSON), not just when hash mismatches
+      console.warn('[GSS WARN] Integrity: Binary integrity check could not execute — ' + (e.message || e));
+    }
+  }
+
   // 4. MCP config registered
   const mcpConfigPath = runtimeManifest.mcpConfigPath;
   let mcpRegistered = false;
@@ -413,9 +440,10 @@ try {
 
   // 5. Version consistency
   const installManifestPath = join(gssDir, 'install-manifest.json');
+  let installManifest = null;
   if (existsSync(installManifestPath)) {
     try {
-      const installManifest = JSON.parse(readFileSync(installManifestPath, 'utf-8'));
+      installManifest = JSON.parse(readFileSync(installManifestPath, 'utf-8'));
       const installCorpusVersion = installManifest.corpusVersion;
       const runtimeCorpusVersion = runtimeManifest.corpusVersion;
       if (installCorpusVersion && runtimeCorpusVersion && installCorpusVersion !== runtimeCorpusVersion) {
@@ -423,7 +451,33 @@ try {
         console.warn('           Runtime: ' + runtimeCorpusVersion + ', Install: ' + installCorpusVersion);
         console.warn('           Re-run: npx get-shit-secured --claude --local');
       }
-    } catch {}
+    } catch (e) {
+      // SRV-004: Log when manifest parsing fails, not just silently swallow
+      console.warn('[GSS WARN] Install: Could not parse install manifest for version check — ' + (e.message || e));
+    }
+  }
+
+  // 5b. Hook content hash verification
+  if (installManifest && installManifest.hookHashes && installManifest.hookHashes['claude']) {
+    try {
+      const crypto = require('crypto');
+      const expectedHookHashes = installManifest.hookHashes['claude'];
+      const hookDir = join(supportSubtree, 'hooks');
+      for (const [hookId, expectedHash] of Object.entries(expectedHookHashes)) {
+        const hookPath = join(hookDir, hookId + '.js');
+        if (existsSync(hookPath)) {
+          const actualHash = crypto.createHash('sha256')
+            .update(readFileSync(hookPath, 'utf-8'))
+            .digest('hex');
+          if (actualHash !== expectedHash) {
+            console.warn('[GSS WARN] Integrity: Hook ' + hookId + ' content hash mismatch. May have been modified.');
+          }
+        }
+      }
+    } catch (e) {
+      // SRV-004: Log when hook verification fails to execute
+      console.warn('[GSS WARN] Integrity: Hook hash verification could not execute — ' + (e.message || e));
+    }
   }
 
   // 6. Artifact directories

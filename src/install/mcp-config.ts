@@ -9,9 +9,10 @@
  * 4. Record config path and server path in manifest tracking
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 import type {
   ManagedJsonPatch,
   McpRegistrationResult,
@@ -48,14 +49,21 @@ async function mergeTomlMcpConfig(
   content = content.replace(/\n+$/, '\n');
 
   const { command, args } = registration.content;
+  const escapeTomlValue = (value: string) =>
+    value
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r');
+  const escapedCommand = escapeTomlValue(command as string);
   const argsStr = (args as string[])
-    .map(arg => `"${arg.replace(/"/g, '\\"')}"`)
+    .map(arg => `"${escapeTomlValue(arg)}"`)
     .join(', ');
   const tomlBlock = [
     '',
     startMarker,
     '[mcp_servers.gss-security-docs]',
-    `command = "${command}"`,
+    `command = "${escapedCommand}"`,
     `args = [${argsStr}]`,
     endMarker,
     '',
@@ -97,6 +105,7 @@ export async function registerMcpServers(
 ): Promise<McpRegistrationResult> {
   const configPaths: Partial<Record<RuntimeTarget, string>> = {};
   const serverBinaryPaths: Partial<Record<RuntimeTarget, string>> = {};
+  const serverBinaryHashes: Partial<Record<RuntimeTarget, string>> = {};
   const errors: string[] = [];
 
   if (options.dryRun || !corpus) {
@@ -124,7 +133,7 @@ export async function registerMcpServers(
         }
       }
     }
-    return { configPaths, serverBinaryPaths, errors };
+    return { configPaths, serverBinaryPaths, serverBinaryHashes, errors };
   }
 
   for (const adapter of adapters) {
@@ -157,6 +166,14 @@ export async function registerMcpServers(
       continue;
     }
     serverBinaryPaths[runtime] = srcServerPath;
+
+    // Compute server binary hash for integrity tracking
+    try {
+      const binaryContent = readFileSync(srcServerPath, 'utf-8');
+      serverBinaryHashes[runtime] = createHash('sha256').update(binaryContent).digest('hex');
+    } catch {
+      // Hash computation failure is non-fatal
+    }
 
     const corpusDestPath = corpus.destinationPaths[runtime];
     if (!corpusDestPath) {

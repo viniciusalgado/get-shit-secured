@@ -10,8 +10,9 @@
  */
 
 import { mkdir, writeFile, copyFile, readFile } from 'node:fs/promises';
-import { existsSync, readdirSync, lstatSync } from 'node:fs';
+import { existsSync, readdirSync, lstatSync, readFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 import type {
   InstallScope,
   RuntimeAdapter,
@@ -83,6 +84,8 @@ export interface CorpusResolution {
   corpusVersion: string;
   sourcePath: string;
   destinationPaths: Partial<Record<RuntimeTarget, string>>;
+  /** SHA-256 hash of the corpus snapshot file */
+  corpusHash?: string;
 }
 
 /**
@@ -96,6 +99,8 @@ export interface InstalledArtifacts {
   runtimeManifestPaths: Partial<Record<RuntimeTarget, string>>;
   totalFilesCreated: number;
   errors: string[];
+  /** SHA-256 hashes of hook files read from disk after writing, keyed by runtime then hook ID */
+  hookHashesByRuntime: Partial<Record<RuntimeTarget, Record<string, string>>>;
 }
 
 /**
@@ -168,6 +173,9 @@ export async function resolveCorpus(
   // Load and validate
   const loaded = loadCorpusSnapshot(snapshotPath);
 
+  // Compute corpus hash for integrity tracking
+  const corpusHash = computeFileHash(snapshotPath);
+
   // Compute destination paths per runtime
   const destinationPaths: Partial<Record<RuntimeTarget, string>> = {};
   for (const runtime of targets.runtimes) {
@@ -182,6 +190,7 @@ export async function resolveCorpus(
     corpusVersion: loaded.snapshot.corpusVersion,
     sourcePath: snapshotPath,
     destinationPaths,
+    corpusHash,
   };
 }
 
@@ -203,6 +212,7 @@ export async function installRuntimeArtifacts(
   const managedConfigsByRuntime: Partial<Record<RuntimeTarget, ManagedConfigRecord[]>> = {};
   const hooksByRuntime: Partial<Record<RuntimeTarget, string[]>> = {};
   const runtimeManifestPaths: Partial<Record<RuntimeTarget, string>> = {};
+  const hookHashesByRuntime: Partial<Record<RuntimeTarget, Record<string, string>>> = {};
   let totalFilesCreated = 0;
 
   if (!dryRun) {
@@ -333,6 +343,16 @@ export async function installRuntimeArtifacts(
         try {
           await writeFile(hookFilePath, hookContent, 'utf-8');
           hookPaths.push(hookFilePath);
+          // SRV-005: Compute hash from actual file content on disk, not generated string
+          try {
+            const diskContent = readFileSync(hookFilePath, 'utf-8');
+            const hash = createHash('sha256').update(diskContent).digest('hex');
+            if (!hookHashesByRuntime[runtime]) hookHashesByRuntime[runtime] = {};
+            hookHashesByRuntime[runtime]![hook.id] = hash;
+          } catch (hashErr) {
+            // Hash computation failure is non-fatal but log it
+            console.warn(`[GSS] Warning: Failed to compute hash for hook ${hook.id}: ${hashErr instanceof Error ? hashErr.message : String(hashErr)}`);
+          }
         } catch (error) {
           errors.push(`${runtime}: Failed to write hook ${hook.id}: ${error}`);
         }
@@ -401,6 +421,7 @@ export async function installRuntimeArtifacts(
     runtimeManifestPaths,
     totalFilesCreated,
     errors,
+    hookHashesByRuntime,
   };
 }
 
@@ -967,4 +988,13 @@ async function mergeSettingsSafe(
   }
   const merged = { ...existing, ...newContent };
   await writeFile(path, JSON.stringify(merged, null, 2), 'utf-8');
+}
+
+/**
+ * Compute SHA-256 hash of a file's contents.
+ * Used for integrity tracking of corpus snapshots and hook scripts.
+ */
+function computeFileHash(filePath: string): string {
+  const content = readFileSync(filePath, 'utf-8');
+  return createHash('sha256').update(content).digest('hex');
 }

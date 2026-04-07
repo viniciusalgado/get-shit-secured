@@ -25,6 +25,7 @@ import { readFileSync } from 'node:fs';
 import { loadCorpusSnapshot, type LoadedSnapshot } from '../corpus/snapshot-loader.js';
 import { isCorpusSnapshot } from '../corpus/schema.js';
 import { validateSnapshot } from '../corpus/validators.js';
+import { sanitizePath } from '../core/sanitize.js';
 
 import { computeDiagnostics, type CorpusDiagnostics } from './diagnostics.js';
 import { readResource, buildResourceList, type ResourceEntry } from './resources.js';
@@ -257,7 +258,7 @@ async function main(): Promise<void> {
     const parsed = JSON.parse(raw);
 
     if (!isCorpusSnapshot(parsed)) {
-      process.stderr.write(`Error: Invalid corpus snapshot at ${snapshotPath}\n`);
+      process.stderr.write(`Error: Invalid corpus snapshot at ${sanitizePath(snapshotPath)}\n`);
       process.stderr.write('The file exists but does not match the expected schema.\n');
       process.exit(1);
     }
@@ -265,7 +266,7 @@ async function main(): Promise<void> {
     loaded = loadCorpusSnapshot(snapshotPath);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    process.stderr.write(`Error: Failed to load corpus snapshot at ${snapshotPath}\n`);
+    process.stderr.write(`Error: Failed to load corpus snapshot at ${sanitizePath(snapshotPath)}\n`);
     process.stderr.write(`${msg}\n`);
     process.stderr.write('\nSet GSS_CORPUS_PATH or use --corpus-path to specify the snapshot.\n');
     process.exit(1);
@@ -291,6 +292,9 @@ async function main(): Promise<void> {
     `[gss-mcp] Health: warnings=${diag.warnings.length}, reused=${diag.reusedDocs}, ` +
     `issueCoverage=${diag.docsWithIssueTypes}/${diag.totalDocs}, sections=${diag.docsWithSections}/${diag.totalDocs}\n`,
   );
+
+  // Track actually-read docs for coverage cross-referencing
+  const actuallyReadDocs = new Set<string>();
 
   // Create MCP server
   const server = new Server(
@@ -369,8 +373,13 @@ async function main(): Promise<void> {
         }
 
         case 'validate_security_consultation': {
+          const typedInput = input as ValidateCoverageToolInput;
+          // Cross-reference with actually read docs
           const result = handleValidateCoverage(
-            input as ValidateCoverageToolInput,
+            {
+              ...typedInput,
+              actuallyReadDocs: Array.from(actuallyReadDocs),
+            },
             loaded,
           );
           return {
@@ -384,18 +393,22 @@ async function main(): Promise<void> {
         }
 
         case 'read_security_doc': {
-          const result = handleReadDoc(input as ReadDocToolInput, loaded);
+          const readInput = input as ReadDocToolInput;
+          const result = handleReadDoc(readInput, loaded);
           if (!result) {
             return {
               content: [
                 {
                   type: 'text',
-                  text: JSON.stringify({ error: 'Document not found', input }, null, 2),
+                  text: JSON.stringify({ error: 'Document not found', id: readInput.id, uri: readInput.uri ? sanitizePath(readInput.uri) : undefined }, null, 2),
                 },
               ],
               isError: true,
             };
           }
+          // Track actually read doc for coverage cross-referencing
+          const docId = (result as unknown as Record<string, unknown>).id as string | undefined;
+          if (docId) actuallyReadDocs.add(docId);
           return {
             content: [
               {

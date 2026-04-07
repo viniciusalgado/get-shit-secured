@@ -19,6 +19,8 @@ export interface ValidateCoverageToolInput {
   stacks?: string[];
   issueTags?: string[];
   changedFiles?: string[];
+  /** Document IDs that were actually read via read_security_doc (cross-reference) */
+  actuallyReadDocs?: string[];
 }
 
 /**
@@ -34,7 +36,7 @@ export interface ValidateCoverageToolInput {
 export function handleValidateCoverage(
   input: ValidateCoverageToolInput,
   loaded: LoadedSnapshot,
-): ConsultationValidation {
+): ConsultationValidation & { unreadDocs?: string[] } {
   // Compute the plan for the same signals
   const plan = handleConsultationPlan(
     {
@@ -47,5 +49,19 @@ export function handleValidateCoverage(
   );
 
   // Validate coverage
-  return validateConsultationCoverage(plan, input.consultedDocs);
+  const result = validateConsultationCoverage(plan, input.consultedDocs);
+
+  // Cross-reference with actually read docs if available
+  if (input.actuallyReadDocs && input.actuallyReadDocs.length > 0) {
+    const readSet = new Set(input.actuallyReadDocs);
+    const claimedButNotRead = input.consultedDocs.filter(id => !readSet.has(id));
+    if (claimedButNotRead.length > 0) {
+      return {
+        ...result,
+        unreadDocs: claimedButNotRead,
+      };
+    }
+  }
+
+  return result;
 }

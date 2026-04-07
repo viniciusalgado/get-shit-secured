@@ -1,4 +1,5 @@
 import { relative, join, resolve, normalize } from 'node:path';
+import { realpathSync, lstatSync } from 'node:fs';
 import type { InstallScope, RuntimeTarget } from './types.js';
 
 /**
@@ -120,8 +121,16 @@ export function ensureDir(dir: string): string {
  * Used for security validation to prevent path traversal.
  */
 export function isWithin(base: string, target: string): boolean {
-  const relPath = relative(base, target);
-  return !relPath.startsWith('..') && relPath !== '';
+  try {
+    const resolvedBase = realpathSync(base);
+    const resolvedTarget = realpathSync(target);
+    const relPath = relative(resolvedBase, resolvedTarget);
+    return !relPath.startsWith('..') && relPath !== '';
+  } catch {
+    // If realpath fails (path doesn't exist), fall back to logical check
+    const relPath = relative(base, target);
+    return !relPath.startsWith('..') && relPath !== '';
+  }
 }
 
 /**
@@ -170,8 +179,20 @@ export function validateManifestPath(filePath: string, cwd: string): string {
     throw new Error(`Invalid manifest path: contains parent directory reference: ${filePath}`);
   }
 
-  // Reject absolute paths that don't point to expected locations
-  // (This is a basic check; more specific validation happens per-runtime)
+  // Reject symlinks that escape the expected directory tree
+  try {
+    if (lstatSync(normalized).isSymbolicLink()) {
+      const realTarget = realpathSync(normalized);
+      if (!isWithin(cwd, realTarget)) {
+        throw new Error(`Invalid manifest path: symlink escapes working directory: ${filePath}`);
+      }
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Invalid manifest path')) {
+      throw error;
+    }
+    // If path doesn't exist yet, that's fine — it's a planned write target
+  }
 
   return normalized;
 }

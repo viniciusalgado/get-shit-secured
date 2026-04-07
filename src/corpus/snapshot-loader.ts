@@ -6,8 +6,12 @@
  * consulting mapping.ts or fetching URLs.
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import type { SecurityDoc, CorpusSnapshot, WorkflowId } from '../core/types.js';
+
+/** Maximum allowed corpus snapshot file size (50 MB) */
+const MAX_CORPUS_SIZE = 50 * 1024 * 1024;
 
 /**
  * Loaded snapshot with lookup indices.
@@ -28,6 +32,15 @@ export interface LoadedSnapshot {
  * @returns Loaded snapshot with lookup indices
  */
 export function loadCorpusSnapshot(snapshotPath: string): LoadedSnapshot {
+  // Size guard before reading
+  const stat = statSync(snapshotPath);
+  if (stat.size > MAX_CORPUS_SIZE) {
+    throw new Error(
+      `Corpus snapshot exceeds maximum allowed size (${(stat.size / 1024 / 1024).toFixed(1)} MB > ${MAX_CORPUS_SIZE / 1024 / 1024} MB). ` +
+      'The file may be corrupted or tampered with.'
+    );
+  }
+
   const raw = readFileSync(snapshotPath, 'utf-8');
   const snapshot = JSON.parse(raw) as CorpusSnapshot;
 
@@ -146,4 +159,43 @@ export function getRelatedDocuments(loaded: LoadedSnapshot, docId: string): Secu
   }
 
   return related;
+}
+
+/**
+ * Compute SHA-256 hash of the corpus snapshot file.
+ *
+ * @param snapshotPath - Path to the corpus snapshot JSON file
+ * @returns Hex-encoded SHA-256 hash
+ */
+export function computeCorpusHash(snapshotPath: string): string {
+  const content = readFileSync(snapshotPath, 'utf-8');
+  return createHash('sha256').update(content).digest('hex');
+}
+
+/**
+ * Verify corpus integrity by comparing a known hash against the file on disk.
+ *
+ * @param snapshotPath - Path to the corpus snapshot JSON file
+ * @param expectedHash - Expected SHA-256 hash
+ * @returns Verification result with valid flag and optional error message
+ */
+export function verifyCorpusIntegrity(
+  snapshotPath: string,
+  expectedHash: string
+): { valid: boolean; error?: string } {
+  try {
+    const actualHash = computeCorpusHash(snapshotPath);
+    if (actualHash !== expectedHash) {
+      return {
+        valid: false,
+        error: `Corpus hash mismatch: expected ${expectedHash}, got ${actualHash}`,
+      };
+    }
+    return { valid: true };
+  } catch (error) {
+    return {
+      valid: false,
+      error: `Failed to verify corpus integrity: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
 }

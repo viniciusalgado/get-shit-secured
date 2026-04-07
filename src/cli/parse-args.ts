@@ -26,6 +26,7 @@ export function parseArgs(argv: string[]): CliArgs & { showHelp: boolean; showVe
     showVersion: false,
     hybridShadow: false,
     interactive: false,
+    unknownArgs: [],
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -78,7 +79,11 @@ export function parseArgs(argv: string[]): CliArgs & { showHelp: boolean; showVe
         result.verifyOnly = true;
         break;
       default:
-        // Ignore unknown args for now
+        // Collect unknown args for validation/warning
+        if (arg.startsWith('-')) {
+          if (!Array.isArray(result.unknownArgs)) result.unknownArgs = [];
+          result.unknownArgs.push(arg);
+        }
         break;
     }
   }

@@ -272,6 +272,12 @@ export interface InstallManifestV2 {
   mcpServerPaths?: Partial<Record<RuntimeTarget, string>>;
   /** MCP config file paths per runtime (for uninstall revert) */
   mcpConfigPaths?: Partial<Record<RuntimeTarget, string>>;
+  /** SHA-256 hash of the corpus snapshot file */
+  corpusHash?: string;
+  /** SHA-256 hashes of MCP server binaries per runtime */
+  mcpServerHashes?: Partial<Record<RuntimeTarget, string>>;
+  /** SHA-256 hashes of hook script contents, keyed by runtime then hook ID */
+  hookHashes?: Partial<Record<RuntimeTarget, Record<string, string>>>;
 }
 
 /**
@@ -301,6 +307,8 @@ export interface McpRegistrationResult {
   configPaths: Partial<Record<RuntimeTarget, string>>;
   /** Per-runtime server binary paths that were copied */
   serverBinaryPaths: Partial<Record<RuntimeTarget, string>>;
+  /** Per-runtime SHA-256 hashes of server binaries */
+  serverBinaryHashes?: Partial<Record<RuntimeTarget, string>>;
   /** Errors encountered during registration (non-fatal) */
   errors: string[];
 }
@@ -421,6 +429,8 @@ export interface CliArgs {
   verifyOnly?: boolean;
   /** Force interactive install wizard */
   interactive?: boolean;
+  /** Unknown arguments that were not recognized by the parser */
+  unknownArgs?: string[];
 }
 
 /**
