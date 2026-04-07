@@ -14,6 +14,7 @@
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, relative } from 'node:path';
 import { parseArgs, getHelpText, validateArgs } from './parse-args.js';
+import { promptForInstallArgs, shouldPromptForInstall } from './interactive-install.js';
 import { install, uninstall } from '../core/installer.js';
 import { ClaudeAdapter } from '../runtimes/claude/adapter.js';
 import { CodexAdapter } from '../runtimes/codex/adapter.js';
@@ -50,7 +51,8 @@ function parseTargetMode(args: string[]): RolloutMode | null {
  */
 async function main(): Promise<number> {
   // Parse CLI arguments (skip node and script path)
-  const args = parseArgs(process.argv.slice(2));
+  const rawArgv = process.argv.slice(2);
+  let args = parseArgs(rawArgv);
 
   // Handle --version
   if (args.showVersion) {
@@ -137,6 +139,10 @@ async function main(): Promise<number> {
     return await doctor(process.cwd(), {
       runtimes: args.runtimes.length > 0 ? args.runtimes as Array<'claude' | 'codex'> : undefined,
     });
+  }
+
+  if (shouldPromptForInstall(args, rawArgv, Boolean(process.stdin.isTTY && process.stdout.isTTY))) {
+    args = await promptForInstallArgs(args);
   }
 
   // Validate arguments

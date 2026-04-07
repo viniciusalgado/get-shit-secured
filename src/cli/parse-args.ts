@@ -10,6 +10,7 @@ import type { CliArgs, InstallScope, RuntimeTarget } from '../core/types.js';
  * --local, -l      Install to project directory (default)
  * --global, -g     Install to user home directory
  * --dry-run, -d    Show what would be done without writing files
+ * --interactive    Launch install wizard even when flags are available
  * --uninstall, -u  Uninstall mode (future, reserved)
  * --help, -h       Show help text
  * --version, -v    Show version
@@ -24,6 +25,7 @@ export function parseArgs(argv: string[]): CliArgs & { showHelp: boolean; showVe
     showHelp: false,
     showVersion: false,
     hybridShadow: false,
+    interactive: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -53,6 +55,9 @@ export function parseArgs(argv: string[]): CliArgs & { showHelp: boolean; showVe
       case '--dry-run':
       case '-d':
         result.dryRun = true;
+        break;
+      case '--interactive':
+        result.interactive = true;
         break;
       case '--uninstall':
       case '-u':
@@ -104,18 +109,21 @@ OPTIONS:
   --all, -a         Install for all supported runtimes
   --local, -l       Install to project directory (default)
   --global, -g      Install to user home directory
-  --dry-run, -d         Show what would be done without writing files
-  --uninstall, -u       Uninstall previously installed GSS files
-  --verify-only         Verify installation without installing
-  --hybrid-shadow       Enable MCP comparison mode
-  --help, -h            Show this help message
-  --version, -v         Show version
+  --dry-run, -d     Show what would be done without writing files
+  --interactive     Launch the install wizard
+  --uninstall, -u   Uninstall previously installed GSS files
+  --verify-only     Verify installation without installing
+  --hybrid-shadow   Enable MCP comparison mode
+  --help, -h        Show this help message
+  --version, -v     Show version
 
 EXAMPLES:
+  npx get-shit-secured
   npx get-shit-secured --claude --local
   npx get-shit-secured --codex --global
   npx get-shit-secured --claude --codex --local
   npx get-shit-secured --all --dry-run
+  npx get-shit-secured --interactive
   npx get-shit-secured --uninstall
 
 SCOPE:

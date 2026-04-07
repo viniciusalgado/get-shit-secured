@@ -419,6 +419,8 @@ export interface CliArgs {
   hybridShadow?: boolean;
   /** Verify installation without installing */
   verifyOnly?: boolean;
+  /** Force interactive install wizard */
+  interactive?: boolean;
 }
 
 /**

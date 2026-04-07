@@ -1,146 +1,293 @@
-# get-shit-secured (gss)
+# get-shit-secured (GSS)
 
-Security workflow installer for AI coding runtimes. GSS installs workflow-first prompts, MCP-backed security consultation, and runtime validation support for Claude and Codex.
+Security workflows, OWASP-backed consultation, and runtime guardrails for AI coding runtimes.
 
-## Quick Start
+GSS installs a security-first workflow system into Claude Code and Codex. It gives those runtimes structured security commands or skills, an MCP server backed by a packaged OWASP corpus, artifact validation, and install-time/runtime safety checks so security work stays consistent instead of turning into vague "please audit this" prompting.
+
+`npx get-shit-secured`
+
+Run it with no flags for the interactive install wizard. Use flags when you want a non-interactive install for local setup, CI, or repeatable onboarding.
+
+[Why GSS](#why-gss) | [Getting Started](#getting-started) | [How It Works](#how-it-works) | [Workflows](#workflows) | [CLI](#cli-commands) | [Project Layout](#project-layout) | [Docs](#docs)
+
+---
+
+## Why GSS
+
+Most AI-assisted security review is inconsistent for predictable reasons:
+
+- The runtime does not know your expected workflow.
+- The model is asked to "do security" without a concrete artifact contract.
+- Findings are not validated before remediation starts.
+- Fixes and verification drift away from the original security context.
+
+GSS fixes that by installing a workflow-first security system instead of a pile of loose prompts.
+
+What that means in practice:
+
+- Security work is organized into explicit workflows like `security-review`, `audit`, `validate-findings`, and `verify`.
+- OWASP guidance is packaged into a local corpus and exposed through an MCP server.
+- Runtime integrations enforce safer defaults like path validation, non-destructive config merging, and workflow-aware warnings.
+- Artifacts are written into `.gss/` so handoffs between review, remediation, verification, and reporting stay structured.
+
+This project is for teams or individual developers who want security work to be repeatable, inspectable, and grounded in actual workflow contracts.
+
+## Getting Started
+
+### Interactive install
 
 ```bash
-# Install for Claude (local project)
-npx get-shit-secured --claude --local
-
-# Install for Codex (global)
-npx get-shit-secured --codex --global
-
-# Install for both
-npx get-shit-secured --claude --codex --local
-
-# Uninstall
-npx get-shit-secured --uninstall
+npx get-shit-secured
 ```
 
-## Installation Scope
+The installer wizard lets you choose:
 
-- `--local`: Install to current project directory (default)
-- `--global`: Install to user home directory
+1. Runtime: Claude, Codex, or both
+2. Scope: local project or global user install
+3. Mode: standard `mcp-only` or `hybrid-shadow`
+4. Execution: apply changes or preview with dry-run
 
-## Runtime Targets
+### Non-interactive install
 
-- `--claude`: Install Claude Code commands, agents, hooks, and MCP registration
-- `--codex`: Install Codex skills and MCP registration
-- `--all`: Install for all supported runtimes
+```bash
+# Claude only, local project install
+npx get-shit-secured --claude --local
 
-## Options
+# Codex only, global user install
+npx get-shit-secured --codex --global
 
-- `--dry-run`: Show what would be installed without making changes
-- `--hybrid-shadow`: Keep comparison-oriented MCP mode enabled
-- `--uninstall`: Remove previously installed GSS files
+# Both runtimes
+npx get-shit-secured --all --local
 
-## Structure
+# Preview without writing files
+npx get-shit-secured --all --local --dry-run
 
-Installed files are organized under:
+# Enable comparison-oriented shadow mode
+npx get-shit-secured --claude --local --hybrid-shadow
+```
 
-### Claude Runtime
-- `.claude/commands/gss/` - Claude slash commands
-- `.claude/agents/gss-*.md` - Workflow and role agents
-- `.claude/gss/` - Runtime support subtree
-  - `hooks/` - Hook scripts for session lifecycle
-  - `mcp/` - Installed MCP server entrypoint
-  - `corpus/` - Packaged OWASP corpus snapshot
-  - `runtime-manifest.json` - Runtime metadata
+After install:
 
-### Codex Runtime
-- `.codex/skills/gss-*/` - Codex workflow and role skills
-- `.codex/gss/` - Runtime support subtree
-  - `mcp/` - Installed MCP server entrypoint
-  - `corpus/` - Packaged OWASP corpus snapshot
-  - `runtime-manifest.json` - Runtime metadata
+- Claude users can start with `/gss-help`
+- Any install can be checked with `gss doctor`
+- Existing installs can be verified without reinstalling via `gss --verify-only --claude` or `gss --verify-only --codex`
 
-### Project Artifacts
-- `.gss/install-manifest.json` - Installation record
-- `.gss/artifacts/` - Generated workflow artifacts
-- `.gss/reports/` - Generated reports and summaries
+## Supported Runtimes
 
-## Features
+GSS currently supports:
 
-### Role-Based Agents
+- Claude Code
+- Codex
 
-GSS includes six role-based agents that specialize in different security domains:
+The shared installer core is runtime-agnostic, but each runtime gets its own adapter and output format:
 
-1. **gss-mapper** - Analyzes codebase structure and dependencies
-2. **gss-threat-modeler** - Generates threat models
-3. **gss-auditor** - Performs security audits based on OWASP standards
-4. **gss-remediator** - Plans minimal safe security fixes
-5. **gss-verifier** - Verifies security fixes
-6. **gss-reporter** - Generates comprehensive security reports
+- Claude installs commands, agents, hooks, MCP registration, and runtime support files
+- Codex installs skills, MCP registration, and runtime support files
 
-### MCP-Backed Consultation
+## How It Works
 
-Workflows consult the packaged OWASP corpus through the GSS MCP server:
-- Consultation planning is doc-based, not specialist-based
-- Required workflows emit consultation traces inside their artifacts
-- Runtime validation checks artifact envelopes and handoff compatibility
-- Fresh installs are healthy without requiring a first workflow run
+### 1. Install runtime-specific entrypoints
 
-### Runtime Hooks (Claude)
+GSS renders the same workflow catalog into the format each runtime expects:
 
-Claude installations include hooks for:
-- **SessionStart**: Environment sanity check
-- **PreToolUse**: Warnings on sensitive file operations
-- **PostToolUse**: Artifact and handoff validation
+- Claude: `.claude/commands/gss/` and `.claude/agents/`
+- Codex: `.codex/skills/gss-*/SKILL.md`
 
-## Security Guarantees
+### 2. Register the OWASP-backed MCP server
 
-### Path Safety
-- All file operations validate paths are within allowed directories
-- Path traversal attacks are prevented
-- Symlink escapes are rejected
+The installer copies a bundled MCP server and a packaged corpus snapshot, then registers the server with the target runtime:
 
-### Uninstall Safety
-- Only removes files that were created by GSS
-- Validates manifest entries before deletion
-- Removes managed config blocks without affecting user content
+- Claude local installs register in `.mcp.json`
+- Claude global installs register in `~/.claude.json`
+- Codex installs register in `config.toml`
 
-### Non-Destructive
-- Existing runtime configs are preserved
-- Settings are merged, not replaced
-- User files are never overwritten without explicit policy
+That gives workflows a stable consultation layer instead of relying on whatever the model happens to remember.
+
+### 3. Enforce workflow structure through artifacts
+
+Security workflows write structured outputs into `.gss/artifacts/`. Those artifacts are then used by downstream workflows for validation, remediation planning, verification, and reporting.
+
+Examples:
+
+- `security-review` emits change scope, findings, validation, and security test specs
+- `validate-findings` confirms or rejects audit findings before remediation starts
+- `plan-remediation` produces patch plans and test specifications
+- `verify` checks what was actually applied and reports residual risk
+
+### 4. Keep installs safe and inspectable
+
+GSS is designed to be non-destructive:
+
+- File operations are path-validated
+- Managed config is merged instead of blindly overwritten
+- Installs generate a manifest for uninstall and verification support
+- Claude hooks warn on sensitive paths and invalid artifact behavior
 
 ## Workflows
 
-Available security workflows:
+GSS ships with a full security workflow chain plus a lightweight entry workflow for change-scoped review.
 
-1. `gss-security-review` - Change-scoped security review for current diff or a commit patch (recommended first for security-relevant changes)
-2. `gss-map-codebase` - Analyze codebase structure
-3. `gss-threat-model` - Identify threats and risks
-4. `gss-audit` - Find security vulnerabilities
-5. `gss-plan-remediation` - Plan security fixes
-6. `gss-execute-remediation` - Apply approved fixes
-7. `gss-verify` - Verify the fixes
-8. `gss-report` - Generate reports
+### Recommended starting point
 
-`security-review` is a lightweight supplement to the full chain and remains explicit.
+- `security-review`: review the current diff or a specific commit patch, decide whether the change is security-significant, and emit findings plus remediation-oriented test specs
+
+### Full workflow chain
+
+1. `map-codebase`  
+   Builds a security-relevant inventory of components, dependencies, trust boundaries, and data flows.
+2. `threat-model`  
+   Applies threat modeling to the mapped system and produces risk-focused context.
+3. `audit`  
+   Performs OWASP-grounded security analysis against the codebase and artifacts.
+4. `validate-findings`  
+   Confirms, disputes, or rejects audit findings through exploitation-oriented validation.
+5. `plan-remediation`  
+   Produces patch plans, implementation guidance, rollback plans, and test specifications.
+6. `execute-remediation`  
+   Applies approved changes. This is the only workflow that is supposed to mutate repository files.
+7. `verify`  
+   Verifies the applied fixes, checks for regressions, and records residual risk.
+8. `report`  
+   Aggregates everything into executive and technical reports.
+
+### Role agents
+
+The catalog also defines six fixed security roles used by the runtime integrations:
+
+- `gss-mapper`
+- `gss-threat-modeler`
+- `gss-auditor`
+- `gss-remediator`
+- `gss-verifier`
+- `gss-reporter`
+
+## CLI Commands
+
+### Installer flags
+
+```bash
+npx get-shit-secured --claude --local
+npx get-shit-secured --codex --global
+npx get-shit-secured --all --dry-run
+npx get-shit-secured --interactive
+npx get-shit-secured --uninstall
+```
+
+Supported flags:
+
+- `--claude`, `-c`
+- `--codex`, `-x`
+- `--all`, `-a`
+- `--local`, `-l`
+- `--global`, `-g`
+- `--dry-run`, `-d`
+- `--interactive`
+- `--verify-only`
+- `--hybrid-shadow`
+- `--uninstall`, `-u`
+
+### Operational commands
+
+```bash
+# Verify install health
+gss doctor
+
+# Check rollout readiness
+gss readiness
+
+# Migrate rollout mode
+gss migrate --to mcp-only
+gss migrate --to hybrid-shadow --dry-run
+
+# Compare consultation traces
+gss compare-runs --mcp <trace-or-dir> --legacy <trace-or-dir>
+
+# Compare two artifact envelopes
+gss diff-artifacts --a <artifact-a.json> --b <artifact-b.json>
+
+# Corpus utilities
+gss corpus inspect
+gss corpus validate
+gss corpus refresh
+```
+
+## Install Modes
+
+GSS currently documents two rollout modes:
+
+- `mcp-only`: the default production mode
+- `hybrid-shadow`: enables comparison-oriented reporting while keeping MCP-backed workflows active
+
+Use `gss doctor` to inspect the current state and `gss readiness` before migrating between modes.
+
+## Project Layout
+
+### Runtime output
+
+```text
+.claude/
+  commands/gss/
+  agents/
+  gss/
+
+.codex/
+  skills/gss-*/
+  gss/
+
+.gss/
+  install-manifest.json
+  artifacts/
+  reports/
+```
+
+### Repository structure
+
+```text
+src/
+  cli/        CLI entrypoints and operational commands
+  core/       installer, rendering, manifests, corpus and consultation logic
+  runtimes/   Claude and Codex adapters
+  catalog/    workflow and role definitions
+  hooks/      artifact and consultation validation
+  runtime/    artifact envelopes, diffing, handoff validation
+
+docs/
+  architecture.md
+  migration-guide.md
+  troubleshooting.md
+  compatibility-matrix.md
+```
 
 ## Development
 
 ```bash
-# Install dependencies
 npm install
-
-# Build
 npm run build
-
-# Run tests
 npm test
-
-# Lint
-npm run lint
 ```
 
-## Architecture
+Useful development commands:
 
-See [docs/architecture.md](docs/architecture.md) for detailed design documentation.
+```bash
+# Validate or inspect the OWASP corpus
+npm run validate-corpus
+npm run inspect-corpus
 
-See [AGENTS.md](AGENTS.md) for agent behavior guidelines.
+# Run boundary and migration helpers
+npm run audit-boundaries
+npm run migration:phases
+```
+
+Node.js `>=18` is required.
+
+## Docs
+
+- [Architecture](docs/architecture.md)
+- [Migration Guide](docs/migration-guide.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Compatibility Matrix](docs/compatibility-matrix.md)
+- [Release Notes](docs/release-notes/README.md)
+- [AGENTS.md](AGENTS.md)
 
 ## License
 
