@@ -24,3 +24,7 @@ coverage/
 .gss/
 *.tgz
 migration-plan/
+.claude
+.codex
+.gss
+.mcp.json
